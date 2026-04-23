@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer utilities {
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
+}
+
+/* Избавляемся от автоматических кавычек в tailwind-typography для blockquote */
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after {
+    content: none !important;
+}
+
+/* Красивые чекбоксы для списков задач [ ] и [x] */
+.prose input[type="checkbox"] {
+    @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
+    @apply border-zinc-400 bg-white dark:border-zinc-500 dark:bg-zinc-800/50;
+    /* Убираем бледность у disabled инпутов, сгенерированных markdown */
+}
+.prose input[type="checkbox"]:disabled {
+    opacity: 1; /* override browser default */
+}
+
+.prose input[type="checkbox"]:checked {
+    @apply bg-[#a3966a] border-[#a3966a] dark:bg-[#a3966a] dark:border-[#a3966a];
+}
+
+.prose input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -60%) rotate(45deg);
+}
+
+/* Выравниваем текст рядом с чекбоксом */
+.prose li.task-list-item > input {
+    margin-right: 0.5rem;
+}
+
+/* Красивые горизонтальные линии */
+.prose hr {
+    @apply border-zinc-200 dark:border-zinc-800 my-4;
+}
