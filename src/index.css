@@ -53,3 +53,21 @@
 .prose hr {
     @apply border-zinc-200 dark:border-zinc-800 my-4;
 }
+
+/* Responsive Column Widths */
+.column-container {
+    width: 100vw;
+    scroll-snap-align: start;
+}
+.column-inner {
+    width: calc(100vw - 16px);
+}
+@media (min-width: 640px) {
+    .column-container {
+        width: var(--col-width);
+        scroll-snap-align: none;
+    }
+    .column-inner {
+        width: calc(var(--col-width) - 16px);
+    }
+}

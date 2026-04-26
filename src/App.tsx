@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Upload, Download, Keyboard, Sun, Moon, Undo2, Redo2, Network, ScrollText, File, Trash2, Plus, X, FoldVertical, UnfoldVertical } from 'lucide-react';
+import { Upload, Download, Keyboard, Sun, Moon, Undo2, Redo2, Network, ScrollText, File, Trash2, Plus, X, FoldVertical, UnfoldVertical, Folder } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { PuuNode, PuuDocument } from './types';
@@ -51,12 +51,13 @@ export default function App() {
   
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Focus the first node initially if activeId is null
+  const initialFocusDone = useRef(false);
   useEffect(() => {
-    if (!activeId && nodes.length > 0) {
+    if (!initialFocusDone.current && nodes.length > 0) {
        setActiveId(nodes[0].id);
+       initialFocusDone.current = true;
     }
-  }, [nodes, activeId]);
+  }, [nodes]);
 
   // Global Paste Handler for adding nodes via Command+V when focused but not editing
   useEffect(() => {
@@ -604,21 +605,27 @@ export default function App() {
           // If clicked directly on the main background areas (not on cards)
           if ((e.target as HTMLElement).id === 'puunote-app-container' || (e.target as HTMLElement).id === 'main-scroller' || (e.target as HTMLElement).classList.contains('col-spacer')) {
               setActiveId(null);
+              setEditingId(null);
           }
         }}
       >
-        <header className="h-14 border-b shrink-0 border-zinc-200 dark:border-[#222] flex items-center justify-between px-6 bg-white dark:bg-[#0f0f0f] transition-colors duration-300">
-          <div className="flex items-center gap-6">
-            <span className="font-sans font-semibold text-xl tracking-wide flex items-center gap-3 relative">
-              <span className="cursor-pointer" onClick={() => setFileMenuOpen(!fileMenuOpen)} title="Open files menu">
+        <header className="h-14 border-b shrink-0 border-zinc-200 dark:border-[#222] flex items-center justify-between px-2 sm:px-6 bg-white dark:bg-[#0f0f0f] transition-colors duration-300">
+          <div className="flex items-center gap-2 sm:gap-6">
+            <span className="font-sans font-semibold text-lg sm:text-xl tracking-wide flex items-center gap-1 sm:gap-3 relative">
+              <span className="cursor-pointer hidden sm:inline-block" onClick={() => setFileMenuOpen(!fileMenuOpen)} title="Open files menu">
                  <span className="text-zinc-500 dark:text-[#8f9ba8]">Puu</span><span className="text-[#4a90e2]">Note.</span>
+              </span>
+              <span className="cursor-pointer sm:hidden flex items-center justify-center p-1" onClick={() => setFileMenuOpen(!fileMenuOpen)} title="Open files menu">
+                 <span className="text-[#4a90e2] text-xl font-bold">P.</span>
               </span>
               <button 
                 onClick={() => setFileMenuOpen(!fileMenuOpen)}
-                className="text-xs tracking-wider bg-zinc-100 hover:bg-zinc-200 dark:bg-[#111] dark:hover:bg-[#222] border border-zinc-200 dark:border-[#333] px-2 py-1 rounded text-zinc-500 font-medium transition-colors ml-2 flex items-center gap-2"
+                className="text-[10px] sm:text-xs tracking-wider bg-zinc-100 hover:bg-zinc-200 dark:bg-[#111] dark:hover:bg-[#222] border border-zinc-200 dark:border-[#333] px-1.5 sm:px-2 py-1 rounded text-zinc-500 font-medium transition-colors ml-0 sm:ml-2 flex items-center gap-1 sm:gap-2"
                 title="Manage documents"
               >
-                FILES <span className="opacity-50">▾</span>
+                <span className="hidden sm:inline">FILES</span>
+                <Folder size={14} className="sm:hidden" />
+                <span className="opacity-50 hidden sm:inline">▾</span>
               </button>
             </span>
             <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-[#666]">
@@ -631,45 +638,45 @@ export default function App() {
               </button>
             </nav>
           </div>
-          <div className="flex items-center gap-3 sm:gap-4 text-xs">
-            <div className="flex items-center gap-1 border-r border-zinc-200 dark:border-[#333] pr-3 sm:pr-4">
+          <div className="flex items-center gap-1.5 sm:gap-4 text-xs">
+            <div className="flex items-center gap-0 sm:gap-1 border-r border-zinc-200 dark:border-[#333] pr-2 sm:pr-4">
               <button 
                 onClick={() => { undo(); setActiveId(null); }} disabled={!canUndo}
-                className="p-1.5 text-zinc-500 dark:text-[#666] hover:text-zinc-900 dark:hover:text-[#eee] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1 sm:p-1.5 text-zinc-500 dark:text-[#666] hover:text-zinc-900 dark:hover:text-[#eee] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Undo (Ctrl+Z)"
               >
                 <Undo2 size={16} />
               </button>
               <button 
                 onClick={() => { redo(); setActiveId(null); }} disabled={!canRedo}
-                className="p-1.5 text-zinc-500 dark:text-[#666] hover:text-zinc-900 dark:hover:text-[#eee] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1 sm:p-1.5 text-zinc-500 dark:text-[#666] hover:text-zinc-900 dark:hover:text-[#eee] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Redo (Ctrl+Shift+Z)"
               >
                 <Redo2 size={16} />
               </button>
             </div>
             <button 
-              onClick={() => setCardsCollapsed(!cardsCollapsed)}
-              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] px-2 sm:px-3 py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center justify-center gap-2"
+              onClick={toggleCardsCollapsed}
+              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center justify-center gap-2"
               title="Toggle Expand/Collapse"
             >
               {cardsCollapsed ? <UnfoldVertical size={14} /> : <FoldVertical size={14} />}
             </button>
             <button 
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] px-2 sm:px-3 py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center justify-center gap-2"
+              onClick={toggleTheme}
+              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center justify-center gap-2"
               title="Toggle theme"
             >
               {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
             </button>
-            <label className="cursor-pointer bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] px-3 py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center gap-2" title="Import .md">
+            <label className="cursor-pointer bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center gap-2" title="Import .md">
               <Download size={14} />
               <span className="hidden sm:inline font-mono tracking-wider">.md</span>
               <input type="file" accept=".md" className="hidden" onChange={handleImport} />
             </label>
             <button 
               onClick={exportToMarkdown}
-              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] px-3 py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center gap-2"
+              className="bg-zinc-100 dark:bg-[#111] border border-zinc-200 dark:border-[#333] hover:bg-zinc-200 dark:hover:bg-[#222] p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-zinc-600 dark:text-[#888] font-medium flex items-center gap-2"
               title="Export .md"
             >
               <Upload size={14} />
@@ -680,23 +687,22 @@ export default function App() {
 
         <main 
           id="main-scroller" 
-          className={`flex-1 overflow-x-auto w-full flex items-start relative bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 ${!timelineOpen ? 'overflow-y-hidden' : 'overflow-y-auto'}`}
+          style={{ '--col-width': `${colWidth}px` } as React.CSSProperties}
+          className={`flex-1 overflow-x-auto w-full flex items-start relative bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 snap-x snap-mandatory sm:snap-none ${!timelineOpen ? 'overflow-y-hidden' : 'overflow-y-auto'}`}
         >
           {!timelineOpen ? (
-              <div className="flex flex-row items-start gap-0 px-4 py-0 min-h-full h-full w-max relative col-spacer" onClick={(e) => { if (e.target === e.currentTarget) setActiveId(null); }}>
+              <div className="flex flex-row items-start gap-0 px-0 sm:px-4 py-0 min-h-full h-full w-max relative col-spacer" onClick={(e) => { if (e.target === e.currentTarget) { setActiveId(null); setEditingId(null); } }}>
                {columns.map((colNodes, colIndex) => {
                  return (
                    <div
                      key={colIndex}
                      ref={el => { colRefs.current[colIndex] = el; }}
-                     style={{ width: `${colWidth}px` }}
-                     className="h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 transition-all duration-200 col-spacer"
-                     onClick={(e) => { if (e.target === e.currentTarget) setActiveId(null); }}
+                     className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 transition-all duration-200 col-spacer"
+                     onClick={(e) => { if (e.target === e.currentTarget) { setActiveId(null); setEditingId(null); } }}
                    >
                        <div 
-                         style={{ width: `${colWidth - 16}px` }}
-                         className="relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer"
-                         onClick={(e) => { if (e.target === e.currentTarget) setActiveId(null); }}
+                         className="column-inner relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer"
+                         onClick={(e) => { if (e.target === e.currentTarget) { setActiveId(null); setEditingId(null); } }}
                        >
                          {colNodes.map(node => (
                            <Card key={node.id} node={node} />
@@ -720,7 +726,7 @@ export default function App() {
           )}
         </main>
         
-        <footer className="h-10 shrink-0 border-t border-zinc-200 dark:border-[#222] bg-white dark:bg-[#0f0f0f] px-6 flex items-center justify-between z-50 transition-colors duration-300">
+        <footer className="h-10 shrink-0 border-t border-zinc-200 dark:border-[#222] bg-white dark:bg-[#0f0f0f] px-2 sm:px-6 flex items-center justify-between z-50 transition-colors duration-300">
           <div className="flex gap-6 text-[10px] text-zinc-500 dark:text-[#555] font-mono tracking-widest uppercase hidden lg:flex">
              <span>CARDS: {nodes.length}</span>
              <span>WORDS: {wordCount}</span>
