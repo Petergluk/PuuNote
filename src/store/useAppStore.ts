@@ -19,9 +19,11 @@ interface AppState {
   cardsCollapsed: boolean;
   timelineOpen: boolean;
   colWidth: number;
+  commandPaletteOpen: boolean;
 }
 
 interface AppActions {
+  setCommandPaletteOpen: (open: boolean) => void;
   setTheme: (theme: string) => void;
   toggleTheme: () => void;
   setCardsCollapsed: (col: boolean) => void;
@@ -128,6 +130,9 @@ export const useAppStore = create<AppState & AppActions>()(
     timelineOpen: false,
     colWidth: 320,
 
+    commandPaletteOpen: false,
+
+    setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
     setTheme: (theme) => set({ theme }),
     toggleTheme: () =>
       set((s) => {
@@ -165,6 +170,8 @@ export const useAppStore = create<AppState & AppActions>()(
       let nextNodes =
         typeof updater === "function" ? updater(currentNodes) : updater;
 
+      if (currentNodes === nextNodes) return;
+
       const seen = new Set<string>();
       nextNodes = nextNodes.filter((n) => {
         if (seen.has(n.id)) return false;
@@ -172,7 +179,12 @@ export const useAppStore = create<AppState & AppActions>()(
         return true;
       });
 
-      if (currentNodes === nextNodes) return;
+      if (
+        currentNodes.length === nextNodes.length &&
+        currentNodes.every((n, i) => n === nextNodes[i])
+      )
+        return;
+
       set({
         nodes: nextNodes,
         past: [...state.past, currentNodes].slice(-50),
@@ -240,9 +252,11 @@ export const useAppStore = create<AppState & AppActions>()(
     },
 
     updateContent: (id, content) => {
-      get().setNodes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, content } : n)),
-      );
+      get().setNodes((prev) => {
+        const targetNode = prev.find((n) => n.id === id);
+        if (targetNode && targetNode.content === content) return prev;
+        return prev.map((n) => (n.id === id ? { ...n, content } : n));
+      });
     },
 
     addChild: (parentId) => {

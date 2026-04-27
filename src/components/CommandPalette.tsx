@@ -7,7 +7,8 @@ import { Search, Palette, FileText, Plus, Trash2 } from "lucide-react";
 
 export function CommandPalette() {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
+  const isOpen = useAppStore((s) => s.commandPaletteOpen);
+  const setIsOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -24,12 +25,12 @@ export function CommandPalette() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "f")) {
         e.preventDefault();
-        setIsOpen((open) => !open);
+        setIsOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setIsOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -155,12 +156,7 @@ export function CommandPalette() {
                   <button
                     onClick={() =>
                       handleExecuteCommand(
-                        () =>
-                          activeFileId &&
-                          deleteFile(
-                            { stopPropagation: () => {} } as React.MouseEvent,
-                            activeFileId,
-                          ),
+                        () => activeFileId && deleteFile(activeFileId),
                       )
                     }
                     className="w-full text-left px-4 py-3 hover:bg-red-500/10 flex items-center gap-3 text-red-500"

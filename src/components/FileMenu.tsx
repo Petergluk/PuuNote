@@ -79,7 +79,10 @@ export function FileMenu() {
                       </div>
                     </div>
                     <button
-                      onClick={(e) => deleteFile(e, doc.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteFile(doc.id);
+                      }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
                       title={t("Delete file")}
                     >

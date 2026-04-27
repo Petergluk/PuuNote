@@ -1,6 +1,6 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
 
 // the translations
 // (tip move them in a JSON file and import them,
@@ -14,9 +14,9 @@ const resources = {
       "Toggle Theme": "Toggle Theme",
       "Toggle Expand": "Toggle Expand",
       "Open Timeline View": "Open Timeline View",
-      "Search": "Search or type a command...",
-      "No results": "No fragments found"
-    }
+      Search: "Search or type a command...",
+      "No results": "No fragments found",
+    },
   },
   ru: {
     translation: {
@@ -26,10 +26,10 @@ const resources = {
       "Toggle Theme": "Переключить тему",
       "Toggle Expand": "Развернуть / Свернуть",
       "Open Timeline View": "Открыть Timeline",
-      "Search": "Поиск или команда...",
-      "No results": "Ничего не найдено"
-    }
-  }
+      Search: "Поиск или команда...",
+      "No results": "Ничего не найдено",
+    },
+  },
 };
 
 i18n
@@ -37,10 +37,10 @@ i18n
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
     resources,
-    fallbackLng: "en", 
+    fallbackLng: "en",
     interpolation: {
-      escapeValue: false // react already safes from xss
-    }
+      escapeValue: false, // react already safes from xss
+    },
   });
 
-  export default i18n;
+export default i18n;

@@ -1,5 +1,5 @@
-import Dexie, { type Table } from 'dexie';
-import type { PuuNode } from '../types';
+import Dexie, { type Table } from "dexie";
+import type { PuuNode } from "../types";
 
 export interface DocumentMeta {
   id: string;
@@ -17,10 +17,10 @@ export class AppDatabase extends Dexie {
   files!: Table<DocumentData, string>;
 
   constructor() {
-    super('PuuNoteDB');
+    super("PuuNoteDB");
     this.version(1).stores({
-      documents: 'id, updatedAt', // id is primary key, index on updatedAt
-      files: 'id' // id is primary key
+      documents: "id, updatedAt", // id is primary key, index on updatedAt
+      files: "id", // id is primary key
     });
   }
 }

@@ -72,7 +72,7 @@ export function Header({ handleImport }: HeaderProps) {
             {timelineOpen ? <Network size={16} /> : <ScrollText size={16} />}
           </button>
           <button
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            onClick={() => useAppStore.getState().setCommandPaletteOpen(true)}
             className="p-1.5 rounded transition-colors bg-app-card hover:bg-app-card-hover text-app-accent"
             title="Command Palette (Cmd/Ctrl+K)"
           >

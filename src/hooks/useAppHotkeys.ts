@@ -90,117 +90,120 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const state = useAppStore.getState();
-    const {
-      fullScreenId,
-      timelineOpen,
-      editingId,
-      activeId,
-      setEditingId,
-      addChild,
-      addSibling,
-      setActiveId,
-      nodes,
-    } = state;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const state = useAppStore.getState();
+      const {
+        fullScreenId,
+        timelineOpen,
+        editingId,
+        activeId,
+        setEditingId,
+        addChild,
+        addSibling,
+        setActiveId,
+        nodes,
+      } = state;
 
-    if (fullScreenId || timelineOpen) return;
+      if (fullScreenId || timelineOpen) return;
 
-    const target = e.target as HTMLElement;
-    const isTyping =
-      target.tagName === "TEXTAREA" || target.tagName === "INPUT";
+      const target = e.target as HTMLElement;
+      const isTyping =
+        target.tagName === "TEXTAREA" || target.tagName === "INPUT";
 
-    if (editingId || isTyping) {
-      if (editingId) {
-        if (
-          e.key === "Escape" ||
-          (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-        ) {
-          e.preventDefault();
-          setEditingId(null);
-          setTimeout(() => {
-            if (containerRef?.current) containerRef.current.focus();
-          }, 0);
-        } else if (e.key === "Tab") {
-          e.preventDefault();
-          setEditingId(null);
-          addChild(editingId);
-          setTimeout(() => {
-            if (containerRef?.current) containerRef.current.focus();
-          }, HOTKEY_DOM_WAIT_MS);
-        } else if (e.key === "Enter" && e.shiftKey) {
-          e.preventDefault();
-          setEditingId(null);
-          addSibling(editingId);
-          setTimeout(() => {
-            if (containerRef?.current) containerRef.current.focus();
-          }, HOTKEY_DOM_WAIT_MS);
+      if (editingId || isTyping) {
+        if (editingId) {
+          if (
+            e.key === "Escape" ||
+            (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+          ) {
+            e.preventDefault();
+            setEditingId(null);
+            setTimeout(() => {
+              if (containerRef?.current) containerRef.current.focus();
+            }, 0);
+          } else if (e.key === "Tab") {
+            e.preventDefault();
+            setEditingId(null);
+            addChild(editingId);
+            setTimeout(() => {
+              if (containerRef?.current) containerRef.current.focus();
+            }, HOTKEY_DOM_WAIT_MS);
+          } else if (e.key === "Enter" && e.shiftKey) {
+            e.preventDefault();
+            setEditingId(null);
+            addSibling(editingId);
+            setTimeout(() => {
+              if (containerRef?.current) containerRef.current.focus();
+            }, HOTKEY_DOM_WAIT_MS);
+          }
         }
+        return;
       }
-      return;
-    }
 
-    if (!activeId) return;
+      if (!activeId) return;
 
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (e.shiftKey) {
-        addSibling(activeId);
-      } else {
-        setEditingId(activeId);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          addSibling(activeId);
+        } else {
+          setEditingId(activeId);
+        }
+        return;
       }
-      return;
-    }
 
-    if (e.key === "Tab") {
-      e.preventDefault();
-      addChild(activeId);
-      return;
-    }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        addChild(activeId);
+        return;
+      }
 
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      const children = nodes
-        .filter((n) => n.parentId === activeId)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      if (children.length > 0) setActiveId(children[0].id);
-      return;
-    }
-
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      const node = nodes.find((n) => n.id === activeId);
-      if (node?.parentId) setActiveId(node.parentId);
-      return;
-    }
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      const node = nodes.find((n) => n.id === activeId);
-      if (node) {
-        const siblings = nodes
-          .filter((n) => n.parentId === node.parentId)
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const children = nodes
+          .filter((n) => n.parentId === activeId)
           .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const idx = siblings.findIndex((n) => n.id === activeId);
-        if (idx >= 0 && idx < siblings.length - 1)
-          setActiveId(siblings[idx + 1].id);
+        if (children.length > 0) setActiveId(children[0].id);
+        return;
       }
-      return;
-    }
 
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      const node = nodes.find((n) => n.id === activeId);
-      if (node) {
-        const siblings = nodes
-          .filter((n) => n.parentId === node.parentId)
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const idx = siblings.findIndex((n) => n.id === activeId);
-        if (idx > 0) setActiveId(siblings[idx - 1].id);
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const node = nodes.find((n) => n.id === activeId);
+        if (node?.parentId) setActiveId(node.parentId);
+        return;
       }
-      return;
-    }
-  }, [containerRef]);
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const node = nodes.find((n) => n.id === activeId);
+        if (node) {
+          const siblings = nodes
+            .filter((n) => n.parentId === node.parentId)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const idx = siblings.findIndex((n) => n.id === activeId);
+          if (idx >= 0 && idx < siblings.length - 1)
+            setActiveId(siblings[idx + 1].id);
+        }
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const node = nodes.find((n) => n.id === activeId);
+        if (node) {
+          const siblings = nodes
+            .filter((n) => n.parentId === node.parentId)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const idx = siblings.findIndex((n) => n.id === activeId);
+          if (idx > 0) setActiveId(siblings[idx - 1].id);
+        }
+        return;
+      }
+    },
+    [containerRef],
+  );
 
   return { handleKeyDown };
 }

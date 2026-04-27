@@ -42,7 +42,8 @@ export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
   }
 };
 const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
-  const blocks = mdText.split(/^[^\S\n]*---[^\S\n]*$/gm);
+  const cleanText = mdText.replace(/<!-- puunote-format: 1 -->\s*/g, "");
+  const blocks = cleanText.split(/^[^\S\n]*---[^\S\n]*$/gm);
   const imported: PuuNode[] = [];
   const stack: { id: string; spaces: number }[] = [];
   for (let i = 0; i < blocks.length; i++) {
@@ -137,40 +138,38 @@ const parseMindMapFormat = (mdText: string): PuuNode[] => {
       latestNode.content += "\n" + line;
       continue;
     }
-      if (headingLevel !== -1) {
-        while (
-          stack.length > 0 &&
-          (stack[stack.length - 1].spaces >= 0 ||
-            stack[stack.length - 1].headingLevel! >= headingLevel)
-        ) {
-          stack.pop();
-        }
-      } else {
-        while (
-          stack.length > 0 &&
-          stack[stack.length - 1].spaces >= structuralSpaces
-        ) {
-          stack.pop();
-        }
+    if (headingLevel !== -1) {
+      while (
+        stack.length > 0 &&
+        (stack[stack.length - 1].spaces >= 0 ||
+          stack[stack.length - 1].headingLevel! >= headingLevel)
+      ) {
+        stack.pop();
       }
+    } else {
+      while (
+        stack.length > 0 &&
+        stack[stack.length - 1].spaces >= structuralSpaces
+      ) {
+        stack.pop();
+      }
+    }
 
-      const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
-      const currentOrder = imported.filter(
-        (n) => n.parentId === parentId,
-      ).length;
-      const node: PuuNode = {
-        id: generateId(),
-        content: contentToSave.trimStart(),
-        parentId,
-        order: currentOrder,
-      };
-      imported.push(node);
-      latestNode = node;
-      stack.push({
-        id: node.id,
-        spaces: structuralSpaces,
-        headingLevel: headingLevel !== -1 ? headingLevel : undefined,
-      });
+    const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
+    const currentOrder = imported.filter((n) => n.parentId === parentId).length;
+    const node: PuuNode = {
+      id: generateId(),
+      content: contentToSave.trimStart(),
+      parentId,
+      order: currentOrder,
+    };
+    imported.push(node);
+    latestNode = node;
+    stack.push({
+      id: node.id,
+      spaces: structuralSpaces,
+      headingLevel: headingLevel !== -1 ? headingLevel : undefined,
+    });
   }
 
   imported.forEach((n) => {

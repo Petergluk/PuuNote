@@ -75,14 +75,14 @@ export default function App() {
     return cols;
   }, [nodes]);
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
+  colRefs.current.length = columns.length;
   const initializedCols = useRef<Set<number>>(new Set());
   useEffect(() => {
     let rafId: number;
     const updateScroll = () => {
       colRefs.current.forEach((col, index) => {
         if (col && !initializedCols.current.has(index)) {
-          const innerFlex = col.children[0];
-          const firstCard = innerFlex && (innerFlex.children[0] as HTMLElement);
+          const firstCard = col.querySelector('[id^="card-"]') as HTMLElement;
           if (firstCard) {
             col.scrollTop = firstCard.offsetTop - 64;
             initializedCols.current.add(index);
