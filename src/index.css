@@ -2,6 +2,76 @@
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-app-bg: var(--app-bg);
+  --color-app-panel: var(--app-panel);
+  --color-app-card: var(--app-card);
+  --color-app-card-hover: var(--app-card-hover);
+  --color-app-card-active: var(--app-card-active);
+  --color-app-border: var(--app-border);
+  --color-app-border-hover: var(--app-border-hover);
+  --color-app-text-primary: var(--app-text-primary);
+  --color-app-text-secondary: var(--app-text-secondary);
+  --color-app-text-muted: var(--app-text-muted);
+  --color-app-accent: var(--app-accent);
+}
+
+:root {
+  --app-bg: #fafafa;
+  --app-panel: #ffffff;
+  --app-card: #ffffff;
+  --app-card-hover: #f4f4f5;
+  --app-card-active: #fafafa;
+  --app-border: #e4e4e7;
+  --app-border-hover: #d4d4d8;
+  --app-text-primary: #18181b;
+  --app-text-secondary: #52525b;
+  --app-text-muted: #71717a;
+  --app-accent: #a3966a;
+}
+
+.dark {
+  --app-bg: #0a0a0a;
+  --app-panel: #0f0f0f;
+  --app-card: #111111;
+  --app-card-hover: #1e1e1e;
+  --app-card-active: #1a1a1a;
+  --app-border: #222222;
+  --app-border-hover: #333333;
+  --app-text-primary: #e4e4e7;
+  --app-text-secondary: #a1a1aa;
+  --app-text-muted: #71717a;
+  --app-accent: #a3966a;
+}
+
+.theme-blue {
+  --app-bg: #020617; /* slate-950 */
+  --app-panel: #0f172a; /* slate-900 */
+  --app-card: #1e293b; /* slate-800 */
+  --app-card-hover: #334155; /* slate-700 */
+  --app-card-active: #1e293b;
+  --app-border: #334155; /* slate-700 */
+  --app-border-hover: #475569; /* slate-600 */
+  --app-text-primary: #f8fafc; /* slate-50 */
+  --app-text-secondary: #94a3b8; /* slate-400 */
+  --app-text-muted: #64748b; /* slate-500 */
+  --app-accent: #38bdf8; /* sky-400 */
+}
+
+.theme-brown {
+  --app-bg: #1c1917; /* stone-900 */
+  --app-panel: #292524; /* stone-800 */
+  --app-card: #44403c; /* stone-700 */
+  --app-card-hover: #57534e; /* stone-600 */
+  --app-card-active: #44403c;
+  --app-border: #57534e; /* stone-600 */
+  --app-border-hover: #78716c; /* stone-500 */
+  --app-text-primary: #fafaf9; /* stone-50 */
+  --app-text-secondary: #a8a29e; /* stone-400 */
+  --app-text-muted: #78716c; /* stone-500 */
+  --app-accent: #fbbf24; /* amber-400 */
+}
+
 @layer utilities {
     .hide-scrollbar::-webkit-scrollbar {
         display: none;
@@ -21,7 +91,7 @@
 /* Красивые чекбоксы для списков задач [ ] и [x] */
 .prose input[type="checkbox"] {
     @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
-    @apply border-zinc-400 bg-white dark:border-zinc-500 dark:bg-zinc-800/50;
+    @apply border-app-text-muted bg-app-card;
     /* Убираем бледность у disabled инпутов, сгенерированных markdown */
 }
 .prose input[type="checkbox"]:disabled {
@@ -29,7 +99,7 @@
 }
 
 .prose input[type="checkbox"]:checked {
-    @apply bg-[#a3966a] border-[#a3966a] dark:bg-[#a3966a] dark:border-[#a3966a];
+    @apply bg-app-accent border-app-accent;
 }
 
 .prose input[type="checkbox"]:checked::after {
@@ -51,7 +121,7 @@
 
 /* Красивые горизонтальные линии */
 .prose hr {
-    @apply border-zinc-200 dark:border-zinc-800 my-4;
+    @apply border-app-border my-4;
 }
 
 /* Responsive Column Widths */

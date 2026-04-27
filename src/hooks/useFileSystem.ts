@@ -1,141 +1,164 @@
-import { useState, useEffect } from 'react';
-import { PuuDocument, PuuNode } from '../types';
-import { INITIAL_NODES } from '../constants';
-import { useHistory } from './useHistory';
+import { useEffect } from "react";
+import { useAppStore } from "../store/useAppStore";
+import { generateId } from "../utils/id";
+import { INITIAL_NODES } from "../constants";
+import { PuuNode } from "../types";
 
-const generateId = () => crypto.randomUUID?.() || Math.random().toString(36).substring(2, 9);
+export function useFileSystemInit() {
+  const { setNodesRaw, activeFileId, nodes, documents } = useAppStore();
 
-export function useFileSystem(setActiveId: (id: string | null) => void) {
-  const [documents, setDocuments] = useState<PuuDocument[]>(() => {
-    const saved = localStorage.getItem('puu_documents');
-    if (saved) {
+  useEffect(() => {
+    let savedDocs: any[] = [];
+    try {
+      const stored = localStorage.getItem("puu_documents");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) savedDocs = parsed;
+      }
+    } catch (e) {}
+    if (savedDocs.length === 0) {
+      savedDocs = [
+        { id: "default", title: "New Document", updatedAt: Date.now() },
+      ];
+    }
+    useAppStore.setState({ documents: savedDocs });
+
+    let active = localStorage.getItem("puu_active_file");
+    if (!active || !savedDocs.find((d) => d.id === active)) {
+      active = savedDocs[0].id;
+    }
+    useAppStore.setState({ activeFileId: active });
+
+    let newNodes = INITIAL_NODES;
+    let savedStr = localStorage.getItem(`puu_file_${active}`);
+    if (!savedStr && active === "default") {
+      savedStr = localStorage.getItem("scribe_nodes");
+    }
+    if (savedStr) {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        console.error("Failed to parse documents");
+        const parsed = JSON.parse(savedStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          newNodes = parsed.map((n: any, i: number) => ({
+            ...n,
+            order: n.order ?? i,
+          }));
+        }
+      } catch (e) {}
+    }
+    setNodesRaw(newNodes);
+    useAppStore.setState({ activeId: newNodes[0]?.id || null });
+  }, []);
+
+  useEffect(() => {
+    if (!activeFileId || nodes.length === 0) return;
+    localStorage.setItem(`puu_file_${activeFileId}`, JSON.stringify(nodes));
+    localStorage.setItem("puu_active_file", activeFileId);
+
+    const firstNode =
+      nodes.find(
+        (n) => n.parentId === null && (n.order === 0 || n.order === undefined),
+      ) || nodes[0];
+    let newTitle = "Untitled";
+    if (firstNode) {
+      const lines = firstNode.content.split("\n");
+      const firstHeading = lines.find((l) => l.startsWith("# "));
+      if (firstHeading) {
+        newTitle = firstHeading.replace(/^#\s+/, "").trim();
+      } else {
+        newTitle =
+          firstNode.content.substring(0, 30).trim() +
+          (firstNode.content.length > 30 ? "..." : "");
       }
     }
-    return [{ id: 'default', title: 'New Document', updatedAt: Date.now() }];
-  });
+    if (!newTitle) newTitle = "Untitled";
 
-  const [activeFileId, setActiveFileId] = useState<string>(() => {
-    return localStorage.getItem('puu_active_file') || 'default';
-  });
-
-  const [fileMenuOpen, setFileMenuOpen] = useState(false);
-
-  // Load from local storage or use initial
-  const [nodes, setNodes, undo, redo, canUndo, canRedo, resetHistory] = useHistory<PuuNode[]>(() => {
-    let saved = localStorage.getItem(`puu_file_${activeFileId}`);
-    if (!saved && activeFileId === 'default') {
-       // Legacy fallback
-       saved = localStorage.getItem('scribe_nodes');
+    const docs = useAppStore.getState().documents;
+    const existing = docs.find((d) => d.id === activeFileId);
+    if (!existing || existing.title !== newTitle) {
+      useAppStore.setState({
+        documents: docs.map((d) =>
+          d.id === activeFileId
+            ? { ...d, title: newTitle, updatedAt: Date.now() }
+            : d,
+        ),
+      });
     }
+  }, [nodes, activeFileId]);
+
+  useEffect(() => {
+    if (documents.length > 0) {
+      localStorage.setItem("puu_documents", JSON.stringify(documents));
+    }
+  }, [documents]);
+}
+
+export function useFileSystemActions() {
+  const switchFile = (fileId: string) => {
+    const state = useAppStore.getState();
+    if (fileId === state.activeFileId) {
+      useAppStore.setState({ fileMenuOpen: false });
+      return;
+    }
+
+    let newNodes = INITIAL_NODES;
+    const saved = localStorage.getItem(`puu_file_${fileId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-           return parsed.map((n: PuuNode, i: number) => ({ ...n, order: n.order ?? i }));
+          newNodes = parsed.map((n: PuuNode, i: number) => ({
+            ...n,
+            order: n.order ?? i,
+          }));
         }
-      } catch (e) {
-        console.error("Failed to parse nodes from local storage");
-      }
+      } catch (e) {}
     }
-    return INITIAL_NODES;
-  });
-
-  // Save to local storage on change
-  useEffect(() => {
-    localStorage.setItem(`puu_file_${activeFileId}`, JSON.stringify(nodes));
-    localStorage.setItem('puu_active_file', activeFileId);
-    
-    // Update the document title and updatedAt in the list automatically based on the first heading
-    setDocuments(prev => {
-       const firstNode = nodes.find(n => n.parentId === null && (n.order === 0 || n.order === undefined)) || nodes[0];
-       let newTitle = 'Untitled';
-       if (firstNode) {
-          const lines = firstNode.content.split('\n');
-          const firstHeading = lines.find(l => l.startsWith('# '));
-          if (firstHeading) {
-             newTitle = firstHeading.replace(/^#\s+/, '').trim();
-          } else {
-             newTitle = firstNode.content.substring(0, 30).trim() + (firstNode.content.length > 30 ? '...' : '');
-          }
-       }
-       if (!newTitle) newTitle = 'Untitled';
-
-       return prev.map(d => d.id === activeFileId ? { ...d, title: newTitle, updatedAt: Date.now() } : d);
+    useAppStore.setState({
+      activeFileId: fileId,
+      fileMenuOpen: false,
+      activeId: newNodes[0]?.id || null,
     });
-  }, [nodes, activeFileId]);
-
-  useEffect(() => {
-     localStorage.setItem('puu_documents', JSON.stringify(documents));
-  }, [documents]);
-
-  const switchFile = (fileId: string) => {
-     if (fileId === activeFileId) {
-        setFileMenuOpen(false);
-        return;
-     }
-     
-     const saved = localStorage.getItem(`puu_file_${fileId}`);
-     let newNodes = INITIAL_NODES;
-     if (saved) {
-       try {
-         const parsed = JSON.parse(saved);
-         if (Array.isArray(parsed) && parsed.length > 0) {
-            newNodes = parsed.map((n: PuuNode, i: number) => ({ ...n, order: n.order ?? i }));
-         }
-       } catch (e) {}
-     }
-     setActiveFileId(fileId);
-     resetHistory(newNodes);
-     setActiveId(newNodes[0]?.id || null);
-     setFileMenuOpen(false);
+    state.setNodesRaw(newNodes);
   };
 
   const createNewFile = () => {
-     const newId = generateId();
-     const newDoc = { id: newId, title: 'New Document', updatedAt: Date.now() };
-     setDocuments(prev => [newDoc, ...prev]);
-     
-     const initialNewNodes = [{ id: generateId(), content: '# New Document\n\n...', parentId: null, order: 0 }];
-     setActiveFileId(newId);
-     resetHistory(initialNewNodes);
-     setActiveId(initialNewNodes[0].id);
-     setFileMenuOpen(false);
+    const newId = generateId();
+    const newDoc = { id: newId, title: "New Document", updatedAt: Date.now() };
+    const initialNewNodes = [
+      {
+        id: generateId(),
+        content: "# New Document\n\n...",
+        parentId: null,
+        order: 0,
+      },
+    ];
+
+    useAppStore.setState((s) => ({
+      documents: [newDoc, ...s.documents],
+      activeFileId: newId,
+      fileMenuOpen: false,
+      activeId: initialNewNodes[0].id,
+    }));
+    useAppStore.getState().setNodesRaw(initialNewNodes);
   };
 
   const deleteFile = (e: React.MouseEvent, fileId: string) => {
-     e.stopPropagation();
-     const newDocs = documents.filter(d => d.id !== fileId);
-     if (newDocs.length === 0) {
-        // Can't delete the last file, or create a new default one
-        createNewFile();
-        setDocuments(prev => prev.filter(d => d.id !== fileId)); // filter out the just deleted one
-     } else {
-        setDocuments(newDocs);
-        if (activeFileId === fileId) {
-           switchFile(newDocs[0].id);
-        }
-     }
-     localStorage.removeItem(`puu_file_${fileId}`);
+    e.stopPropagation();
+    const state = useAppStore.getState();
+    const newDocs = state.documents.filter((d) => d.id !== fileId);
+    if (newDocs.length === 0) {
+      createNewFile();
+      useAppStore.setState((s) => ({
+        documents: s.documents.filter((d) => d.id !== fileId),
+      }));
+    } else {
+      useAppStore.setState({ documents: newDocs });
+      if (state.activeFileId === fileId) {
+        switchFile(newDocs[0].id);
+      }
+    }
+    localStorage.removeItem(`puu_file_${fileId}`);
   };
 
-  return {
-    documents,
-    activeFileId,
-    fileMenuOpen,
-    setFileMenuOpen,
-    nodes,
-    setNodes,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    switchFile,
-    createNewFile,
-    deleteFile
-  };
+  return { switchFile, createNewFile, deleteFile };
 }

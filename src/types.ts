@@ -1,18 +1,15 @@
-import { MutableRefObject } from 'react';
-
+import { MutableRefObject } from "react";
 export interface PuuNode {
   id: string;
   content: string;
   parentId: string | null;
   order?: number;
 }
-
 export interface PuuDocument {
   id: string;
   title: string;
   updatedAt: number;
 }
-
 export interface EditorContextType {
   activeId: string | null;
   editingId: string | null;
@@ -22,7 +19,11 @@ export interface EditorContextType {
   cardRefs: MutableRefObject<Record<string, HTMLDivElement | null>>;
   draggedId: string | null;
   setDraggedId: (id: string | null) => void;
-  moveNode: (sourceId: string, targetId: string, position: 'before' | 'after' | 'child') => void;
+  moveNode: (
+    sourceId: string,
+    targetId: string,
+    position: "before" | "after" | "child",
+  ) => void;
   setActive: (id: string | null) => void;
   setEditing: (id: string | null) => void;
   setFullScreen: (id: string | null) => void;
