@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { AnimatePresence } from "motion/react";
 import { PuuNode } from "./types";
 import { Card } from "./components/Card";
@@ -8,34 +8,42 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
+import { CommandPalette } from "./components/CommandPalette";
 import { parseMarkdownToNodes } from "./utils/markdownParser";
-import { useFileSystemInit, useFileSystemActions } from "./hooks/useFileSystem";
+import { validateNodes } from "./utils/schema";
+import { useFileSystemInit } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
-import { useAppStore, computeActivePath } from "./store/useAppStore";
+import {
+  useAppStore,
+  computeActivePath,
+  computeDescendantIds,
+} from "./store/useAppStore";
 export default function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   /* Initialize Managers */
   useFileSystemInit();
   usePreferencesInit();
-  const { handleKeyDown } =
-    useAppHotkeys(); /* binds zero-argument global and scoped hooks */
-  const { createNewFile } = useFileSystemActions();
-  const {
-    activeId,
-    setActiveId,
-    editingId,
-    setEditingId,
-    fullScreenId,
-    setFullScreenId,
-    timelineOpen,
-    setTimelineOpen,
-    colWidth,
-    nodes,
-    setNodesRaw,
-    addChild,
-  } = useAppStore();
+  const { handleKeyDown } = useAppHotkeys(containerRef);
+  const activeId = useAppStore((s) => s.activeId);
+  const setActiveId = useAppStore((s) => s.setActiveId);
+  const setEditingId = useAppStore((s) => s.setEditingId);
+  const fullScreenId = useAppStore((s) => s.fullScreenId);
+  const setFullScreenId = useAppStore((s) => s.setFullScreenId);
+  const timelineOpen = useAppStore((s) => s.timelineOpen);
+  const colWidth = useAppStore((s) => s.colWidth);
+  const nodes = useAppStore((s) => s.nodes);
+  const setNodesRaw = useAppStore((s) => s.setNodesRaw);
+  const addChild = useAppStore((s) => s.addChild);
+
   const activePath = useMemo(
     () => computeActivePath(nodes, activeId),
+    [nodes, activeId],
+  );
+
+  const activeDescendantIds = useMemo(
+    () => computeDescendantIds(nodes, activeId),
     [nodes, activeId],
   ); /* Build column arrays */
   const columns = useMemo(() => {
@@ -69,7 +77,8 @@ export default function App() {
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initializedCols = useRef<Set<number>>(new Set());
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let rafId: number;
+    const updateScroll = () => {
       colRefs.current.forEach((col, index) => {
         if (col && !initializedCols.current.has(index)) {
           const innerFlex = col.children[0];
@@ -80,15 +89,17 @@ export default function App() {
           }
         }
       });
-    }, 50);
-    return () => clearTimeout(timer);
+    };
+    rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(updateScroll); // Double raf guarantees paint
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [
     columns,
   ]); /* Center the active path vertically and horizontally when the active node changes */
   useEffect(() => {
-    let r1: number;
     let r2: number;
-    r1 = requestAnimationFrame(() => {
+    const r1 = requestAnimationFrame(() => {
       r2 = requestAnimationFrame(() => {
         if (!activeId) return;
         const activeEl = document.getElementById(`card-${activeId}`);
@@ -141,14 +152,24 @@ export default function App() {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large (max 5MB).");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const mdText = event.target?.result as string;
       if (!mdText) return;
       const imported = parseMarkdownToNodes(mdText);
-      if (imported.length > 0) {
-        setNodesRaw(imported);
-        setActiveId(imported[0].id);
+      try {
+        const validated = validateNodes(imported);
+        if (validated.length > 0) {
+          setNodesRaw(validated);
+          setActiveId(validated[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to validate imported nodes", err);
+        alert("Imported file is invalid or corrupted.");
       }
     };
     reader.readAsText(file);
@@ -156,6 +177,7 @@ export default function App() {
   };
   return (
     <div
+      ref={containerRef}
       id="puunote-app-container"
       className="min-h-screen h-screen bg-app-bg text-app-text-primary font-sans flex flex-col overflow-hidden outline-none transition-colors duration-300"
       tabIndex={0}
@@ -181,16 +203,7 @@ export default function App() {
       >
         {" "}
         {!timelineOpen ? (
-          <div
-            className="flex flex-row items-start gap-0 px-0 sm:px-4 py-0 min-h-full h-full w-max relative col-spacer"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setActiveId(null);
-                setEditingId(null);
-              }
-            }}
-          >
-            {" "}
+          <div className="flex flex-row items-start gap-0 px-0 sm:px-4 py-0 min-h-full h-full w-max relative col-spacer">
             {columns.map((colNodes, colIndex) => {
               return (
                 <div
@@ -199,45 +212,33 @@ export default function App() {
                     colRefs.current[colIndex] = el;
                   }}
                   className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 transition-all duration-200 col-spacer"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setActiveId(null);
-                      setEditingId(null);
-                    }
-                  }}
                 >
-                  {" "}
-                  <div
-                    className="column-inner relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer"
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                        setActiveId(null);
-                        setEditingId(null);
-                      }
-                    }}
-                  >
-                    {" "}
+                  <div className="column-inner relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer">
                     {colNodes.map((node) => (
                       <ErrorBoundary key={node.id}>
-                        {" "}
-                        <Card node={node} />{" "}
+                        <Card
+                          node={node}
+                          isInPath={activePath.includes(node.id)}
+                          isDescendantFromActive={activeDescendantIds.has(
+                            node.id,
+                          )}
+                        />
                       </ErrorBoundary>
-                    ))}{" "}
+                    ))}
                     {colNodes.length === 0 && colIndex === 0 && (
                       <div
                         onClick={() => addChild(null)}
                         className="bg-app-card border border-dashed border-app-border p-6 rounded flex justify-center items-center h-min group cursor-pointer hover:border-app-accent transition-colors shadow-sm"
                       >
-                        {" "}
                         <span className="text-[10px] uppercase tracking-[0.2em] text-app-text-muted group-hover:text-app-accent transition-colors">
                           + Add Fragment
-                        </span>{" "}
+                        </span>
                       </div>
-                    )}{" "}
-                  </div>{" "}
+                    )}
+                  </div>
                 </div>
               );
-            })}{" "}
+            })}
           </div>
         ) : (
           <TimelineView nodes={nodes} />
@@ -245,15 +246,16 @@ export default function App() {
       </main>{" "}
       <Footer />{" "}
       <AnimatePresence>
-        {" "}
         {fullScreenId && (
           <FullScreenModal
+            key="fullscreen-modal"
             nodeId={fullScreenId}
             onClose={() => setFullScreenId(null)}
           />
-        )}{" "}
-        <FileMenu />{" "}
-      </AnimatePresence>{" "}
+        )}
+      </AnimatePresence>
+      <FileMenu />
+      <CommandPalette />
     </div>
   );
 }

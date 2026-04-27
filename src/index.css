@@ -73,71 +73,71 @@
 }
 
 @layer utilities {
-    .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    .hide-scrollbar {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
-    }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
 }
 
 /* Избавляемся от автоматических кавычек в tailwind-typography для blockquote */
 .prose blockquote p:first-of-type::before,
 .prose blockquote p:last-of-type::after {
-    content: none !important;
+  content: none !important;
 }
 
 /* Красивые чекбоксы для списков задач [ ] и [x] */
 .prose input[type="checkbox"] {
-    @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
-    @apply border-app-text-muted bg-app-card;
-    /* Убираем бледность у disabled инпутов, сгенерированных markdown */
+  @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
+  @apply border-app-text-muted bg-app-card;
+  /* Убираем бледность у disabled инпутов, сгенерированных markdown */
 }
 .prose input[type="checkbox"]:disabled {
-    opacity: 1; /* override browser default */
+  opacity: 1; /* override browser default */
 }
 
 .prose input[type="checkbox"]:checked {
-    @apply bg-app-accent border-app-accent;
+  @apply bg-app-accent border-app-accent;
 }
 
 .prose input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 4px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: translate(-50%, -60%) rotate(45deg);
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
 }
 
 /* Выравниваем текст рядом с чекбоксом */
 .prose li.task-list-item > input {
-    margin-right: 0.5rem;
+  margin-right: 0.5rem;
 }
 
 /* Красивые горизонтальные линии */
 .prose hr {
-    @apply border-app-border my-4;
+  @apply border-app-border my-4;
 }
 
 /* Responsive Column Widths */
 .column-container {
-    width: 100vw;
-    scroll-snap-align: start;
+  width: 100vw;
+  scroll-snap-align: start;
 }
 .column-inner {
-    width: calc(100vw - 16px);
+  width: calc(100vw - 16px);
 }
 @media (min-width: 640px) {
-    .column-container {
-        width: var(--col-width);
-        scroll-snap-align: none;
-    }
-    .column-inner {
-        width: calc(var(--col-width) - 16px);
-    }
+  .column-container {
+    width: var(--col-width);
+    scroll-snap-align: none;
+  }
+  .column-inner {
+    width: calc(var(--col-width) - 16px);
+  }
 }

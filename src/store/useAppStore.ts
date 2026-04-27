@@ -57,19 +57,29 @@ export const computeActivePath = (
   activeId: string | null,
 ): string[] => {
   if (!activeId) return [];
+  const nodeMap = new Map<string, PuuNode>();
+  const childrenMap = new Map<string | null, PuuNode[]>();
+  for (const n of nodes) {
+    nodeMap.set(n.id, n);
+    const children = childrenMap.get(n.parentId) || [];
+    children.push(n);
+    childrenMap.set(n.parentId, children);
+  }
+
   const pathUp = [];
   let currUp: string | null = activeId;
   while (currUp) {
     pathUp.push(currUp);
-    const node = nodes.find((n) => n.id === currUp);
+    const node = nodeMap.get(currUp);
     currUp = node?.parentId || null;
   }
   pathUp.reverse();
   const pathDown = [];
   let currDown = activeId;
   while (true) {
-    const children = nodes.filter((n) => n.parentId === currDown);
-    if (children.length === 0) break;
+    const children = childrenMap.get(currDown);
+    if (!children || children.length === 0) break;
+    children.sort((a, b) => (a.order || 0) - (b.order || 0));
     currDown = children[0].id;
     pathDown.push(currDown);
   }
@@ -81,13 +91,22 @@ export const computeDescendantIds = (
   activeId: string | null,
 ): Set<string> => {
   if (!activeId) return new Set<string>();
+  const childrenMap = new Map<string | null, PuuNode[]>();
+  for (const n of nodes) {
+    const children = childrenMap.get(n.parentId) || [];
+    children.push(n);
+    childrenMap.set(n.parentId, children);
+  }
+
   const ids = new Set<string>();
   const queue = [activeId];
   while (queue.length > 0) {
     const curr = queue.shift()!;
     if (curr !== activeId) ids.add(curr);
-    const children = nodes.filter((n) => n.parentId === curr);
-    queue.push(...children.map((n) => n.id));
+    const children = childrenMap.get(curr);
+    if (children) {
+      queue.push(...children.map((n) => n.id));
+    }
   }
   return ids;
 };
@@ -111,7 +130,15 @@ export const useAppStore = create<AppState & AppActions>()(
 
     setTheme: (theme) => set({ theme }),
     toggleTheme: () =>
-      set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
+      set((s) => {
+        const themes = ["light", "dark", "blue", "brown"];
+        const currentIndex = themes.indexOf(s.theme);
+        const nextTheme =
+          currentIndex === -1
+            ? "light"
+            : themes[(currentIndex + 1) % themes.length];
+        return { theme: nextTheme };
+      }),
     setCardsCollapsed: (cardsCollapsed) => set({ cardsCollapsed }),
     toggleCardsCollapsed: () =>
       set((s) => ({ cardsCollapsed: !s.cardsCollapsed })),
@@ -123,12 +150,28 @@ export const useAppStore = create<AppState & AppActions>()(
     setFullScreenId: (fullScreenId) => set({ fullScreenId }),
     setFileMenuOpen: (fileMenuOpen) => set({ fileMenuOpen }),
 
-    setNodesRaw: (nodes) => set({ nodes, past: [], future: [] }),
+    setNodesRaw: (nodes) => {
+      const seen = new Set<string>();
+      const uniqueNodes = nodes.filter((n) => {
+        if (seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      });
+      set({ nodes: uniqueNodes, past: [], future: [] });
+    },
     setNodes: (updater) => {
       const state = get();
       const currentNodes = state.nodes;
-      const nextNodes =
+      let nextNodes =
         typeof updater === "function" ? updater(currentNodes) : updater;
+
+      const seen = new Set<string>();
+      nextNodes = nextNodes.filter((n) => {
+        if (seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      });
+
       if (currentNodes === nextNodes) return;
       set({
         nodes: nextNodes,
@@ -291,7 +334,7 @@ export const useAppStore = create<AppState & AppActions>()(
           let curr = prev.find((n) => n.id === childId);
           while (curr) {
             if (curr.parentId === parentId) return true;
-            curr = prev.find((n) => n.id === curr.parentId);
+            curr = prev.find((n) => n.id === curr?.parentId);
           }
           return false;
         };

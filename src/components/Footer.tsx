@@ -1,9 +1,13 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Keyboard } from "lucide-react";
 import { INITIAL_NODES } from "../constants";
 import { useAppStore, computeActivePath } from "../store/useAppStore";
 export function Footer() {
-  const { nodes, activeId, colWidth, setNodesRaw, setActiveId } = useAppStore();
+  const nodes = useAppStore((s) => s.nodes);
+  const activeId = useAppStore((s) => s.activeId);
+  const colWidth = useAppStore((s) => s.colWidth);
+  const setNodesRaw = useAppStore((s) => s.setNodesRaw);
+  const setActiveId = useAppStore((s) => s.setActiveId);
   const activePathLength = useMemo(
     () => computeActivePath(nodes, activeId).length,
     [nodes, activeId],

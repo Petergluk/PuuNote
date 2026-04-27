@@ -1,12 +1,19 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, RefObject } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
 import { PuuNode } from "../types";
+import { HOTKEY_DOM_WAIT_MS } from "../constants";
 
-export function useAppHotkeys() {
+export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
-      const { activeId, editingId, setNodes } = useAppStore.getState();
+      const state = useAppStore.getState();
+      const { activeId, editingId, setNodes, fullScreenId, timelineOpen } =
+        state;
+
+      // Guard against pasting logic when not in tree view
+      if (timelineOpen || fullScreenId) return;
+
       if (activeId && !editingId) {
         const text = e.clipboardData?.getData("text");
         if (!text) return;
@@ -112,31 +119,22 @@ export function useAppHotkeys() {
           e.preventDefault();
           setEditingId(null);
           setTimeout(() => {
-            const appContainer = document.getElementById(
-              "puunote-app-container",
-            );
-            if (appContainer) appContainer.focus();
+            if (containerRef?.current) containerRef.current.focus();
           }, 0);
         } else if (e.key === "Tab") {
           e.preventDefault();
           setEditingId(null);
           addChild(editingId);
           setTimeout(() => {
-            const appContainer = document.getElementById(
-              "puunote-app-container",
-            );
-            if (appContainer) appContainer.focus();
-          }, 50);
+            if (containerRef?.current) containerRef.current.focus();
+          }, HOTKEY_DOM_WAIT_MS);
         } else if (e.key === "Enter" && e.shiftKey) {
           e.preventDefault();
           setEditingId(null);
           addSibling(editingId);
           setTimeout(() => {
-            const appContainer = document.getElementById(
-              "puunote-app-container",
-            );
-            if (appContainer) appContainer.focus();
-          }, 50);
+            if (containerRef?.current) containerRef.current.focus();
+          }, HOTKEY_DOM_WAIT_MS);
         }
       }
       return;
@@ -162,7 +160,9 @@ export function useAppHotkeys() {
 
     if (e.key === "ArrowRight") {
       e.preventDefault();
-      const children = nodes.filter((n) => n.parentId === activeId);
+      const children = nodes
+        .filter((n) => n.parentId === activeId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
       if (children.length > 0) setActiveId(children[0].id);
       return;
     }
@@ -178,7 +178,9 @@ export function useAppHotkeys() {
       e.preventDefault();
       const node = nodes.find((n) => n.id === activeId);
       if (node) {
-        const siblings = nodes.filter((n) => n.parentId === node.parentId);
+        const siblings = nodes
+          .filter((n) => n.parentId === node.parentId)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
         const idx = siblings.findIndex((n) => n.id === activeId);
         if (idx >= 0 && idx < siblings.length - 1)
           setActiveId(siblings[idx + 1].id);
@@ -190,13 +192,15 @@ export function useAppHotkeys() {
       e.preventDefault();
       const node = nodes.find((n) => n.id === activeId);
       if (node) {
-        const siblings = nodes.filter((n) => n.parentId === node.parentId);
+        const siblings = nodes
+          .filter((n) => n.parentId === node.parentId)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
         const idx = siblings.findIndex((n) => n.id === activeId);
         if (idx > 0) setActiveId(siblings[idx - 1].id);
       }
       return;
     }
-  }, []);
+  }, [containerRef]);
 
   return { handleKeyDown };
 }

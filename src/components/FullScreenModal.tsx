@@ -1,13 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Minimize2 } from "lucide-react";
 import { motion } from "motion/react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeSanitize from "rehype-sanitize";
 
 import { PuuNode } from "../types";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
+import { SafeMarkdown } from "./SafeMarkdown";
 
 export const FullScreenModal = ({
   nodeId,
@@ -16,20 +14,9 @@ export const FullScreenModal = ({
   nodeId: string;
   onClose: () => void;
 }) => {
-  const { nodes, setNodesRaw } = useAppStore();
+  const nodes = useAppStore((s) => s.nodes);
+  const updateContent = useAppStore((s) => s.updateContent);
   const [localActiveId, setLocalActiveId] = useState(nodeId);
-
-  const targetNode = nodes.find((n: PuuNode) => n.id === nodeId);
-  if (!targetNode) return null;
-
-  const columnNodes = nodes.filter(
-    (n: PuuNode) => n.parentId === targetNode.parentId,
-  );
-
-  const updateContent = (id: string, content: string) => {
-    setNodesRaw(nodes.map((n) => (n.id === id ? { ...n, content } : n)));
-  };
-
   const activeElRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +35,13 @@ export const FullScreenModal = ({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  const targetNode = nodes.find((n: PuuNode) => n.id === nodeId);
+  if (!targetNode) return null;
+
+  const columnNodes = nodes.filter(
+    (n: PuuNode) => n.parentId === targetNode.parentId,
+  );
 
   return (
     <motion.div
@@ -71,36 +65,35 @@ export const FullScreenModal = ({
       </header>
 
       <div className="flex-1 overflow-auto p-12 lg:p-24 max-w-4xl mx-auto w-full flex flex-col gap-12 relative pb-[50vh]">
-        {columnNodes.map((n: PuuNode) => {
-          const isLocalActive = n.id === localActiveId;
-          return (
-            <div
-              key={n.id}
-              ref={n.id === nodeId ? activeElRef : null}
-              onClick={() => setLocalActiveId(n.id)}
-              className={`transition-opacity duration-200 cursor-text min-h-[100px] ${isLocalActive ? "opacity-100" : "opacity-40 hover:opacity-100 "}`}
-            >
-              {isLocalActive ? (
-                <AutoSizeTextarea
-                  value={n.content}
-                  onChange={(e: any) => updateContent(n.id, e.target.value)}
-                  autoFocus
-                  placeholder="Type here..."
-                  className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-xl"
-                />
-              ) : (
-                <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-[#eee] prose-headings:font-normal prose-headings:tracking-tight prose-p:text-app-text-secondary dark:prose-p:text-[#888] prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-[#d1d1d1] prose-ul:text-app-text-secondary dark:prose-ul:text-[#888] prose-ol:text-app-text-secondary dark:prose-ol:text-[#888] prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-[#222] prose-code:px-1 prose-code:rounded">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeSanitize]}
-                  >
-                    {n.content || "*Empty card...*"}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {columnNodes
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((n: PuuNode) => {
+            const isLocalActive = n.id === localActiveId;
+            return (
+              <div
+                key={n.id}
+                ref={n.id === nodeId ? activeElRef : null}
+                onClick={() => setLocalActiveId(n.id)}
+                className={`transition-opacity duration-200 cursor-text min-h-[100px] ${isLocalActive ? "opacity-100" : "opacity-40 hover:opacity-100 "}`}
+              >
+                {isLocalActive ? (
+                  <AutoSizeTextarea
+                    value={n.content}
+                    onChange={(val: string) => updateContent(n.id, val)}
+                    autoFocus
+                    placeholder="Type here..."
+                    className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-xl"
+                  />
+                ) : (
+                  <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-tight prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
+                    <SafeMarkdown>
+                      {n.content || "*Empty card...*"}
+                    </SafeMarkdown>
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
     </motion.div>
   );

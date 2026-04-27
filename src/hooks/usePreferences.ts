@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 export function usePreferencesInit() {
-  const { cardsCollapsed, colWidth, theme } = useAppStore(); /* Initial Load */
+  /* Initial Load */
   useEffect(() => {
     const savedCollapsed =
       localStorage.getItem("puu_cardsCollapsed") === "true";
@@ -20,27 +20,37 @@ export function usePreferencesInit() {
       theme: savedTheme,
     });
   }, []); /* Sync to LocalStorage & DOM */
+
   useEffect(() => {
-    localStorage.setItem("puu_cardsCollapsed", String(cardsCollapsed));
-  }, [cardsCollapsed]);
-  useEffect(() => {
-    localStorage.setItem("puu_colWidth", colWidth.toString());
-  }, [colWidth]);
-  useEffect(() => {
-    /* Clear old theme classes */
-    document.documentElement.classList.remove(
-      "dark",
-      "theme-blue",
-      "theme-brown",
-    ); /* Process compound themes like"blue"vs"dark-blue"or"dark theme-blue" */
-    if (theme.startsWith("dark")) {
-      document.documentElement.classList.add("dark");
-    }
-    if (theme.includes("blue")) {
-      document.documentElement.classList.add("theme-blue");
-    } else if (theme.includes("brown")) {
-      document.documentElement.classList.add("theme-brown");
-    }
-    localStorage.setItem("puu_theme", theme);
-  }, [theme]);
+    const unsubscribe = useAppStore.subscribe((state, prevState) => {
+      if (state.cardsCollapsed !== prevState.cardsCollapsed) {
+        localStorage.setItem(
+          "puu_cardsCollapsed",
+          String(state.cardsCollapsed),
+        );
+      }
+      if (state.colWidth !== prevState.colWidth) {
+        localStorage.setItem("puu_colWidth", state.colWidth.toString());
+      }
+      if (state.theme !== prevState.theme) {
+        const theme = state.theme;
+        /* Clear old theme classes */
+        document.documentElement.classList.remove(
+          "dark",
+          "theme-blue",
+          "theme-brown",
+        ); /* Process compound themes like"blue"vs"dark-blue"or"dark theme-blue" */
+        if (theme.startsWith("dark")) {
+          document.documentElement.classList.add("dark");
+        }
+        if (theme.includes("blue")) {
+          document.documentElement.classList.add("theme-blue");
+        } else if (theme.includes("brown")) {
+          document.documentElement.classList.add("theme-brown");
+        }
+        localStorage.setItem("puu_theme", theme);
+      }
+    });
+    return unsubscribe;
+  }, []);
 }

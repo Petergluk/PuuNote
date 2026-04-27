@@ -5,12 +5,15 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+
+import { AUTOSIZE_DEBOUNCE_MS } from "../constants";
+
 export const AutoSizeTextarea = forwardRef<
   HTMLTextAreaElement,
   {
     value: string;
-    onChange: (e: any) => void;
-    onBlur?: (e: any) => void;
+    onChange: (value: string) => void;
+    onBlur?: () => void;
     autoFocus?: boolean;
     className?: string;
     placeholder?: string;
@@ -26,10 +29,13 @@ export const AutoSizeTextarea = forwardRef<
       () => internalRef.current as HTMLTextAreaElement,
     );
     const [localValue, setLocalValue] = useState(value);
-    const timeoutRef = useRef<any>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Sync external value initially, or when it changes outside
     useEffect(() => {
       setLocalValue(value);
     }, [value]);
+
     useEffect(() => {
       if (internalRef.current) {
         internalRef.current.style.height = "auto";
@@ -37,19 +43,31 @@ export const AutoSizeTextarea = forwardRef<
           internalRef.current.scrollHeight + "px";
       }
     }, [localValue]);
+
+    useEffect(() => {
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }, []);
+
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setLocalValue(e.target.value); /* Debounce the global update */
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       const val = e.target.value;
-      timeoutRef.current = setTimeout(() => {
-        onChange({ target: { value: val } });
-      }, 400);
-    };
-    const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      setLocalValue(val);
+
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      onChange(e); /* Ensure the latest value is saved immediately on blur */
-      if (onBlur) onBlur(e);
+      timeoutRef.current = setTimeout(() => {
+        onChange(val);
+      }, AUTOSIZE_DEBOUNCE_MS);
     };
+
+    const handleBlur = () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      onChange(localValue);
+      if (onBlur) onBlur();
+    };
+
     return (
       <textarea
         ref={internalRef}
@@ -64,9 +82,9 @@ export const AutoSizeTextarea = forwardRef<
         }
         rows={1}
         onFocus={(e) => {
-          const v = e.target.value;
-          e.target.value = "";
-          e.target.value = v;
+          // move cursor to end
+          const length = e.target.value.length;
+          e.target.setSelectionRange(length, length);
         }}
       />
     );
