@@ -20,6 +20,12 @@ interface AppState {
   timelineOpen: boolean;
   colWidth: number;
   commandPaletteOpen: boolean;
+  uiMode: "normal" | "fullscreen" | "zen";
+  confirmDialog: {
+    isOpen: boolean;
+    message: string;
+    onConfirm?: () => void;
+  };
 }
 
 interface AppActions {
@@ -34,13 +40,14 @@ interface AppActions {
   setEditingId: (id: string | null) => void;
   setDraggedId: (id: string | null) => void;
   setFullScreenId: (id: string | null) => void;
+  setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
   setFileMenuOpen: (open: boolean) => void;
+  openConfirm: (message: string, onConfirm: () => void) => void;
+  closeConfirm: () => void;
   setNodesRaw: (nodes: PuuNode[]) => void;
   setNodes: (updater: PuuNode[] | ((prev: PuuNode[]) => PuuNode[])) => void;
   undo: () => void;
   redo: () => void;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
   exportToMarkdown: () => void;
   updateContent: (id: string, content: string) => void;
   addChild: (parentId: string | null) => void;
@@ -54,64 +61,6 @@ interface AppActions {
   ) => void;
 }
 
-export const computeActivePath = (
-  nodes: PuuNode[],
-  activeId: string | null,
-): string[] => {
-  if (!activeId) return [];
-  const nodeMap = new Map<string, PuuNode>();
-  const childrenMap = new Map<string | null, PuuNode[]>();
-  for (const n of nodes) {
-    nodeMap.set(n.id, n);
-    const children = childrenMap.get(n.parentId) || [];
-    children.push(n);
-    childrenMap.set(n.parentId, children);
-  }
-
-  const pathUp = [];
-  let currUp: string | null = activeId;
-  while (currUp) {
-    pathUp.push(currUp);
-    const node = nodeMap.get(currUp);
-    currUp = node?.parentId || null;
-  }
-  pathUp.reverse();
-  const pathDown = [];
-  let currDown = activeId;
-  while (true) {
-    const children = childrenMap.get(currDown);
-    if (!children || children.length === 0) break;
-    children.sort((a, b) => (a.order || 0) - (b.order || 0));
-    currDown = children[0].id;
-    pathDown.push(currDown);
-  }
-  return Array.from(new Set([...pathUp, ...pathDown]));
-};
-
-export const computeDescendantIds = (
-  nodes: PuuNode[],
-  activeId: string | null,
-): Set<string> => {
-  if (!activeId) return new Set<string>();
-  const childrenMap = new Map<string | null, PuuNode[]>();
-  for (const n of nodes) {
-    const children = childrenMap.get(n.parentId) || [];
-    children.push(n);
-    childrenMap.set(n.parentId, children);
-  }
-
-  const ids = new Set<string>();
-  const queue = [activeId];
-  while (queue.length > 0) {
-    const curr = queue.shift()!;
-    if (curr !== activeId) ids.add(curr);
-    const children = childrenMap.get(curr);
-    if (children) {
-      queue.push(...children.map((n) => n.id));
-    }
-  }
-  return ids;
-};
 
 export const useAppStore = create<AppState & AppActions>()(
   subscribeWithSelector((set, get) => ({
@@ -129,8 +78,16 @@ export const useAppStore = create<AppState & AppActions>()(
     cardsCollapsed: false,
     timelineOpen: false,
     colWidth: 320,
-
     commandPaletteOpen: false,
+    uiMode: "normal",
+    confirmDialog: { isOpen: false, message: "" },
+
+    openConfirm: (message, onConfirm) => set({
+      confirmDialog: { isOpen: true, message, onConfirm }
+    }),
+    closeConfirm: () => set((state) => ({
+      confirmDialog: { ...state.confirmDialog, isOpen: false }
+    })),
 
     setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
     setTheme: (theme) => set({ theme }),
@@ -153,6 +110,7 @@ export const useAppStore = create<AppState & AppActions>()(
     setEditingId: (editingId) => set({ editingId }),
     setDraggedId: (draggedId) => set({ draggedId }),
     setFullScreenId: (fullScreenId) => set({ fullScreenId }),
+    setUiMode: (uiMode) => set({ uiMode }),
     setFileMenuOpen: (fileMenuOpen) => set({ fileMenuOpen }),
 
     setNodesRaw: (nodes) => {
@@ -209,9 +167,6 @@ export const useAppStore = create<AppState & AppActions>()(
       const next = future[0];
       set({ past: [...past, nodes], nodes: next, future: future.slice(1) });
     },
-
-    canUndo: () => get().past.length > 0,
-    canRedo: () => get().future.length > 0,
 
     exportToMarkdown: () => {
       const { nodes } = get();

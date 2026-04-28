@@ -38,6 +38,24 @@ export const Card = React.memo(
       "none" | "top" | "bottom" | "right"
     >("none");
 
+    const handleToggleCheckbox = React.useCallback((index: number, newValue: boolean) => {
+      let count = 0;
+      const newContent = (node.content || "").replace(
+        /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
+        (match, p1, p2, p3) => {
+          if (count === index) {
+            count++;
+            return p1 + (newValue ? "x" : " ") + p3;
+          }
+          count++;
+          return match;
+        }
+      );
+      if (newContent !== node.content) {
+        updateContent(node.id, newContent);
+      }
+    }, [node.id, node.content, updateContent]);
+
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -54,7 +72,7 @@ export const Card = React.memo(
       !hasActiveNode || isActive || isInPath || isDescendantFromActive;
     const shouldCollapse = cardsCollapsed && !isEditing && !isActive;
     let cardClasses =
-      "bg-app-panel border border-app-border opacity-50 hover:opacity-100 transition-all duration-200 hover:bg-app-bg text-app-text-primary";
+      "bg-app-panel border border-app-border opacity-60 hover:opacity-100 transition-all duration-200 hover:bg-app-bg text-app-text-primary";
     if (isActive) {
       cardClasses =
         "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 transition-all duration-200 transform scale-[1.01] z-50 text-app-text-primary";
@@ -74,7 +92,7 @@ export const Card = React.memo(
       cardClasses += " !border-r-app-accent !border-r-4";
     return (
       <div
-        className={`relative group/card-wrapper`}
+        className={`relative group/card-wrapper ${isActive || isEditing ? "z-40" : "z-10"}`}
         id={`card-${node.id}`}
         ref={cardRef}
       >
@@ -141,7 +159,7 @@ export const Card = React.memo(
                 autoFocus
                 className="w-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
               />{" "}
-              <div className="absolute -top-3 -right-2 flex items-center gap-1 opacity-0 group-hover/edit:opacity-100 transition-opacity z-10 shadow-lg bg-app-card-hover border border-app-border rounded p-1">
+              <div className="absolute -top-3 -right-0 flex items-center gap-1 opacity-0 group-hover/edit:opacity-100 transition-opacity z-10 shadow-lg bg-app-card-hover border border-app-border rounded p-1">
                 {" "}
                 <button
                   onMouseDown={handleSplitNode}
@@ -167,10 +185,10 @@ export const Card = React.memo(
             </div>
           ) : (
             <div
-              className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-tight ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-[#eee] prose-p:text-app-text-primary dark:prose-p:text-[#d1d1d1] prose-li:text-app-text-primary dark:prose-li:text-[#d1d1d1] prose-strong:text-app-text-primary dark:prose-strong:text-white" : "prose-headings:text-app-text-muted dark:prose-headings:text-[#666] prose-p:text-app-text-muted dark:prose-p:text-[#666] prose-li:text-app-text-muted dark:prose-li:text-[#666] prose-strong:text-app-text-secondary dark:prose-strong:text-[#888]"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-[#222] prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""}`}
+              className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-[#eee] prose-p:text-app-text-primary dark:prose-p:text-[#d1d1d1] prose-li:text-app-text-primary dark:prose-li:text-[#d1d1d1] prose-strong:text-app-text-primary dark:prose-strong:text-white" : "prose-headings:text-app-text-muted dark:prose-headings:text-[#666] prose-p:text-app-text-muted dark:prose-p:text-[#666] prose-li:text-app-text-muted dark:prose-li:text-[#666] prose-strong:text-app-text-secondary dark:prose-strong:text-[#888]"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-[#222] prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""}`}
             >
               {" "}
-              <SafeMarkdown>
+              <SafeMarkdown onToggleCheckbox={handleToggleCheckbox}>
                 {node.content || "*Empty node...*"}
               </SafeMarkdown>{" "}
             </div>
@@ -202,7 +220,7 @@ export const Card = React.memo(
                   e.stopPropagation();
                   addChild(node.id);
                 }}
-                className="absolute top-1/2 -right-4 -translate-y-1/2 bg-app-card border border-app-border text-app-accent rounded-full p-1.5 shadow-lg hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent transition-colors z-20 flex items-center justify-center"
+                className="absolute top-1/2 right-[-13px] -translate-y-1/2 bg-app-card border border-app-border text-app-accent rounded-full p-1.5 shadow-lg hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent transition-colors z-20 flex items-center justify-center"
                 title="Add Child (Tab)"
               >
                 {" "}
@@ -213,7 +231,7 @@ export const Card = React.memo(
                   e.stopPropagation();
                   deleteNode(node.id);
                 }}
-                className="absolute -top-3 -right-3 bg-red-50 border border-red-200 text-red-600 dark:text-[#995555] rounded-full p-1.5 shadow-lg hover:bg-red-100 hover:text-red-700 hover:border-red-300 transition-colors z-20 flex items-center justify-center"
+                className="absolute -top-3 right-[-13px] bg-app-card border border-app-border text-app-text-muted opacity-75 hover:opacity-100 rounded-full p-1.5 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all z-20 flex items-center justify-center"
                 title="Delete"
               >
                 {" "}

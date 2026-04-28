@@ -73,11 +73,11 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
           const isRedoAction = (isZ && e.shiftKey) || isY;
           const isUndoAction = isZ && !e.shiftKey;
 
-          if (isUndoAction && state.canUndo()) {
+          if (isUndoAction && state.past.length > 0) {
             e.preventDefault();
             state.undo();
             state.setActiveId(null);
-          } else if (isRedoAction && state.canRedo()) {
+          } else if (isRedoAction && state.future.length > 0) {
             e.preventDefault();
             state.redo();
             state.setActiveId(null);

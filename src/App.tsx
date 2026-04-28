@@ -1,24 +1,27 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, Suspense, lazy } from "react";
 import { AnimatePresence } from "motion/react";
 import { PuuNode } from "./types";
 import { Card } from "./components/Card";
-import { FullScreenModal } from "./components/FullScreenModal";
-import { TimelineView } from "./components/TimelineView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
-import { CommandPalette } from "./components/CommandPalette";
+import { ConfirmDialog } from "./components/ConfirmDialog";
+import { Minimize } from "lucide-react";
+
+const FullScreenModal = lazy(() => import("./components/FullScreenModal").then(module => ({ default: module.FullScreenModal })));
+const TimelineView = lazy(() => import("./components/TimelineView").then(module => ({ default: module.TimelineView })));
+const CommandPalette = lazy(() => import("./components/CommandPalette").then(module => ({ default: module.CommandPalette })));
+
 import { parseMarkdownToNodes } from "./utils/markdownParser";
 import { validateNodes } from "./utils/schema";
-import { useFileSystemInit } from "./hooks/useFileSystem";
+import { useFileSystemInit, useFileSystemActions } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
 import {
   useAppStore,
-  computeActivePath,
-  computeDescendantIds,
 } from "./store/useAppStore";
+import { computeActivePath, computeDescendantIds } from "./utils/tree";
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,8 +37,33 @@ export default function App() {
   const timelineOpen = useAppStore((s) => s.timelineOpen);
   const colWidth = useAppStore((s) => s.colWidth);
   const nodes = useAppStore((s) => s.nodes);
-  const setNodesRaw = useAppStore((s) => s.setNodesRaw);
   const addChild = useAppStore((s) => s.addChild);
+  const uiMode = useAppStore((s) => s.uiMode);
+
+  const { createNewFile } = useFileSystemActions();
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const doc = document as Document & {
+        webkitFullscreenElement?: Element;
+        mozFullScreenElement?: Element;
+        msFullscreenElement?: Element;
+      };
+      if (!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement)) {
+        useAppStore.getState().setUiMode("normal");
+      }
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+    document.addEventListener("mozfullscreenchange", onFullscreenChange);
+    document.addEventListener("MSFullscreenChange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", onFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", onFullscreenChange);
+    };
+  }, []);
 
   const activePath = useMemo(
     () => computeActivePath(nodes, activeId),
@@ -75,8 +103,10 @@ export default function App() {
     return cols;
   }, [nodes]);
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
-  colRefs.current.length = columns.length;
   const initializedCols = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    colRefs.current = colRefs.current.slice(0, columns.length);
+  }, [columns.length]);
   useEffect(() => {
     let rafId: number;
     const updateScroll = () => {
@@ -97,6 +127,8 @@ export default function App() {
   }, [
     columns,
   ]); /* Center the active path vertically and horizontally when the active node changes */
+  const activePathString = activePath.join(',');
+
   useEffect(() => {
     let r2: number;
     const r1 = requestAnimationFrame(() => {
@@ -124,7 +156,8 @@ export default function App() {
             });
           }
         } /* Vertical Alignment for all path items */
-        for (const pathId of activePath) {
+        const currentPath = activePathString ? activePathString.split(',') : [];
+        for (const pathId of currentPath) {
           const el = document.getElementById(`card-${pathId}`);
           if (el) {
             const col = el.closest(".overflow-y-auto");
@@ -148,7 +181,7 @@ export default function App() {
       cancelAnimationFrame(r1);
       cancelAnimationFrame(r2);
     };
-  }, [activeId, activePath, timelineOpen]); /* Run when activePath is rebuilt */
+  }, [activeId, activePathString, timelineOpen]); /* Run when activePath is rebuilt */
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -164,8 +197,10 @@ export default function App() {
       try {
         const validated = validateNodes(imported);
         if (validated.length > 0) {
-          setNodesRaw(validated);
-          setActiveId(validated[0].id);
+          useAppStore.getState().openConfirm("Import will create a new document. Proceed?", () => {
+            const title = file.name.replace(/\.md$/i, "");
+            createNewFile(validated, title);
+          });
         }
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
@@ -195,7 +230,7 @@ export default function App() {
       }}
     >
       {" "}
-      <Header handleImport={handleImport} />{" "}
+      {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
       <main
         id="main-scroller"
         style={{ "--col-width": `${colWidth}px` } as React.CSSProperties}
@@ -208,10 +243,11 @@ export default function App() {
               return (
                 <div
                   key={colIndex}
+                  style={{ zIndex: 100 - colIndex }}
                   ref={(el) => {
                     colRefs.current[colIndex] = el;
                   }}
-                  className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 transition-all duration-200 col-spacer"
+                  className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 sm:pl-2 sm:pr-8 sm:-mr-6 transition-all duration-200 col-spacer relative"
                 >
                   <div className="column-inner relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer">
                     {colNodes.map((node) => (
@@ -241,21 +277,57 @@ export default function App() {
             })}
           </div>
         ) : (
-          <TimelineView nodes={nodes} />
+          <Suspense fallback={<div className="p-8 text-app-text-muted">Loading timeline...</div>}>
+            <TimelineView nodes={nodes} />
+          </Suspense>
         )}{" "}
       </main>{" "}
-      <Footer />{" "}
-      <AnimatePresence>
-        {fullScreenId && (
-          <FullScreenModal
-            key="fullscreen-modal"
-            nodeId={fullScreenId}
-            onClose={() => setFullScreenId(null)}
-          />
-        )}
-      </AnimatePresence>
-      <FileMenu />
-      <CommandPalette />
+      {uiMode !== "zen" && <Footer />}{" "}
+      {uiMode === "zen" && (
+        <button
+          style={{ zIndex: 99999, pointerEvents: 'auto' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            useAppStore.getState().setUiMode("normal");
+            try {
+              const doc = document as Document & {
+                webkitFullscreenElement?: Element;
+                mozFullScreenElement?: Element;
+                msFullscreenElement?: Element;
+                exitFullscreen?: () => Promise<void>;
+                webkitExitFullscreen?: () => Promise<void>;
+                mozCancelFullScreen?: () => Promise<void>;
+                msExitFullscreen?: () => Promise<void>;
+              };
+              const isFS = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+              if (isFS) {
+                const exitFS = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+                if (exitFS) exitFS.call(doc).catch(() => { /* ignore */ });
+              }
+            } catch (err) {
+              console.warn("Fullscreen exit error", err);
+            }
+          }}
+          className="fixed top-4 right-4 p-3 bg-black/20 hover:bg-black/50 border border-white/20 text-white/50 hover:text-white rounded-full backdrop-blur-md transition-all cursor-pointer shadow-lg"
+          title="Exit Zen Mode"
+        >
+          <Minimize size={16} />
+        </button>
+      )}
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {fullScreenId && (
+            <FullScreenModal
+              key="fullscreen-modal"
+              nodeId={fullScreenId}
+              onClose={() => setFullScreenId(null)}
+            />
+          )}
+        </AnimatePresence>
+        <FileMenu />
+        <CommandPalette />
+        <ConfirmDialog />
+      </Suspense>
     </div>
   );
 }

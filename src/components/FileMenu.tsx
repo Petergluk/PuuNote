@@ -43,7 +43,7 @@ export function FileMenu() {
             </header>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
               <button
-                onClick={createNewFile}
+                onClick={() => createNewFile()}
                 className="w-full flex items-center justify-center gap-2 p-3 bg-app-accent/10 hover:bg-app-accent/20 text-app-accent border border-app-accent/20 rounded-lg transition-colors font-medium mb-4"
               >
                 <Plus size={16} /> {t("New Document")}
@@ -81,7 +81,9 @@ export function FileMenu() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteFile(doc.id);
+                        useAppStore.getState().openConfirm(t("Are you sure you want to delete this document?"), () => {
+                          deleteFile(doc.id);
+                        });
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
                       title={t("Delete file")}

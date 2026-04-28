@@ -11,14 +11,18 @@ const pendingSave: {
   nodes: typeof INITIAL_NODES;
 } = { timer: null, fileId: "", nodes: [] };
 
-export const flushPendingSave = () => {
+export const flushPendingSave = async () => {
   if (pendingSave.timer) {
     clearTimeout(pendingSave.timer);
     pendingSave.timer = null;
     const { fileId, nodes } = pendingSave;
     if (fileId && nodes.length > 0) {
-      localStorage.setItem("puu_active_file", fileId);
-      db.files.put({ id: fileId, nodes }).catch((err) => {
+      try {
+        localStorage.setItem("puu_active_file", fileId);
+      } catch (err) {
+        console.error("Failed to store active file", err);
+      }
+      await db.files.put({ id: fileId, nodes }).catch((err) => {
         console.error("Failed to save data into dexie", err);
       });
     }
@@ -54,23 +58,26 @@ export function useFileSystemInit() {
                 }
 
                 if (nodesData && Array.isArray(nodesData)) {
-                  await db.files
-                    .put({ id: doc.id, nodes: nodesData })
-                    .catch(() => {});
+                  await db.files.put({ id: doc.id, nodes: nodesData });
                 }
-                localStorage.removeItem(`puu_file_${doc.id}`);
               }
               const mappedDocs = lsDocs.map((d) => ({
                 ...d,
                 updatedAt: parseInt(String(d.updatedAt), 10) || Date.now(),
               }));
-              await db.documents.bulkPut(mappedDocs).catch(() => {});
+              await db.documents.bulkPut(mappedDocs);
+
+              // Only remove legacy keys if all Dexie writes succeeded
+              for (const doc of lsDocs) {
+                if (!doc || !doc.id) continue;
+                localStorage.removeItem(`puu_file_${doc.id}`);
+              }
+              localStorage.removeItem("puu_documents");
+              localStorage.removeItem("scribe_nodes");
             }
           } catch (err) {
             console.error("Migration error: ", err);
           }
-          localStorage.removeItem("puu_documents");
-          localStorage.removeItem("scribe_nodes");
         }
 
         const stored = await db.documents.toArray();
@@ -115,12 +122,16 @@ export function useFileSystemInit() {
         active = savedDocs[0].id;
       }
       useAppStore.setState({ activeFileId: active });
-      localStorage.setItem("puu_active_file", active); // persist active id in ls since it's just one string
+      try {
+        localStorage.setItem("puu_active_file", active); // persist active id in ls since it's just one string
+      } catch (err) {
+        console.error("Failed to save active file reference to localStorage", err);
+      }
 
       let newNodes = INITIAL_NODES;
       try {
         const fileData = await db.files.get(active);
-        let savedNodes = fileData?.nodes;
+        const savedNodes = fileData?.nodes;
 
         if (savedNodes) {
           const validated = validateNodes(savedNodes);
@@ -176,7 +187,11 @@ export function useFileSystemInit() {
 
         pendingSave.timer = setTimeout(() => {
           pendingSave.timer = null;
-          localStorage.setItem("puu_active_file", activeFileId);
+          try {
+            localStorage.setItem("puu_active_file", activeFileId);
+          } catch (err) {
+            console.error("Failed to update active file in ls", err);
+          }
           db.files.put({ id: activeFileId, nodes }).catch((err) => {
             console.error("Failed to save data into dexie", err);
           });
@@ -251,12 +266,12 @@ export function useFileSystemActions() {
       return;
     }
 
-    flushPendingSave();
+    await flushPendingSave();
 
     let newNodes = INITIAL_NODES;
     try {
       const fileData = await db.files.get(fileId);
-      let saved = fileData?.nodes;
+      const saved = fileData?.nodes;
 
       if (saved && Array.isArray(saved) && saved.length > 0) {
         const seenIds = new Set<string>();
@@ -289,12 +304,12 @@ export function useFileSystemActions() {
     useAppStore.getState().setNodesRaw(newNodes);
   };
 
-  const createNewFile = () => {
-    flushPendingSave();
+  const createNewFile = async (initialNodes?: typeof INITIAL_NODES, title?: string) => {
+    await flushPendingSave();
 
     const newId = generateId();
-    const newDoc = { id: newId, title: "New Document", updatedAt: Date.now() };
-    const initialNewNodes = [
+    const newDoc = { id: newId, title: title || "New Document", updatedAt: Date.now() };
+    const nodesToUse = initialNodes || [
       {
         id: generateId(),
         content: "# New Document\n\n...",
@@ -303,35 +318,54 @@ export function useFileSystemActions() {
       },
     ];
 
+    try {
+      await db.documents.put({ ...newDoc, updatedAt: String(newDoc.updatedAt) });
+      await db.files.put({ id: newId, nodes: nodesToUse });
+    } catch (err) {
+      console.error("Failed to insert new file into db", err);
+    }
+
     useAppStore.setState((s) => ({
       documents: [newDoc, ...s.documents],
       activeFileId: newId,
       fileMenuOpen: false,
-      activeId: initialNewNodes[0].id,
+      activeId: nodesToUse[0]?.id || null,
     }));
-    useAppStore.getState().setNodesRaw(initialNewNodes);
+    useAppStore.getState().setNodesRaw(nodesToUse);
   };
 
   const deleteFile = async (fileId: string) => {
-    flushPendingSave();
-
+    // If the file we are deleting is the currently active file, cancel any pending saves
     const state = useAppStore.getState();
+    if (state.activeFileId === fileId) {
+       if (pendingSave.timer) clearTimeout(pendingSave.timer);
+       pendingSave.timer = null;
+    } else {
+       await flushPendingSave();
+    }
+    
+    // Explicitly delete from DB BEFORE changing state
+    try {
+      await db.files.delete(fileId);
+      await db.documents.delete(fileId);
+      localStorage.removeItem(`puu_file_${fileId}`); // cleanup legacy
+    } catch (err) {
+      console.error("Failed to delete from db", err);
+    }
+
     const newDocs = state.documents.filter((d) => d.id !== fileId);
+
     if (newDocs.length === 0) {
-      createNewFile();
+      await createNewFile();
       useAppStore.setState((s) => ({
         documents: s.documents.filter((d) => d.id !== fileId),
       }));
     } else {
       useAppStore.setState({ documents: newDocs });
       if (state.activeFileId === fileId) {
-        switchFile(newDocs[0].id);
+        await switchFile(newDocs[0].id);
       }
     }
-
-    db.files.delete(fileId).catch(() => {});
-    db.documents.delete(fileId).catch(() => {});
-    localStorage.removeItem(`puu_file_${fileId}`); // cleanup legacy
   };
 
   return { switchFile, createNewFile, deleteFile };

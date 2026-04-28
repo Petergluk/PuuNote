@@ -1,12 +1,11 @@
 import { PuuNode } from "../types";
 import { generateId } from "./id";
+import { getOrderedChildren } from "./tree";
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
   let md = "<!-- puunote-format: 1 -->\n\n";
   const traverse = (parentId: string | null, depth: number) => {
-    const children = nodes
-      .filter((n) => n.parentId === parentId)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const children = getOrderedChildren(nodes, parentId);
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
       const indent = " ".repeat(depth * 4);
@@ -19,22 +18,18 @@ export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
         .join("\n");
       md += formattedText + "\n\n";
       traverse(child.id, depth + 1);
-      // Divider after node and descendants unless it's the very last root node maybe?
-      // Actually we just add it down below and clean it
-      md += `${indent}---\n\n`;
+      md += `${indent}<!-- puunote-node -->\n\n`;
     }
   };
   traverse(null, 0);
 
-  // Clean up trailing `---` at the end of the file safely using regex
-  md = md.replace(/(?:\s*---)+\s*$/, "");
+  // Clean up trailing separators at the end of the file safely using regex
+  md = md.replace(/(?:\s*<!-- puunote-node -->)+\s*$/, "");
   return md.trim() + "\n";
 };
 
 export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
-  const isPuuNoteFormat =
-    mdText.includes("<!-- puunote-format: 1 -->") ||
-    /(?:^|\n)[^\S\n]*---[^\S\n]*(?:\n|$)/.test(mdText);
+  const isPuuNoteFormat = mdText.includes("<!-- puunote-format: 1 -->");
   if (isPuuNoteFormat) {
     return parsePuuNoteFormat(mdText);
   } else {
@@ -43,7 +38,10 @@ export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
 };
 const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
   const cleanText = mdText.replace(/<!-- puunote-format: 1 -->\s*/g, "");
-  const blocks = cleanText.split(/^[^\S\n]*---[^\S\n]*$/gm);
+  const separatorRegex = cleanText.includes("<!-- puunote-node -->") 
+    ? /^[^\S\n]*<!-- puunote-node -->[^\S\n]*$/gm 
+    : /^[^\S\n]*---[^\S\n]*$/gm;
+  const blocks = cleanText.split(separatorRegex);
   const imported: PuuNode[] = [];
   const stack: { id: string; spaces: number }[] = [];
   for (let i = 0; i < blocks.length; i++) {

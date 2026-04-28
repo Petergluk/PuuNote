@@ -42,6 +42,25 @@ export const FullScreenModal = ({
   const columnNodes = nodes.filter(
     (n: PuuNode) => n.parentId === targetNode.parentId,
   );
+  columnNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const handleToggleCheckbox = (node: PuuNode, index: number, newValue: boolean) => {
+    let count = 0;
+    const newContent = (node.content || "").replace(
+      /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
+      (match, p1, p2, p3) => {
+        if (count === index) {
+          count++;
+          return p1 + (newValue ? "x" : " ") + p3;
+        }
+        count++;
+        return match;
+      }
+    );
+    if (newContent !== node.content) {
+      updateContent(node.id, newContent);
+    }
+  };
 
   return (
     <motion.div
@@ -51,18 +70,13 @@ export const FullScreenModal = ({
       transition={{ duration: 0.15 }}
       className="fixed inset-0 z-[100] bg-app-panel flex flex-col outline-none"
     >
-      <header className="h-14 border-b shrink-0 border-app-border flex items-center justify-between px-6 bg-app-bg">
-        <div className="text-app-accent text-xs font-mono tracking-widest uppercase">
-          Focus Mode
-        </div>
-        <button
-          onClick={onClose}
-          className="py-1.5 px-3 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card border border-app-border hover:border-app-border-hover shadow-sm rounded flex items-center gap-2 text-xs font-mono uppercase"
-        >
-          <span>Close (Esc)</span>
-          <Minimize2 size={12} />
-        </button>
-      </header>
+      <button
+        onClick={onClose}
+        className="absolute top-6 right-6 z-10 p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
+        title="Close Focus Mode (Esc)"
+      >
+        <Minimize2 size={20} />
+      </button>
 
       <div className="flex-1 overflow-auto p-12 lg:p-24 max-w-4xl mx-auto w-full flex flex-col gap-12 relative pb-[50vh]">
         {columnNodes
@@ -85,8 +99,8 @@ export const FullScreenModal = ({
                     className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-xl"
                   />
                 ) : (
-                  <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-tight prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
-                    <SafeMarkdown>
+                  <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
+                    <SafeMarkdown onToggleCheckbox={(idx, val) => handleToggleCheckbox(n, idx, val)}>
                       {n.content || "*Empty card...*"}
                     </SafeMarkdown>
                   </div>

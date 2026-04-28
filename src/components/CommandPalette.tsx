@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "../hooks/useFileSystem";
 import { Search, Palette, FileText, Plus, Trash2 } from "lucide-react";
+import { db } from "../db/db";
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -12,25 +13,38 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const nodes = useAppStore((s) => s.nodes);
+  const [searchResults, setSearchResults] = useState<{ id: string; content: string; fileId: string; fileTitle: string }[]>([]);
+  const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const setActiveId = useAppStore((s) => s.setActiveId);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
   const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
 
-  const { createNewFile, deleteFile } = useFileSystemActions();
+  const { createNewFile, deleteFile, switchFile } = useFileSystemActions();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "f")) {
         e.preventDefault();
-        setIsOpen(true);
+        setIsOpen(!isOpen);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setIsOpen]);
+  }, [isOpen, setIsOpen]);
+
+  // Global escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isOpen, setIsOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,17 +52,51 @@ export function CommandPalette() {
     }
   }, [isOpen]);
 
-  const results = nodes
-    .filter((n) => n.content.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 10);
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      
+      const lowerQuery = query.toLowerCase();
+      const allFiles = await db.files.toArray();
+      const results: { id: string; content: string; fileId: string; fileTitle: string }[] = [];
+      
+      for (const file of allFiles) {
+        const doc = documents.find((d) => d.id === file.id);
+        const title = doc ? doc.title : "Unknown Document";
+        
+        for (const node of file.nodes) {
+          if (node.content.toLowerCase().includes(lowerQuery)) {
+            results.push({
+              id: node.id,
+              content: node.content,
+              fileId: file.id,
+              fileTitle: title,
+            });
+            if (results.length >= 15) break; 
+          }
+        }
+        if (results.length >= 15) break;
+      }
+      
+      setSearchResults(results);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, documents]);
 
   const closePalette = () => {
     setIsOpen(false);
     setQuery("");
   };
 
-  const handleSelectNode = (id: string) => {
-    setActiveId(id);
+  const handleSelectNode = async (fileId: string, nodeId: string) => {
+    if (fileId !== activeFileId) {
+      await switchFile(fileId);
+    }
+    setActiveId(nodeId);
     closePalette();
   };
 
@@ -95,22 +143,22 @@ export function CommandPalette() {
                   <div className="px-4 py-1 text-xs font-semibold text-app-text-muted uppercase tracking-wider">
                     Search Results
                   </div>
-                  {results.length === 0 ? (
+                  {searchResults.length === 0 ? (
                     <div className="px-4 py-3 text-app-text-secondary text-sm">
                       {t("No results")}
                     </div>
                   ) : (
-                    results.map((node) => (
+                    searchResults.map((result) => (
                       <button
-                        key={node.id}
-                        onClick={() => handleSelectNode(node.id)}
+                        key={`${result.fileId}-${result.id}`}
+                        onClick={() => handleSelectNode(result.fileId, result.id)}
                         className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex flex-col gap-1 border-b border-app-border/50 last:border-0"
                       >
                         <span className="text-app-text-primary truncate">
-                          {node.content.split("\n")[0] || "Untitled"}
+                           {result.fileTitle} &rsaquo; {result.content.split("\n")[0] || "Untitled"}
                         </span>
                         <span className="text-xs text-app-text-muted truncate">
-                          {node.content}
+                           {result.content}
                         </span>
                       </button>
                     ))
@@ -156,7 +204,13 @@ export function CommandPalette() {
                   <button
                     onClick={() =>
                       handleExecuteCommand(
-                        () => activeFileId && deleteFile(activeFileId),
+                        () => {
+                          if (activeFileId) {
+                            useAppStore.getState().openConfirm(t("Are you sure you want to delete this document?"), () => {
+                              deleteFile(activeFileId);
+                            });
+                          }
+                        }
                       )
                     }
                     className="w-full text-left px-4 py-3 hover:bg-red-500/10 flex items-center gap-3 text-red-500"
