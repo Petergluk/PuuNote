@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { PuuNode, PuuDocument } from "../types";
-import { generateId } from "../utils/id";
 import { exportNodesToMarkdown } from "../utils/markdownParser";
+import { documentApi } from "../domain/documentTree";
 
 interface AppState {
   documents: PuuDocument[];
@@ -211,155 +211,54 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
-    updateContent: (id, content) => {
-      get().setNodes((prev) => {
-        const targetNode = prev.find((n) => n.id === id);
-        if (targetNode && targetNode.content === content) return prev;
-        return prev.map((n) => (n.id === id ? { ...n, content } : n));
-      });
-    },
+      updateContent: (id, content) => {
+        get().setNodes((prev) => documentApi.updateContent(prev, id, content));
+      },
 
-    addChild: (parentId) => {
-      const newId = generateId();
-      get().setNodes((prev) => {
-        const siblings = prev.filter((n) => n.parentId === parentId);
-        const maxOrder =
-          siblings.length > 0
-            ? Math.max(...siblings.map((n) => n.order || 0))
-            : -1;
-        return [
-          ...prev,
-          { id: newId, content: "", parentId, order: maxOrder + 1 },
-        ];
-      });
-      set({ activeId: newId, editingId: newId });
-    },
-
-    addSibling: (targetId) => {
-      const newId = generateId();
-      get().setNodes((prev) => {
-        const targetNode = prev.find((n) => n.id === targetId);
-        if (!targetNode) return prev;
-        const parentId = targetNode.parentId;
-        const targetOrder = targetNode.order || 0;
-        const next = prev.map((n) => {
-          if (n.parentId === parentId && (n.order || 0) > targetOrder) {
-            return { ...n, order: (n.order || 0) + 1 };
-          }
-          return n;
+      addChild: (parentId) => {
+        let newIdValue: string | null = null;
+        get().setNodes((prev) => {
+          const { nextNodes, newId } = documentApi.addChild(prev, parentId);
+          newIdValue = newId;
+          return nextNodes;
         });
-        return [
-          ...next,
-          { id: newId, content: "", parentId, order: targetOrder + 1 },
-        ];
-      });
-      set({ activeId: newId, editingId: newId });
-    },
+        if (newIdValue) set({ activeId: newIdValue, editingId: newIdValue });
+      },
 
-    deleteNode: (id) => {
-      let parentFallback: string | null = null;
-      get().setNodes((prev) => {
-        const idsToRemove = new Set<string>();
-        const queue = [id];
-        while (queue.length > 0) {
-          const curr = queue.shift()!;
-          idsToRemove.add(curr);
-          const children = prev.filter((n) => n.parentId === curr);
-          for (const c of children) queue.push(c.id);
-        }
-        parentFallback = prev.find((n) => n.id === id)?.parentId || null;
-        return prev.filter((n) => !idsToRemove.has(n.id));
-      });
-      const activeId = get().activeId;
-      if (activeId === id) set({ activeId: parentFallback });
-    },
-
-    splitNode: (id, textBefore, textAfter) => {
-      const newId = generateId();
-      get().setNodes((prev) => {
-        const targetNode = prev.find((n) => n.id === id);
-        if (!targetNode) return prev;
-        const next = prev.map((n) => {
-          if (n.id === id) return { ...n, content: textBefore };
-          if (
-            n.parentId === targetNode.parentId &&
-            (n.order || 0) > (targetNode.order || 0)
-          ) {
-            return { ...n, order: (n.order || 0) + 1 };
-          }
-          return n;
+      addSibling: (targetId) => {
+        let newIdValue: string | null = null;
+        get().setNodes((prev) => {
+          const { nextNodes, newId } = documentApi.addSibling(prev, targetId);
+          newIdValue = newId;
+          return nextNodes;
         });
-        return [
-          ...next,
-          {
-            id: newId,
-            content: textAfter,
-            parentId: targetNode.parentId,
-            order: (targetNode.order || 0) + 1,
-          },
-        ];
-      });
-      set({ activeId: newId, editingId: newId });
-    },
+        if (newIdValue) set({ activeId: newIdValue, editingId: newIdValue });
+      },
 
-    moveNode: (sourceId, targetId, position) => {
-      get().setNodes((prev) => {
-        const isDescendant = (childId: string, parentId: string) => {
-          let curr = prev.find((n) => n.id === childId);
-          while (curr) {
-            if (curr.parentId === parentId) return true;
-            curr = prev.find((n) => n.id === curr?.parentId);
-          }
-          return false;
-        };
-        if (sourceId === targetId || isDescendant(targetId, sourceId)) {
-          set({ draggedId: null });
-          return prev;
-        }
-        const copy = prev.map((n) => ({ ...n }));
-        const targetNode = copy.find((n) => n.id === targetId);
-        const sourceIdx = copy.findIndex((n) => n.id === sourceId);
-        if (!targetNode || sourceIdx === -1) {
-          set({ draggedId: null });
-          return prev;
-        }
-        const source = copy[sourceIdx];
-        copy.splice(sourceIdx, 1);
-        let newParentId = targetNode.parentId;
-        if (position === "child") {
-          newParentId = targetId;
-          const destSiblings = copy
-            .filter((n) => n.parentId === newParentId)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          source.parentId = newParentId;
-          source.order =
-            destSiblings.length > 0
-              ? (destSiblings[destSiblings.length - 1].order || 0) + 1
-              : 0;
-          copy.push(source);
-        } else {
-          newParentId = targetNode.parentId;
-          source.parentId = newParentId;
-          const destSiblings = copy
-            .filter((n) => n.parentId === newParentId)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          const targetIdx = destSiblings.findIndex((n) => n.id === targetId);
-          destSiblings.splice(
-            position === "before" ? targetIdx : targetIdx + 1,
-            0,
-            source,
-          );
-          destSiblings.forEach((n, i) => {
-            n.order = i;
-            const objInCopy = copy.find((x) => x.id === n.id);
-            if (objInCopy) objInCopy.order = i;
-            if (n.id === source.id) source.order = i;
-          });
-          copy.push(source);
-        }
-        return copy;
-      });
-      set({ activeId: sourceId, draggedId: null });
-    },
+      deleteNode: (id) => {
+        let parentFallbackValue: string | null = null;
+        get().setNodes((prev) => {
+          const { nextNodes, parentFallback } = documentApi.deleteNode(prev, id);
+          parentFallbackValue = parentFallback;
+          return nextNodes;
+        });
+        const activeId = get().activeId;
+        if (activeId === id) set({ activeId: parentFallbackValue });
+      },
+
+      splitNode: (id, textBefore, textAfter) => {
+        let newIdValue: string | null = null;
+        get().setNodes((prev) => {
+          const { nextNodes, newId } = documentApi.splitNode(prev, id, textBefore, textAfter);
+          newIdValue = newId;
+          return nextNodes;
+        });
+        if (newIdValue) set({ activeId: newIdValue, editingId: newIdValue });
+      },
+
+      moveNode: (sourceId, targetId, position) => {
+        get().setNodes((prev) => documentApi.moveNode(prev, sourceId, targetId, position));
+        set({ activeId: sourceId, draggedId: null });
+      },
   })),
 );

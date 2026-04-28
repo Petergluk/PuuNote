@@ -30,6 +30,7 @@ export const AutoSizeTextarea = forwardRef<
     );
     const [localValue, setLocalValue] = useState(value);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingChangeRef = useRef<string | null>(null);
 
     // Sync external value initially, or when it changes outside
     useEffect(() => {
@@ -55,15 +56,22 @@ export const AutoSizeTextarea = forwardRef<
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const val = e.target.value;
       setLocalValue(val);
+      pendingChangeRef.current = val;
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
-        onChange(val);
+        if (pendingChangeRef.current !== null) {
+          onChange(pendingChangeRef.current);
+          pendingChangeRef.current = null;
+        }
       }, AUTOSIZE_DEBOUNCE_MS);
     };
 
     const handleBlur = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (pendingChangeRef.current !== null) {
+        pendingChangeRef.current = null;
+      }
       onChange(localValue);
       if (onBlur) onBlur();
     };

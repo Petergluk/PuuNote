@@ -3,7 +3,7 @@ import { Plus, Maximize2, Trash2, Scissors } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
-import { toggleCheckboxContent } from "../utils/markdownParser";
+import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
 export const Card = React.memo(
@@ -38,20 +38,7 @@ export const Card = React.memo(
     const [dropTarget, setDropTarget] = useState<
       "none" | "top" | "bottom" | "right"
     >("none");
-
-    const handleToggleCheckbox = React.useCallback(
-      (index: number, newValue: boolean) => {
-        const newContent = toggleCheckboxContent(
-          node.content || "",
-          index,
-          newValue,
-        );
-        if (newContent !== node.content) {
-          updateContent(node.id, newContent);
-        }
-      },
-      [node.id, node.content, updateContent],
-    );
+    const toggleCheckbox = useToggleCheckbox();
 
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -182,10 +169,10 @@ export const Card = React.memo(
             </div>
           ) : (
             <div
-              className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-[#eee] prose-p:text-app-text-primary dark:prose-p:text-[#d1d1d1] prose-li:text-app-text-primary dark:prose-li:text-[#d1d1d1] prose-strong:text-app-text-primary dark:prose-strong:text-white" : "prose-headings:text-app-text-muted dark:prose-headings:text-[#666] prose-p:text-app-text-muted dark:prose-p:text-[#666] prose-li:text-app-text-muted dark:prose-li:text-[#666] prose-strong:text-app-text-secondary dark:prose-strong:text-[#888]"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-[#222] prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""}`}
+              className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-p:text-app-text-primary dark:prose-p:text-app-text-primary prose-li:text-app-text-primary dark:prose-li:text-app-text-primary prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary" : "prose-headings:text-app-text-muted dark:prose-headings:text-app-text-muted prose-p:text-app-text-muted dark:prose-p:text-app-text-muted prose-li:text-app-text-muted dark:prose-li:text-app-text-muted prose-strong:text-app-text-secondary dark:prose-strong:text-app-text-secondary"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""}`}
             >
               {" "}
-              <SafeMarkdown onToggleCheckbox={handleToggleCheckbox}>
+              <SafeMarkdown onToggleCheckbox={(idx, val) => toggleCheckbox(node.id, node.content || "", idx, val)}>
                 {node.content || "*Empty node...*"}
               </SafeMarkdown>{" "}
             </div>
@@ -226,7 +213,16 @@ export const Card = React.memo(
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  deleteNode(node.id);
+                  const state = useAppStore.getState();
+                  const childrenCount = state.nodes.filter(n => n.parentId === node.id).length;
+                  if (childrenCount > 0) {
+                     state.openConfirm(
+                       `This will delete the card and its ${childrenCount} descendant branches. Are you sure?`,
+                       () => { deleteNode(node.id); }
+                     );
+                  } else {
+                    deleteNode(node.id);
+                  }
                 }}
                 className="absolute -top-3 right-[-13px] bg-app-card border border-app-border text-app-text-muted opacity-75 hover:opacity-100 rounded-full p-1.5 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all z-20 flex items-center justify-center"
                 title="Delete"

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { PuuNode } from "../types";
 import { useAppStore } from "../store/useAppStore";
@@ -7,7 +7,9 @@ import { SafeMarkdown } from "./SafeMarkdown";
 import { COPY_SUCCESS_TIMEOUT_MS } from "../constants";
 import { useTranslation } from "react-i18next";
 import { getDepthFirstNodes } from "../utils/tree";
-import { toggleCheckboxContent } from "../utils/markdownParser";
+import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
+
+const HEADING_REGEX = /^(#{1,6})\s+(.*)$/;
 
 export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const { t } = useTranslation();
@@ -22,19 +24,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
     return getDepthFirstNodes(nodes).map(({ depth: _depth, ...node }) => node);
   }, [nodes]);
 
-  const handleToggleCheckbox = useCallback(
-    (node: PuuNode, index: number, newValue: boolean) => {
-      const newContent = toggleCheckboxContent(
-        node.content || "",
-        index,
-        newValue,
-      );
-      if (newContent !== node.content) {
-        updateContent(node.id, newContent);
-      }
-    },
-    [updateContent],
-  );
+  const toggleCheckbox = useToggleCheckbox();
 
   /* Extract outline (headings) from nodes */
   const outline = useMemo(() => {
@@ -48,7 +38,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
     orderedNodes.forEach((n) => {
       const lines = n.content.split("\n");
       lines.forEach((line) => {
-        const match = line.match(/^(#{1,6})\s+(.*)$/);
+        const match = line.match(HEADING_REGEX);
         if (match) {
           items.push({
             id: `h-${hId++}`,
@@ -179,7 +169,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
                       <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
                         <SafeMarkdown
                           onToggleCheckbox={(idx, val) =>
-                            handleToggleCheckbox(n, idx, val)
+                            toggleCheckbox(n.id, n.content || "", idx, val)
                           }
                         >
                           {n.content || `*${t("Empty node")}*`}

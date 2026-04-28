@@ -1,16 +1,13 @@
 import { useMemo, useEffect, useRef } from "react";
 import { PuuNode } from "../types";
 
+import { buildTreeIndex } from "../utils/tree";
+
 export function useColumns(nodes: PuuNode[]) {
   const columns = useMemo(() => {
     const cols: PuuNode[][] = [];
-    const childrenMap = new Map<string | null, PuuNode[]>();
-    for (const node of nodes) {
-      if (!childrenMap.has(node.parentId)) {
-        childrenMap.set(node.parentId, []);
-      }
-      childrenMap.get(node.parentId)!.push(node);
-    }
+    const { childrenMap } = buildTreeIndex(nodes);
+    
     for (const group of childrenMap.values()) {
       group.sort((a, b) => (a.order || 0) - (b.order || 0));
     }
@@ -47,6 +44,14 @@ export function useActivePathScroll(
   useEffect(() => {
     initializedCols.current.clear();
   }, [activeFileId]);
+
+  useEffect(() => {
+    const initCols = initializedCols.current;
+    return () => {
+      initCols.clear();
+      colRefs.current = [];
+    };
+  }, []);
 
   // Make deep comparison or just use length/first-element as heuristic
   // but standard React expects same reference or JSON stringification

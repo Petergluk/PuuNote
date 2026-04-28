@@ -22,14 +22,12 @@ export const validateNodes = (data: unknown) => {
     const nodeMap = new Map();
     for (const node of nodes) {
       if (nodeMap.has(node.id)) {
-        console.warn("Duplicate node ID detected:", node.id);
-        // Will ignore tree duplicate integrity, usually best to drop it or fix it,
-        // but for now let's just let it pass as the last node will overwrite in maps
+        console.warn("Duplicate node ID detected, keeping last occurrence:", node.id);
       }
       nodeMap.set(node.id, node);
     }
 
-    let validNodes = [...nodes];
+    let validNodes = Array.from(nodeMap.values()) as typeof nodes;
 
     for (const node of validNodes) {
       const path = new Set<string>();

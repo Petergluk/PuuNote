@@ -4,6 +4,7 @@ import { generateId } from "../utils/id";
 import { INITIAL_NODES } from "../constants";
 import { validateNodes } from "../utils/schema";
 import { db } from "../db/db";
+import { toast } from "sonner";
 
 const pendingSave: {
   timer: ReturnType<typeof setTimeout> | null;
@@ -24,6 +25,9 @@ export const flushPendingSave = async () => {
       }
       await db.files.put({ id: fileId, nodes }).catch((err) => {
         console.error("Failed to save data into dexie", err);
+        if (err?.name === "QuotaExceededError" || err?.message?.includes("Quota")) {
+          toast.error("Storage space is full. Could not save your notes.");
+        }
       });
     }
   }
@@ -378,13 +382,20 @@ export function useFileSystemActions() {
     ];
 
     try {
-      await db.documents.put({
-        ...newDoc,
-        updatedAt: String(newDoc.updatedAt),
+      await db.transaction('rw', db.files, db.documents, async () => {
+        await db.documents.put({
+          ...newDoc,
+          updatedAt: String(newDoc.updatedAt),
+        });
+        await db.files.put({ id: newId, nodes: nodesToUse });
       });
-      await db.files.put({ id: newId, nodes: nodesToUse });
     } catch (err) {
       console.error("Failed to insert new file into db", err);
+      if (err instanceof Error && (err.name === "QuotaExceededError" || err.message.includes("Quota"))) {
+        toast.error("Storage space is full. Could not save your new document.");
+      } else {
+        toast.error("Failed to create new file.");
+      }
     }
 
     useAppStore.setState((s) => ({
@@ -408,11 +419,14 @@ export function useFileSystemActions() {
 
     // Explicitly delete from DB BEFORE changing state
     try {
-      await db.files.delete(fileId);
-      await db.documents.delete(fileId);
+      await db.transaction('rw', db.files, db.documents, async () => {
+        await db.files.delete(fileId);
+        await db.documents.delete(fileId);
+      });
       localStorage.removeItem(`puu_file_${fileId}`); // cleanup legacy
     } catch (err) {
       console.error("Failed to delete from db", err);
+      toast.error("Failed to delete the file.");
     }
 
     const newDocs = state.documents.filter((d) => d.id !== fileId);

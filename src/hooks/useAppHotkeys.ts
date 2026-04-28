@@ -26,8 +26,12 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
           return;
         }
 
+        const separator = text.includes("<!-- puunote-node -->")
+          ? /<!-- puunote-node -->/
+          : /^\s*---\s*$/m;
+
         const parts = text
-          .split(/^\s*---\s*$/m)
+          .split(separator)
           .map((p) => p.trim())
           .filter((p) => p.length > 0);
         if (parts.length === 0) return;
@@ -36,17 +40,18 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
         setNodes((prev) => {
           const siblings = prev.filter((n) => n.parentId === activeId);
-          let maxOrder =
+          const baseOrder =
             siblings.length > 0
               ? Math.max(...siblings.map((n) => n.order || 0))
               : -1;
-          const newNodes: PuuNode[] = parts.map((part) => {
-            maxOrder++;
+              
+          const newIds = parts.map(() => generateId());
+          const newNodes: PuuNode[] = parts.map((part, i) => {
             return {
-              id: generateId(),
+              id: newIds[i],
               content: part,
               parentId: activeId,
-              order: maxOrder,
+              order: baseOrder + i + 1,
             };
           });
           return [...prev, ...newNodes];

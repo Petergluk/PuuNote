@@ -21,10 +21,13 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
             rehypeSanitize,
             {
               ...defaultSchema,
+              tagNames: defaultSchema.tagNames ? defaultSchema.tagNames.filter(
+                (tag) => !["svg", "math", "style", "script", "iframe"].includes(tag)
+              ) : [],
               protocols: {
                 ...defaultSchema.protocols,
                 src: ["http", "https"],
-                href: ["http", "https", "mailto"], // Restrict href protocols for security
+                href: ["http", "https"], // strict mode without mailto or data
               },
             },
           ],

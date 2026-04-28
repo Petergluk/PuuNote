@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
+import Fuse from "fuse.js";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "../hooks/useFileSystem";
 import { Search, Palette, FileText, Plus, Trash2 } from "lucide-react";
@@ -28,24 +29,16 @@ export function CommandPalette() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Toggle
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         setIsOpen(!isOpen);
       }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, setIsOpen]);
-
-  // Global escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
         setIsOpen(false);
       }
     };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, setIsOpen]);
 
   useEffect(() => {
@@ -61,9 +54,9 @@ export function CommandPalette() {
         return;
       }
 
-      const lowerQuery = query.toLowerCase();
+
       const allFiles = await db.files.toArray();
-      const results: {
+      const docs: {
         id: string;
         content: string;
         fileId: string;
@@ -75,18 +68,22 @@ export function CommandPalette() {
         const title = doc ? doc.title : "Unknown Document";
 
         for (const node of file.nodes) {
-          if (node.content.toLowerCase().includes(lowerQuery)) {
-            results.push({
-              id: node.id,
-              content: node.content,
-              fileId: file.id,
-              fileTitle: title,
-            });
-            if (results.length >= 15) break;
-          }
+          docs.push({
+            id: node.id,
+            content: node.content,
+            fileId: file.id,
+            fileTitle: title,
+          });
         }
-        if (results.length >= 15) break;
       }
+
+      const fuse = new Fuse(docs, {
+        keys: ["content"],
+        threshold: 0.4,
+        ignoreLocation: true,
+      });
+
+      const results = fuse.search(query).slice(0, 15).map(res => res.item);
 
       setSearchResults(results);
     }, 300);
@@ -102,8 +99,13 @@ export function CommandPalette() {
   const handleSelectNode = async (fileId: string, nodeId: string) => {
     if (fileId !== activeFileId) {
       await switchFile(fileId);
+      const state = useAppStore.getState();
+      if (state.activeId !== nodeId) {
+        setActiveId(nodeId);
+      }
+    } else {
+      setActiveId(nodeId);
     }
-    setActiveId(nodeId);
     closePalette();
   };
 

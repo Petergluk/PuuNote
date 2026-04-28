@@ -1,14 +1,16 @@
 import { PuuNode } from "../types";
 import { generateId } from "./id";
-import { getOrderedChildren } from "./tree";
+import { buildTreeIndex } from "./tree";
 
 export const PUUNOTE_FORMAT_MARKER = "<!-- puunote-format: 1 -->";
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
   let md = `${PUUNOTE_FORMAT_MARKER}\n\n`;
   const visited = new Set<string>();
+  const { childrenMap } = buildTreeIndex(nodes);
   const traverse = (parentId: string | null, depth: number) => {
-    const children = getOrderedChildren(nodes, parentId);
+    const children = childrenMap.get(parentId) || [];
+    children.sort((a, b) => (a.order || 0) - (b.order || 0));
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
       if (visited.has(child.id)) continue;

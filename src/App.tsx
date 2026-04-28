@@ -1,6 +1,8 @@
 import { useEffect, useRef, useMemo, Suspense, lazy } from "react";
 import { AnimatePresence } from "motion/react";
+import { Toaster, toast } from "sonner";
 import { Card } from "./components/Card";
+import { isFullscreen, exitFullscreen } from "./utils/fullscreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -57,19 +59,7 @@ export default function App() {
 
   useEffect(() => {
     const onFullscreenChange = () => {
-      const doc = document as Document & {
-        webkitFullscreenElement?: Element;
-        mozFullScreenElement?: Element;
-        msFullscreenElement?: Element;
-      };
-      if (
-        !(
-          doc.fullscreenElement ||
-          doc.webkitFullscreenElement ||
-          doc.mozFullScreenElement ||
-          doc.msFullscreenElement
-        )
-      ) {
+      if (!isFullscreen(document)) {
         useAppStore.getState().setUiMode("normal");
       }
     };
@@ -79,10 +69,7 @@ export default function App() {
     document.addEventListener("MSFullscreenChange", onFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        onFullscreenChange,
-      );
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
       document.removeEventListener("mozfullscreenchange", onFullscreenChange);
       document.removeEventListener("MSFullscreenChange", onFullscreenChange);
     };
@@ -136,9 +123,7 @@ export default function App() {
         }
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
-        useAppStore
-          .getState()
-          .openConfirm("Imported file is invalid or corrupted.", () => {});
+        toast.error("Import failed", { description: "Imported file is invalid or corrupted." });
       }
     };
     reader.readAsText(file);
@@ -163,6 +148,7 @@ export default function App() {
         }
       }}
     >
+      <Toaster theme="system" position="bottom-right" richColors />
       {" "}
       {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
       <main
@@ -228,31 +214,13 @@ export default function App() {
             e.stopPropagation();
             useAppStore.getState().setUiMode("normal");
             try {
-              const doc = document as Document & {
-                webkitFullscreenElement?: Element;
-                mozFullScreenElement?: Element;
-                msFullscreenElement?: Element;
-                exitFullscreen?: () => Promise<void>;
-                webkitExitFullscreen?: () => Promise<void>;
-                mozCancelFullScreen?: () => Promise<void>;
-                msExitFullscreen?: () => Promise<void>;
-              };
-              const isFS = !!(
-                doc.fullscreenElement ||
-                doc.webkitFullscreenElement ||
-                doc.mozFullScreenElement ||
-                doc.msFullscreenElement
-              );
-              if (isFS) {
-                const exitFS =
-                  doc.exitFullscreen ||
-                  doc.webkitExitFullscreen ||
-                  doc.mozCancelFullScreen ||
-                  doc.msExitFullscreen;
-                if (exitFS)
-                  exitFS.call(doc).catch(() => {
+              if (isFullscreen(document)) {
+                const exitFunc = exitFullscreen(document);
+                if (exitFunc && exitFunc.catch) {
+                  exitFunc.catch(() => {
                     /* ignore */
                   });
+                }
               }
             } catch (err) {
               console.warn("Fullscreen exit error", err);

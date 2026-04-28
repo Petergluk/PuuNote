@@ -15,6 +15,7 @@ import {
   Minimize,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
+import { requestFullscreen, exitFullscreen, isFullscreen } from "../utils/fullscreen";
 
 interface HeaderProps {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -39,53 +40,25 @@ export function Header({ handleImport }: HeaderProps) {
   const setUiMode = useAppStore((s) => s.setUiMode);
 
   const toggleFullscreen = () => {
-    const doc = document as Document & {
-      webkitFullscreenElement?: Element;
-      mozFullScreenElement?: Element;
-      msFullscreenElement?: Element;
-      exitFullscreen?: () => Promise<void>;
-      webkitExitFullscreen?: () => Promise<void>;
-      mozCancelFullScreen?: () => Promise<void>;
-      msExitFullscreen?: () => Promise<void>;
-    };
-    const isFullscreen = !!(
-      doc.fullscreenElement ||
-      doc.webkitFullscreenElement ||
-      doc.mozFullScreenElement ||
-      doc.msFullscreenElement
-    );
-
-    if (!isFullscreen) {
+    if (!isFullscreen(document)) {
       setUiMode("fullscreen");
-      const el = document.documentElement as HTMLElement & {
-        requestFullscreen?: () => Promise<void>;
-        webkitRequestFullscreen?: () => Promise<void>;
-        mozRequestFullScreen?: () => Promise<void>;
-        msRequestFullscreen?: () => Promise<void>;
-      };
-      const requestFS =
-        el.requestFullscreen ||
-        el.webkitRequestFullscreen ||
-        el.mozRequestFullScreen ||
-        el.msRequestFullscreen;
-      if (requestFS)
-        requestFS.call(el).catch(() => {
+      const reqFunc = requestFullscreen(document.documentElement);
+      if (reqFunc && reqFunc.catch) {
+        reqFunc.catch(() => {
           /* ignore */
         });
+      }
     } else {
       if (uiMode === "fullscreen") {
         setUiMode("zen");
       } else {
         setUiMode("normal");
-        const exitFS =
-          doc.exitFullscreen ||
-          doc.webkitExitFullscreen ||
-          doc.mozCancelFullScreen ||
-          doc.msExitFullscreen;
-        if (exitFS)
-          exitFS.call(doc).catch(() => {
+        const exitFunc = exitFullscreen(document);
+        if (exitFunc && exitFunc.catch) {
+          exitFunc.catch(() => {
             /* ignore */
           });
+        }
       }
     }
   };
