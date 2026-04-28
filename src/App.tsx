@@ -181,7 +181,7 @@ export default function App() {
                   ref={(el) => {
                     colRefs.current[colIndex] = el;
                   }}
-                  className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 sm:pl-2 sm:pr-8 sm:-mr-6 transition-all duration-200 col-spacer relative"
+                  className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-4 transition-all duration-200 col-spacer relative"
                 >
                   <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[95vh] mx-auto transition-all duration-200 col-spacer">
                     {colNodes.map((node) => (

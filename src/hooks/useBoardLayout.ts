@@ -106,65 +106,44 @@ export function useActivePathScroll(
         }
 
         // Vertical Alignment for all columns
-        let globalTargetY = 0;
-        let baselineFound = false;
-
-        const intendedCenters = new Map<string, number>();
-        const scrollTasks: { col: Element; diff: number; top: number }[] = [];
-
-        colRefs.current.forEach((col) => {
+        colRefs.current.forEach((col, colIndex) => {
           if (!col) return;
           
-          let elToAlign: Element | null = null;
-          let elToAlignIsActive = false;
-
-          // 1. Check if the column has a node in activePath
+          let activeNodeInCol: Element | null = null;
+          // Find the active node in this column
           for (const pathId of activePath) {
             const el = document.getElementById(`card-${pathId}`);
             if (el && col.contains(el)) {
-              elToAlign = el;
-              elToAlignIsActive = true;
+              activeNodeInCol = el;
               break;
             }
           }
 
-          // 2. If not, use the first card in the column
-          if (!elToAlign) {
-            elToAlign = col.querySelector('[id^="card-"]');
-          }
-
-          if (elToAlign) {
-            const elRect = elToAlign.getBoundingClientRect();
+          if (activeNodeInCol) {
+            const elRect = activeNodeInCol.getBoundingClientRect();
             const colRect = col.getBoundingClientRect();
+            
+            let desiredCenterY = elRect.top + elRect.height / 2;
 
-            let desiredCenterY = colRect.top + col.clientHeight / 2;
-
-            if (!baselineFound && elToAlignIsActive) {
-                const isFirstCardInColumn = col.querySelector('[id^="card-"]') === elToAlign;
-                if (isFirstCardInColumn) {
-                    desiredCenterY = colRect.top + 64 + (elToAlign as HTMLElement).offsetHeight / 2;
-                } else {
-                    desiredCenterY = colRect.top + col.clientHeight / 2;
+            if (colIndex > 0) {
+              // Align to parent's vertical center
+              const parentId = activeNodeInCol.getAttribute("data-parent-id");
+              if (parentId) {
+                const parentEl = document.getElementById(`card-${parentId}`);
+                if (parentEl) {
+                  const pRect = parentEl.getBoundingClientRect();
+                  desiredCenterY = pRect.top + pRect.height / 2;
                 }
-                globalTargetY = desiredCenterY;
-                baselineFound = true;
-            }
-
-            if (elToAlignIsActive) {
-                desiredCenterY = globalTargetY;
+              }
             } else {
-                const parentId = elToAlign.getAttribute("data-parent-id");
-                if (parentId && intendedCenters.has(parentId)) {
-                    desiredCenterY = intendedCenters.get(parentId)!;
-                } else {
-                    const parentEl = document.getElementById(`card-${parentId}`);
-                    if (parentEl) {
-                        const pRect = parentEl.getBoundingClientRect();
-                        desiredCenterY = pRect.top + pRect.height / 2;
-                    } else if (baselineFound) {
-                        desiredCenterY = globalTargetY;
-                    }
-                }
+               // First column keeps its scroll, just ensure it's not totally out of bounds
+               const minCenterY = colRect.top + 64 + elRect.height / 2;
+               const maxCenterY = colRect.bottom - 16 - elRect.height / 2;
+               if (desiredCenterY < minCenterY) {
+                 desiredCenterY = minCenterY; 
+               } else if (desiredCenterY > maxCenterY) {
+                 desiredCenterY = maxCenterY;
+               }
             }
 
             const currentCenterY = elRect.top + elRect.height / 2;
@@ -175,24 +154,11 @@ export function useActivePathScroll(
             
             const targetScrollTop = col.scrollTop + targetDiff;
             const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop));
-            const appliedDiff = clampedScrollTop - col.scrollTop;
-
-            const cardsInCol = col.querySelectorAll('[id^="card-"]');
-            cardsInCol.forEach(card => {
-                const cRect = card.getBoundingClientRect();
-                const cardCenterY = cRect.top + cRect.height / 2;
-                const cId = card.id.replace("card-", "");
-                intendedCenters.set(cId, cardCenterY - appliedDiff);
-            });
-
-            if (Math.abs(appliedDiff) > 2) {
-              scrollTasks.push({ col, diff: appliedDiff, top: clampedScrollTop });
+            
+            if (Math.abs(clampedScrollTop - col.scrollTop) > 2) {
+               col.scrollTo({ top: clampedScrollTop, behavior: "smooth" });
             }
           }
-        });
-
-        scrollTasks.forEach(task => {
-          task.col.scrollTo({ top: task.top, behavior: "smooth" });
         });
       });
     });

@@ -77,8 +77,8 @@ export function Footer() {
             <button
               onClick={() => {
                 const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
-                const cw = Math.floor(aw / 3) - 24;
+                const aw = s ? s.clientWidth : window.innerWidth;
+                const cw = Math.floor(aw / 3) - 32;
                 useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer"
@@ -89,10 +89,10 @@ export function Footer() {
             <button
               onClick={() => {
                 const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
-                const cC = aw / (useAppStore.getState().colWidth + 24);
-                const tC = Math.floor(cC + 0.05) + 1;
-                const cw = (aw / tC) - 24;
+                const aw = s ? s.clientWidth : window.innerWidth;
+                const cC = aw / (useAppStore.getState().colWidth + 32);
+                const tC = Math.floor(cC + 0.1) + 1;
+                const cw = (aw / tC) - 32;
                 useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
@@ -114,11 +114,11 @@ export function Footer() {
             <button
               onClick={() => {
                 const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
-                const cC = aw / (useAppStore.getState().colWidth + 24);
-                let tC = Math.ceil(cC - 0.05) - 1;
+                const aw = s ? s.clientWidth : window.innerWidth;
+                const cC = aw / (useAppStore.getState().colWidth + 32);
+                let tC = Math.ceil(cC - 0.1) - 1;
                 tC = Math.max(1, tC);
-                const cw = (aw / tC) - 24;
+                const cw = (aw / tC) - 32;
                 useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
