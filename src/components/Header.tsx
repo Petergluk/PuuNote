@@ -48,7 +48,12 @@ export function Header({ handleImport }: HeaderProps) {
       mozCancelFullScreen?: () => Promise<void>;
       msExitFullscreen?: () => Promise<void>;
     };
-    const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+    const isFullscreen = !!(
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
+    );
 
     if (!isFullscreen) {
       setUiMode("fullscreen");
@@ -58,15 +63,29 @@ export function Header({ handleImport }: HeaderProps) {
         mozRequestFullScreen?: () => Promise<void>;
         msRequestFullscreen?: () => Promise<void>;
       };
-      const requestFS = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-      if (requestFS) requestFS.call(el).catch(() => { /* ignore */ });
+      const requestFS =
+        el.requestFullscreen ||
+        el.webkitRequestFullscreen ||
+        el.mozRequestFullScreen ||
+        el.msRequestFullscreen;
+      if (requestFS)
+        requestFS.call(el).catch(() => {
+          /* ignore */
+        });
     } else {
       if (uiMode === "fullscreen") {
         setUiMode("zen");
       } else {
         setUiMode("normal");
-        const exitFS = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
-        if (exitFS) exitFS.call(doc).catch(() => { /* ignore */ });
+        const exitFS =
+          doc.exitFullscreen ||
+          doc.webkitExitFullscreen ||
+          doc.mozCancelFullScreen ||
+          doc.msExitFullscreen;
+        if (exitFS)
+          exitFS.call(doc).catch(() => {
+            /* ignore */
+          });
       }
     }
   };
@@ -93,14 +112,14 @@ export function Header({ handleImport }: HeaderProps) {
           <nav className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => setFileMenuOpen(!fileMenuOpen)}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${fileMenuOpen ? 'text-app-text-primary bg-app-card-hover border border-app-border' : 'text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border'}`}
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${fileMenuOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title="Manage documents"
             >
               <Folder size={18} />
             </button>
             <button
               onClick={() => setTimelineOpen(!timelineOpen)}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${timelineOpen ? 'text-app-text-primary bg-app-card-hover border border-app-border' : 'text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border'}`}
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${timelineOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title="Toggle View Mode"
             >
               {timelineOpen ? <Network size={18} /> : <ScrollText size={18} />}
@@ -145,7 +164,11 @@ export function Header({ handleImport }: HeaderProps) {
           className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center justify-center gap-2"
           title="Toggle Fullscreen"
         >
-          {uiMode !== "normal" ? <Minimize size={16} /> : <Maximize size={16} />}
+          {uiMode !== "normal" ? (
+            <Minimize size={16} />
+          ) : (
+            <Maximize size={16} />
+          )}
         </button>
         <button
           onClick={toggleCardsCollapsed}

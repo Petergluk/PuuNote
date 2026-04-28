@@ -6,7 +6,7 @@ import { validateNodes } from "../utils/schema";
 import { db } from "../db/db";
 
 const pendingSave: {
-  timer: NodeJS.Timeout | null;
+  timer: ReturnType<typeof setTimeout> | null;
   fileId: string;
   nodes: typeof INITIAL_NODES;
 } = { timer: null, fileId: "", nodes: [] };
@@ -125,7 +125,10 @@ export function useFileSystemInit() {
       try {
         localStorage.setItem("puu_active_file", active); // persist active id in ls since it's just one string
       } catch (err) {
-        console.error("Failed to save active file reference to localStorage", err);
+        console.error(
+          "Failed to save active file reference to localStorage",
+          err,
+        );
       }
 
       let newNodes = INITIAL_NODES;
@@ -251,9 +254,15 @@ export function useFileSystemInit() {
       }
     });
 
+    const handleBeforeUnload = () => {
+      flushPendingSave();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       unsubscribe();
       flushPendingSave();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 }
@@ -304,11 +313,18 @@ export function useFileSystemActions() {
     useAppStore.getState().setNodesRaw(newNodes);
   };
 
-  const createNewFile = async (initialNodes?: typeof INITIAL_NODES, title?: string) => {
+  const createNewFile = async (
+    initialNodes?: typeof INITIAL_NODES,
+    title?: string,
+  ) => {
     await flushPendingSave();
 
     const newId = generateId();
-    const newDoc = { id: newId, title: title || "New Document", updatedAt: Date.now() };
+    const newDoc = {
+      id: newId,
+      title: title || "New Document",
+      updatedAt: Date.now(),
+    };
     const nodesToUse = initialNodes || [
       {
         id: generateId(),
@@ -319,7 +335,10 @@ export function useFileSystemActions() {
     ];
 
     try {
-      await db.documents.put({ ...newDoc, updatedAt: String(newDoc.updatedAt) });
+      await db.documents.put({
+        ...newDoc,
+        updatedAt: String(newDoc.updatedAt),
+      });
       await db.files.put({ id: newId, nodes: nodesToUse });
     } catch (err) {
       console.error("Failed to insert new file into db", err);
@@ -338,12 +357,12 @@ export function useFileSystemActions() {
     // If the file we are deleting is the currently active file, cancel any pending saves
     const state = useAppStore.getState();
     if (state.activeFileId === fileId) {
-       if (pendingSave.timer) clearTimeout(pendingSave.timer);
-       pendingSave.timer = null;
+      if (pendingSave.timer) clearTimeout(pendingSave.timer);
+      pendingSave.timer = null;
     } else {
-       await flushPendingSave();
+      await flushPendingSave();
     }
-    
+
     // Explicitly delete from DB BEFORE changing state
     try {
       await db.files.delete(fileId);

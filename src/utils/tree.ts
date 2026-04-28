@@ -8,23 +8,26 @@ export interface TreeIndex {
 export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
   const nodeMap = new Map<string, PuuNode>();
   const childrenMap = new Map<string | null, PuuNode[]>();
-  
+
   for (const n of nodes) {
     nodeMap.set(n.id, n);
     const children = childrenMap.get(n.parentId) || [];
     children.push(n);
     childrenMap.set(n.parentId, children);
   }
-  
+
   return { nodeMap, childrenMap };
 };
 
-export const getAncestors = (nodes: PuuNode[], startId: string | null): string[] => {
+export const getAncestors = (
+  nodes: PuuNode[],
+  startId: string | null,
+): string[] => {
   if (!startId) return [];
   const { nodeMap } = buildTreeIndex(nodes);
   const path: string[] = [];
   let curr: string | null = startId;
-  
+
   while (curr) {
     path.push(curr);
     const node = nodeMap.get(curr);
@@ -68,7 +71,7 @@ export const computeDescendantIds = (
 ): Set<string> => {
   if (!activeId) return new Set<string>();
   const { childrenMap } = buildTreeIndex(nodes);
-  
+
   const ids = new Set<string>();
   const queue = [activeId];
   while (queue.length > 0) {
@@ -82,16 +85,21 @@ export const computeDescendantIds = (
   return ids;
 };
 
-export const getOrderedChildren = (nodes: PuuNode[], parentId: string | null): PuuNode[] => {
+export const getOrderedChildren = (
+  nodes: PuuNode[],
+  parentId: string | null,
+): PuuNode[] => {
   const { childrenMap } = buildTreeIndex(nodes);
   const children = childrenMap.get(parentId) || [];
   return children.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
-export const getDepthFirstNodes = (nodes: PuuNode[]): (PuuNode & { depth: number })[] => {
+export const getDepthFirstNodes = (
+  nodes: PuuNode[],
+): (PuuNode & { depth: number })[] => {
   const { childrenMap } = buildTreeIndex(nodes);
   const result: (PuuNode & { depth: number })[] = [];
-  
+
   const traverse = (parentId: string | null, depth: number) => {
     const children = childrenMap.get(parentId) || [];
     children.sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -100,7 +108,7 @@ export const getDepthFirstNodes = (nodes: PuuNode[]): (PuuNode & { depth: number
       traverse(child.id, depth + 1);
     }
   };
-  
+
   traverse(null, 0);
   return result;
 };

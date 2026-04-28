@@ -44,18 +44,22 @@ export const FullScreenModal = ({
   );
   columnNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const handleToggleCheckbox = (node: PuuNode, index: number, newValue: boolean) => {
+  const handleToggleCheckbox = (
+    node: PuuNode,
+    index: number,
+    newValue: boolean,
+  ) => {
     let count = 0;
     const newContent = (node.content || "").replace(
       /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
-      (match, p1, p2, p3) => {
+      (match, p1, _p2, p3) => {
         if (count === index) {
           count++;
           return p1 + (newValue ? "x" : " ") + p3;
         }
         count++;
         return match;
-      }
+      },
     );
     if (newContent !== node.content) {
       updateContent(node.id, newContent);
@@ -100,7 +104,11 @@ export const FullScreenModal = ({
                   />
                 ) : (
                   <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
-                    <SafeMarkdown onToggleCheckbox={(idx, val) => handleToggleCheckbox(n, idx, val)}>
+                    <SafeMarkdown
+                      onToggleCheckbox={(idx, val) =>
+                        handleToggleCheckbox(n, idx, val)
+                      }
+                    >
                       {n.content || "*Empty card...*"}
                     </SafeMarkdown>
                   </div>

@@ -38,23 +38,26 @@ export const Card = React.memo(
       "none" | "top" | "bottom" | "right"
     >("none");
 
-    const handleToggleCheckbox = React.useCallback((index: number, newValue: boolean) => {
-      let count = 0;
-      const newContent = (node.content || "").replace(
-        /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
-        (match, p1, p2, p3) => {
-          if (count === index) {
+    const handleToggleCheckbox = React.useCallback(
+      (index: number, newValue: boolean) => {
+        let count = 0;
+        const newContent = (node.content || "").replace(
+          /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
+          (match, p1, _p2, p3) => {
+            if (count === index) {
+              count++;
+              return p1 + (newValue ? "x" : " ") + p3;
+            }
             count++;
-            return p1 + (newValue ? "x" : " ") + p3;
-          }
-          count++;
-          return match;
+            return match;
+          },
+        );
+        if (newContent !== node.content) {
+          updateContent(node.id, newContent);
         }
-      );
-      if (newContent !== node.content) {
-        updateContent(node.id, newContent);
-      }
-    }, [node.id, node.content, updateContent]);
+      },
+      [node.id, node.content, updateContent],
+    );
 
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();

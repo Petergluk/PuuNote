@@ -64,36 +64,60 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
               <span className="font-mono text-app-text-primary">↑ ↓ ← →</span>
             </div>
             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Clear focus")}</span>
+              <span className="text-app-text-secondary">
+                {t("Clear focus")}
+              </span>
               <span className="font-mono text-app-text-primary">Esc</span>
             </div>
             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Edit selected")}</span>
+              <span className="text-app-text-secondary">
+                {t("Edit selected")}
+              </span>
               <span className="font-mono text-app-text-primary">Enter</span>
             </div>
             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Save changes")}</span>
-              <span className="font-mono text-app-text-primary">{isMac ? "⌘ + Enter" : "Ctrl + Enter"}</span>
+              <span className="text-app-text-secondary">
+                {t("Save changes")}
+              </span>
+              <span className="font-mono text-app-text-primary">
+                {isMac ? "⌘ + Enter" : "Ctrl + Enter"}
+              </span>
             </div>
             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Undo shortcut")}</span>
-              <span className="font-mono text-app-text-primary">{isMac ? "⌘Z" : "Ctrl+Z"}</span>
+              <span className="text-app-text-secondary">
+                {t("Undo shortcut")}
+              </span>
+              <span className="font-mono text-app-text-primary">
+                {isMac ? "⌘Z" : "Ctrl+Z"}
+              </span>
             </div>
-             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Redo shortcut")}</span>
-              <span className="font-mono text-app-text-primary">{isMac ? "⇧⌘Z" : "Ctrl+Shift+Z"}</span>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-app-text-secondary">
+                {t("Redo shortcut")}
+              </span>
+              <span className="font-mono text-app-text-primary">
+                {isMac ? "⇧⌘Z" : "Ctrl+Shift+Z"}
+              </span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-t border-app-border/50 pt-2 mt-2">
-              <span className="text-app-text-secondary">{t("Add Sibling")}</span>
-              <span className="font-mono text-app-text-primary">Shift + Enter</span>
+              <span className="text-app-text-secondary">
+                {t("Add Sibling")}
+              </span>
+              <span className="font-mono text-app-text-primary">
+                Shift + Enter
+              </span>
             </div>
             <div className="flex justify-between items-center py-1.5">
               <span className="text-app-text-secondary">{t("Add Child")}</span>
               <span className="font-mono text-app-text-primary">Tab</span>
             </div>
             <div className="flex justify-between items-center py-1.5">
-              <span className="text-app-text-secondary">{t("Command Palette")}</span>
-              <span className="font-mono text-app-text-primary">{isMac ? "⌘K" : "Ctrl+K"}</span>
+              <span className="text-app-text-secondary">
+                {t("Command Palette")}
+              </span>
+              <span className="font-mono text-app-text-primary">
+                {isMac ? "⌘K" : "Ctrl+K"}
+              </span>
             </div>
           </div>
         </motion.div>

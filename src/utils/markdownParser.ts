@@ -38,8 +38,8 @@ export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
 };
 const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
   const cleanText = mdText.replace(/<!-- puunote-format: 1 -->\s*/g, "");
-  const separatorRegex = cleanText.includes("<!-- puunote-node -->") 
-    ? /^[^\S\n]*<!-- puunote-node -->[^\S\n]*$/gm 
+  const separatorRegex = cleanText.includes("<!-- puunote-node -->")
+    ? /^[^\S\n]*<!-- puunote-node -->[^\S\n]*$/gm
     : /^[^\S\n]*---[^\S\n]*$/gm;
   const blocks = cleanText.split(separatorRegex);
   const imported: PuuNode[] = [];

@@ -61,7 +61,6 @@ interface AppActions {
   ) => void;
 }
 
-
 export const useAppStore = create<AppState & AppActions>()(
   subscribeWithSelector((set, get) => ({
     documents: [],
@@ -82,12 +81,14 @@ export const useAppStore = create<AppState & AppActions>()(
     uiMode: "normal",
     confirmDialog: { isOpen: false, message: "" },
 
-    openConfirm: (message, onConfirm) => set({
-      confirmDialog: { isOpen: true, message, onConfirm }
-    }),
-    closeConfirm: () => set((state) => ({
-      confirmDialog: { ...state.confirmDialog, isOpen: false }
-    })),
+    openConfirm: (message, onConfirm) =>
+      set({
+        confirmDialog: { isOpen: true, message, onConfirm },
+      }),
+    closeConfirm: () =>
+      set((state) => ({
+        confirmDialog: { ...state.confirmDialog, isOpen: false },
+      })),
 
     setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
     setTheme: (theme) => set({ theme }),

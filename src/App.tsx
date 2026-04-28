@@ -1,6 +1,5 @@
 import { useEffect, useRef, useMemo, Suspense, lazy } from "react";
 import { AnimatePresence } from "motion/react";
-import { PuuNode } from "./types";
 import { Card } from "./components/Card";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
@@ -9,19 +8,31 @@ import { FileMenu } from "./components/FileMenu";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Minimize } from "lucide-react";
 
-const FullScreenModal = lazy(() => import("./components/FullScreenModal").then(module => ({ default: module.FullScreenModal })));
-const TimelineView = lazy(() => import("./components/TimelineView").then(module => ({ default: module.TimelineView })));
-const CommandPalette = lazy(() => import("./components/CommandPalette").then(module => ({ default: module.CommandPalette })));
+const FullScreenModal = lazy(() =>
+  import("./components/FullScreenModal").then((module) => ({
+    default: module.FullScreenModal,
+  })),
+);
+const TimelineView = lazy(() =>
+  import("./components/TimelineView").then((module) => ({
+    default: module.TimelineView,
+  })),
+);
+const CommandPalette = lazy(() =>
+  import("./components/CommandPalette").then((module) => ({
+    default: module.CommandPalette,
+  })),
+);
 
 import { parseMarkdownToNodes } from "./utils/markdownParser";
 import { validateNodes } from "./utils/schema";
 import { useFileSystemInit, useFileSystemActions } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
-import {
-  useAppStore,
-} from "./store/useAppStore";
+import { useAppStore } from "./store/useAppStore";
 import { computeActivePath, computeDescendantIds } from "./utils/tree";
+import { useColumns, useActivePathScroll } from "./hooks/useBoardLayout";
+
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +60,14 @@ export default function App() {
         mozFullScreenElement?: Element;
         msFullscreenElement?: Element;
       };
-      if (!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement)) {
+      if (
+        !(
+          doc.fullscreenElement ||
+          doc.webkitFullscreenElement ||
+          doc.mozFullScreenElement ||
+          doc.msFullscreenElement
+        )
+      ) {
         useAppStore.getState().setUiMode("normal");
       }
     };
@@ -59,7 +77,10 @@ export default function App() {
     document.addEventListener("MSFullscreenChange", onFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        onFullscreenChange,
+      );
       document.removeEventListener("mozfullscreenchange", onFullscreenChange);
       document.removeEventListener("MSFullscreenChange", onFullscreenChange);
     };
@@ -73,115 +94,20 @@ export default function App() {
   const activeDescendantIds = useMemo(
     () => computeDescendantIds(nodes, activeId),
     [nodes, activeId],
-  ); /* Build column arrays */
-  const columns = useMemo(() => {
-    const cols: PuuNode[][] = [];
-    const childrenMap = new Map<string | null, PuuNode[]>();
-    for (const node of nodes) {
-      if (!childrenMap.has(node.parentId)) {
-        childrenMap.set(node.parentId, []);
-      }
-      childrenMap.get(node.parentId)!.push(node);
-    }
-    for (const group of childrenMap.values()) {
-      group.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-    let currentLevel = childrenMap.get(null) || [];
-    if (currentLevel.length === 0) {
-      cols.push([]);
-      return cols;
-    }
-    while (currentLevel.length > 0) {
-      cols.push(currentLevel);
-      const nextLevel: PuuNode[] = [];
-      for (const parent of currentLevel) {
-        const children = childrenMap.get(parent.id) || [];
-        nextLevel.push(...children);
-      }
-      currentLevel = nextLevel;
-    }
-    return cols;
-  }, [nodes]);
-  const colRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const initializedCols = useRef<Set<number>>(new Set());
+  );
+
+  /* Build column arrays */
+  const columns = useColumns(nodes);
+
   useEffect(() => {
     colRefs.current = colRefs.current.slice(0, columns.length);
   }, [columns.length]);
-  useEffect(() => {
-    let rafId: number;
-    const updateScroll = () => {
-      colRefs.current.forEach((col, index) => {
-        if (col && !initializedCols.current.has(index)) {
-          const firstCard = col.querySelector('[id^="card-"]') as HTMLElement;
-          if (firstCard) {
-            col.scrollTop = firstCard.offsetTop - 64;
-            initializedCols.current.add(index);
-          }
-        }
-      });
-    };
-    rafId = requestAnimationFrame(() => {
-      rafId = requestAnimationFrame(updateScroll); // Double raf guarantees paint
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [
-    columns,
-  ]); /* Center the active path vertically and horizontally when the active node changes */
-  const activePathString = activePath.join(',');
 
-  useEffect(() => {
-    let r2: number;
-    const r1 = requestAnimationFrame(() => {
-      r2 = requestAnimationFrame(() => {
-        if (!activeId) return;
-        const activeEl = document.getElementById(`card-${activeId}`);
-        if (!activeEl) return;
-        if (timelineOpen) {
-          activeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          return;
-        } /* Horizontal Scroll onto active column */
-        const mainScroller = document.getElementById("main-scroller");
-        const activeCol = activeEl.closest(".overflow-y-auto") as HTMLElement;
-        if (mainScroller && activeCol) {
-          const scrollerRect = mainScroller.getBoundingClientRect();
-          const colRect = activeCol.getBoundingClientRect();
-          const hDiff =
-            colRect.left +
-            activeCol.offsetWidth / 2 -
-            (scrollerRect.left + mainScroller.clientWidth / 2);
-          if (Math.abs(hDiff) > 2) {
-            mainScroller.scrollTo({
-              left: mainScroller.scrollLeft + hDiff,
-              behavior: "smooth",
-            });
-          }
-        } /* Vertical Alignment for all path items */
-        const currentPath = activePathString ? activePathString.split(',') : [];
-        for (const pathId of currentPath) {
-          const el = document.getElementById(`card-${pathId}`);
-          if (el) {
-            const col = el.closest(".overflow-y-auto");
-            if (col) {
-              const elRect = el.getBoundingClientRect();
-              const colRect = col.getBoundingClientRect();
-              const desiredTop = Math.max(
-                colRect.top + 32,
-                colRect.top + col.clientHeight / 2 - el.offsetHeight / 2,
-              );
-              const diff = elRect.top - desiredTop;
-              if (Math.abs(diff) > 2) {
-                col.scrollTo({ top: col.scrollTop + diff, behavior: "smooth" });
-              }
-            }
-          }
-        }
-      });
-    });
-    return () => {
-      cancelAnimationFrame(r1);
-      cancelAnimationFrame(r2);
-    };
-  }, [activeId, activePathString, timelineOpen]); /* Run when activePath is rebuilt */
+  const { colRefs } = useActivePathScroll(activeId, activePath, timelineOpen, [
+    columns,
+  ]);
+
+  /* Run when activePath is rebuilt */
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -197,10 +123,12 @@ export default function App() {
       try {
         const validated = validateNodes(imported);
         if (validated.length > 0) {
-          useAppStore.getState().openConfirm("Import will create a new document. Proceed?", () => {
-            const title = file.name.replace(/\.md$/i, "");
-            createNewFile(validated, title);
-          });
+          useAppStore
+            .getState()
+            .openConfirm("Import will create a new document. Proceed?", () => {
+              const title = file.name.replace(/\.md$/i, "");
+              createNewFile(validated, title);
+            });
         }
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
@@ -277,7 +205,11 @@ export default function App() {
             })}
           </div>
         ) : (
-          <Suspense fallback={<div className="p-8 text-app-text-muted">Loading timeline...</div>}>
+          <Suspense
+            fallback={
+              <div className="p-8 text-app-text-muted">Loading timeline...</div>
+            }
+          >
             <TimelineView nodes={nodes} />
           </Suspense>
         )}{" "}
@@ -285,7 +217,7 @@ export default function App() {
       {uiMode !== "zen" && <Footer />}{" "}
       {uiMode === "zen" && (
         <button
-          style={{ zIndex: 99999, pointerEvents: 'auto' }}
+          style={{ zIndex: 99999, pointerEvents: "auto" }}
           onClick={(e) => {
             e.stopPropagation();
             useAppStore.getState().setUiMode("normal");
@@ -299,10 +231,22 @@ export default function App() {
                 mozCancelFullScreen?: () => Promise<void>;
                 msExitFullscreen?: () => Promise<void>;
               };
-              const isFS = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+              const isFS = !!(
+                doc.fullscreenElement ||
+                doc.webkitFullscreenElement ||
+                doc.mozFullScreenElement ||
+                doc.msFullscreenElement
+              );
               if (isFS) {
-                const exitFS = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
-                if (exitFS) exitFS.call(doc).catch(() => { /* ignore */ });
+                const exitFS =
+                  doc.exitFullscreen ||
+                  doc.webkitExitFullscreen ||
+                  doc.mozCancelFullScreen ||
+                  doc.msExitFullscreen;
+                if (exitFS)
+                  exitFS.call(doc).catch(() => {
+                    /* ignore */
+                  });
               }
             } catch (err) {
               console.warn("Fullscreen exit error", err);

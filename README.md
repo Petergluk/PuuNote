@@ -25,16 +25,18 @@ PuuNote is an innovative horizontal-tree, card-based text editor. Instead of wri
 - **Styling**: Tailwind CSS 4
 - **Animations**: Framer Motion (motion/react)
 - **Icons**: Lucide React
-- **Markdown parsing**: react-markdown + remark-gfm + rehype-sanitize 
+- **Markdown parsing**: react-markdown + remark-gfm + rehype-sanitize
 
 ## 🌐 Quick Start
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Run the development server:
+
    ```bash
    npm run dev
    ```

@@ -81,9 +81,14 @@ export function FileMenu() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        useAppStore.getState().openConfirm(t("Are you sure you want to delete this document?"), () => {
-                          deleteFile(doc.id);
-                        });
+                        useAppStore
+                          .getState()
+                          .openConfirm(
+                            t("Are you sure you want to delete this document?"),
+                            () => {
+                              deleteFile(doc.id);
+                            },
+                          );
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
                       title={t("Delete file")}

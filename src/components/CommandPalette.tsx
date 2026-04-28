@@ -13,7 +13,9 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [searchResults, setSearchResults] = useState<{ id: string; content: string; fileId: string; fileTitle: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<
+    { id: string; content: string; fileId: string; fileTitle: string }[]
+  >([]);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const setActiveId = useAppStore((s) => s.setActiveId);
@@ -58,15 +60,20 @@ export function CommandPalette() {
         setSearchResults([]);
         return;
       }
-      
+
       const lowerQuery = query.toLowerCase();
       const allFiles = await db.files.toArray();
-      const results: { id: string; content: string; fileId: string; fileTitle: string }[] = [];
-      
+      const results: {
+        id: string;
+        content: string;
+        fileId: string;
+        fileTitle: string;
+      }[] = [];
+
       for (const file of allFiles) {
         const doc = documents.find((d) => d.id === file.id);
         const title = doc ? doc.title : "Unknown Document";
-        
+
         for (const node of file.nodes) {
           if (node.content.toLowerCase().includes(lowerQuery)) {
             results.push({
@@ -75,12 +82,12 @@ export function CommandPalette() {
               fileId: file.id,
               fileTitle: title,
             });
-            if (results.length >= 15) break; 
+            if (results.length >= 15) break;
           }
         }
         if (results.length >= 15) break;
       }
-      
+
       setSearchResults(results);
     }, 300);
 
@@ -151,14 +158,17 @@ export function CommandPalette() {
                     searchResults.map((result) => (
                       <button
                         key={`${result.fileId}-${result.id}`}
-                        onClick={() => handleSelectNode(result.fileId, result.id)}
+                        onClick={() =>
+                          handleSelectNode(result.fileId, result.id)
+                        }
                         className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex flex-col gap-1 border-b border-app-border/50 last:border-0"
                       >
                         <span className="text-app-text-primary truncate">
-                           {result.fileTitle} &rsaquo; {result.content.split("\n")[0] || "Untitled"}
+                          {result.fileTitle} &rsaquo;{" "}
+                          {result.content.split("\n")[0] || "Untitled"}
                         </span>
                         <span className="text-xs text-app-text-muted truncate">
-                           {result.content}
+                          {result.content}
                         </span>
                       </button>
                     ))
@@ -203,15 +213,20 @@ export function CommandPalette() {
                   </button>
                   <button
                     onClick={() =>
-                      handleExecuteCommand(
-                        () => {
-                          if (activeFileId) {
-                            useAppStore.getState().openConfirm(t("Are you sure you want to delete this document?"), () => {
-                              deleteFile(activeFileId);
-                            });
-                          }
+                      handleExecuteCommand(() => {
+                        if (activeFileId) {
+                          useAppStore
+                            .getState()
+                            .openConfirm(
+                              t(
+                                "Are you sure you want to delete this document?",
+                              ),
+                              () => {
+                                deleteFile(activeFileId);
+                              },
+                            );
                         }
-                      )
+                      })
                     }
                     className="w-full text-left px-4 py-3 hover:bg-red-500/10 flex items-center gap-3 text-red-500"
                   >
