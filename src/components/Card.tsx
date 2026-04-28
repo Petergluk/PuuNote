@@ -91,6 +91,7 @@ export const Card = React.memo(
       <div
         className={`relative group/card-wrapper ${isActive || isEditing ? "z-40" : "z-10"}`}
         id={`card-${node.id}`}
+        data-parent-id={node.parentId || ""}
         ref={cardRef}
       >
         <div

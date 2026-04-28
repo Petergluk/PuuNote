@@ -76,13 +76,10 @@ export function Footer() {
             {" "}
             <button
               onClick={() => {
-                // Fit exactly 3 columns to the screen width
-                const availableWidth = window.innerWidth - 48; // Account for padding (sm:px-4 is 16px * 2 = 32px + 16px buffer for scrollbar)
-                const idealColWidth = Math.max(
-                  220,
-                  Math.min(1200, Math.floor(availableWidth / 3)),
-                );
-                useAppStore.setState({ colWidth: idealColWidth });
+                const s = document.getElementById("main-scroller");
+                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
+                const cw = Math.floor(aw / 3) - 24;
+                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer"
               title={t("Fit 3 columns")}
@@ -91,11 +88,12 @@ export function Footer() {
             </button>{" "}
             <button
               onClick={() => {
-                const availableWidth = window.innerWidth - 48;
-                const currentCols = availableWidth / useAppStore.getState().colWidth;
-                const targetCols = Math.floor(currentCols + 0.01) + 1;
-                const idealColWidth = availableWidth / targetCols;
-                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, idealColWidth)) });
+                const s = document.getElementById("main-scroller");
+                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
+                const cC = aw / (useAppStore.getState().colWidth + 24);
+                const tC = Math.floor(cC + 0.05) + 1;
+                const cw = (aw / tC) - 24;
+                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Decrease width")}
@@ -115,12 +113,13 @@ export function Footer() {
             />{" "}
             <button
               onClick={() => {
-                const availableWidth = window.innerWidth - 48;
-                const currentCols = availableWidth / useAppStore.getState().colWidth;
-                let targetCols = Math.ceil(currentCols - 0.01) - 1;
-                targetCols = Math.max(1, targetCols);
-                const idealColWidth = availableWidth / targetCols;
-                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, idealColWidth)) });
+                const s = document.getElementById("main-scroller");
+                const aw = s ? s.clientWidth - 32 : window.innerWidth - 32;
+                const cC = aw / (useAppStore.getState().colWidth + 24);
+                let tC = Math.ceil(cC - 0.05) - 1;
+                tC = Math.max(1, tC);
+                const cw = (aw / tC) - 24;
+                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Increase width")}

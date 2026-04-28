@@ -106,15 +106,24 @@ export function useActivePathScroll(
         }
 
         // Vertical Alignment for all columns
+        let globalTargetY = 0;
+        let baselineFound = false;
+
+        const intendedCenters = new Map<string, number>();
+        const scrollTasks: { col: Element; diff: number; top: number }[] = [];
+
         colRefs.current.forEach((col) => {
           if (!col) return;
           
           let elToAlign: Element | null = null;
+          let elToAlignIsActive = false;
+
           // 1. Check if the column has a node in activePath
           for (const pathId of activePath) {
             const el = document.getElementById(`card-${pathId}`);
             if (el && col.contains(el)) {
               elToAlign = el;
+              elToAlignIsActive = true;
               break;
             }
           }
@@ -128,22 +137,62 @@ export function useActivePathScroll(
             const elRect = elToAlign.getBoundingClientRect();
             const colRect = col.getBoundingClientRect();
 
-            const isFirstCardInColumn = col.querySelector('[id^="card-"]') === elToAlign;
+            let desiredCenterY = colRect.top + col.clientHeight / 2;
 
-            let desiredTop = Math.max(
-              colRect.top + 32,
-              colRect.top + col.clientHeight / 2 - (elToAlign as HTMLElement).offsetHeight / 2,
-            );
-
-            if (isFirstCardInColumn) {
-              desiredTop = colRect.top + 64; // align entire branch horizontally
+            if (!baselineFound && elToAlignIsActive) {
+                const isFirstCardInColumn = col.querySelector('[id^="card-"]') === elToAlign;
+                if (isFirstCardInColumn) {
+                    desiredCenterY = colRect.top + 64 + (elToAlign as HTMLElement).offsetHeight / 2;
+                } else {
+                    desiredCenterY = colRect.top + col.clientHeight / 2;
+                }
+                globalTargetY = desiredCenterY;
+                baselineFound = true;
             }
 
-            const diff = elRect.top - desiredTop;
-            if (Math.abs(diff) > 2) {
-              col.scrollTo({ top: col.scrollTop + diff, behavior: "smooth" });
+            if (elToAlignIsActive) {
+                desiredCenterY = globalTargetY;
+            } else {
+                const parentId = elToAlign.getAttribute("data-parent-id");
+                if (parentId && intendedCenters.has(parentId)) {
+                    desiredCenterY = intendedCenters.get(parentId)!;
+                } else {
+                    const parentEl = document.getElementById(`card-${parentId}`);
+                    if (parentEl) {
+                        const pRect = parentEl.getBoundingClientRect();
+                        desiredCenterY = pRect.top + pRect.height / 2;
+                    } else if (baselineFound) {
+                        desiredCenterY = globalTargetY;
+                    }
+                }
+            }
+
+            const currentCenterY = elRect.top + elRect.height / 2;
+            const targetDiff = currentCenterY - desiredCenterY;
+
+            let maxScrollTop = col.scrollHeight - col.clientHeight;
+            if (maxScrollTop < 0) maxScrollTop = 0;
+            
+            const targetScrollTop = col.scrollTop + targetDiff;
+            const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop));
+            const appliedDiff = clampedScrollTop - col.scrollTop;
+
+            const cardsInCol = col.querySelectorAll('[id^="card-"]');
+            cardsInCol.forEach(card => {
+                const cRect = card.getBoundingClientRect();
+                const cardCenterY = cRect.top + cRect.height / 2;
+                const cId = card.id.replace("card-", "");
+                intendedCenters.set(cId, cardCenterY - appliedDiff);
+            });
+
+            if (Math.abs(appliedDiff) > 2) {
+              scrollTasks.push({ col, diff: appliedDiff, top: clampedScrollTop });
             }
           }
+        });
+
+        scrollTasks.forEach(task => {
+          task.col.scrollTo({ top: task.top, behavior: "smooth" });
         });
       });
     });
