@@ -105,34 +105,46 @@ export function useActivePathScroll(
           }
         }
 
-        // Vertical Alignment for all path items
-        for (const pathId of activePath) {
-          const el = document.getElementById(`card-${pathId}`);
-          if (el) {
-            const col = el.closest(".overflow-y-auto");
-            if (col) {
-              const elRect = el.getBoundingClientRect();
-              const colRect = col.getBoundingClientRect();
-
-              const isFirstCardInColumn =
-                col.querySelector('[id^="card-"]') === el;
-
-              let desiredTop = Math.max(
-                colRect.top + 32,
-                colRect.top + col.clientHeight / 2 - el.offsetHeight / 2,
-              );
-
-              if (isFirstCardInColumn) {
-                desiredTop = colRect.top + 64; // align entire branch horizontally
-              }
-
-              const diff = elRect.top - desiredTop;
-              if (Math.abs(diff) > 2) {
-                col.scrollTo({ top: col.scrollTop + diff, behavior: "smooth" });
-              }
+        // Vertical Alignment for all columns
+        colRefs.current.forEach((col) => {
+          if (!col) return;
+          
+          let elToAlign: Element | null = null;
+          // 1. Check if the column has a node in activePath
+          for (const pathId of activePath) {
+            const el = document.getElementById(`card-${pathId}`);
+            if (el && col.contains(el)) {
+              elToAlign = el;
+              break;
             }
           }
-        }
+
+          // 2. If not, use the first card in the column
+          if (!elToAlign) {
+            elToAlign = col.querySelector('[id^="card-"]');
+          }
+
+          if (elToAlign) {
+            const elRect = elToAlign.getBoundingClientRect();
+            const colRect = col.getBoundingClientRect();
+
+            const isFirstCardInColumn = col.querySelector('[id^="card-"]') === elToAlign;
+
+            let desiredTop = Math.max(
+              colRect.top + 32,
+              colRect.top + col.clientHeight / 2 - (elToAlign as HTMLElement).offsetHeight / 2,
+            );
+
+            if (isFirstCardInColumn) {
+              desiredTop = colRect.top + 64; // align entire branch horizontally
+            }
+
+            const diff = elRect.top - desiredTop;
+            if (Math.abs(diff) > 2) {
+              col.scrollTo({ top: col.scrollTop + diff, behavior: "smooth" });
+            }
+          }
+        });
       });
     });
     return () => {

@@ -1,7 +1,8 @@
 import { PuuNode } from "../types";
 import { generateId } from "./id";
 import { getOrderedChildren } from "./tree";
-import { PUUNOTE_FORMAT_MARKER } from "../constants";
+
+export const PUUNOTE_FORMAT_MARKER = "<!-- puunote-format: 1 -->";
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
   let md = `${PUUNOTE_FORMAT_MARKER}\n\n`;

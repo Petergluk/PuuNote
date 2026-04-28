@@ -90,11 +90,13 @@ export function Footer() {
               <Columns size={16} />
             </button>{" "}
             <button
-              onClick={() =>
-                useAppStore.setState((s) => ({
-                  colWidth: Math.max(220, s.colWidth - 5),
-                }))
-              }
+              onClick={() => {
+                const availableWidth = window.innerWidth - 48;
+                const currentCols = availableWidth / useAppStore.getState().colWidth;
+                const targetCols = Math.floor(currentCols + 0.01) + 1;
+                const idealColWidth = availableWidth / targetCols;
+                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, idealColWidth)) });
+              }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Decrease width")}
             >
@@ -112,11 +114,14 @@ export function Footer() {
               title={t("Col Width")}
             />{" "}
             <button
-              onClick={() =>
-                useAppStore.setState((s) => ({
-                  colWidth: Math.min(1200, s.colWidth + 5),
-                }))
-              }
+              onClick={() => {
+                const availableWidth = window.innerWidth - 48;
+                const currentCols = availableWidth / useAppStore.getState().colWidth;
+                let targetCols = Math.ceil(currentCols - 0.01) - 1;
+                targetCols = Math.max(1, targetCols);
+                const idealColWidth = availableWidth / targetCols;
+                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, idealColWidth)) });
+              }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Increase width")}
             >

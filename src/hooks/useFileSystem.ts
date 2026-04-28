@@ -144,7 +144,9 @@ export function useFileSystemInit() {
                 nodes: dirtySave.nodes,
               });
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error("Failed to parse puu_dirty_save", e);
+          }
           localStorage.removeItem("puu_dirty_save");
         }
 
@@ -280,7 +282,9 @@ export function useFileSystemInit() {
               nodes: pendingSave.nodes,
             }),
           );
-        } catch (e) {}
+        } catch (e) {
+          console.error("Failed to stringify dirty save", e);
+        }
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
