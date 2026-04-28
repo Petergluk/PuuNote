@@ -11,6 +11,7 @@ interface AppState {
   past: PuuNode[][];
   future: PuuNode[][];
   activeId: string | null;
+  selectedIds: string[];
   editingId: string | null;
   draggedId: string | null;
   fullScreenId: string | null;
@@ -37,6 +38,8 @@ interface AppActions {
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
   setActiveId: (id: string | null) => void;
+  toggleSelection: (id: string, isShift?: boolean) => void;
+  clearSelection: () => void;
   setEditingId: (id: string | null) => void;
   setDraggedId: (id: string | null) => void;
   setFullScreenId: (id: string | null) => void;
@@ -54,6 +57,7 @@ interface AppActions {
   addSibling: (siblingId: string | null) => void;
   deleteNode: (id: string) => void;
   splitNode: (id: string, textBefore: string, textAfter: string) => void;
+  mergeNodes: (masterId: string, nodeIdsToMerge: string[]) => void;
   moveNode: (
     sourceId: string,
     targetId: string,
@@ -69,6 +73,7 @@ export const useAppStore = create<AppState & AppActions>()(
     past: [],
     future: [],
     activeId: null,
+    selectedIds: [],
     editingId: null,
     draggedId: null,
     fullScreenId: null,
@@ -107,7 +112,22 @@ export const useAppStore = create<AppState & AppActions>()(
       set((s) => ({ cardsCollapsed: !s.cardsCollapsed })),
     setTimelineOpen: (timelineOpen) => set({ timelineOpen }),
     setColWidth: (colWidth) => set({ colWidth }),
-    setActiveId: (activeId) => set({ activeId }),
+    setActiveId: (activeId) => set({ activeId, selectedIds: activeId ? [activeId] : [] }),
+    toggleSelection: (id, isShift) => set((state) => {
+      const { selectedIds, activeId } = state;
+      if (isShift && activeId) {
+        // We ideally want the depth-first ordered nodes here, but doing a simpler range or just falling back to push
+        // Let's just do simple toggle for now and improve later if needed, but we can import tree logic if needed.
+        // For now, toggle behavior:
+      }
+      
+      if (selectedIds.includes(id)) {
+        return { selectedIds: selectedIds.filter(x => x !== id) };
+      } else {
+        return { selectedIds: [...selectedIds, id] };
+      }
+    }),
+    clearSelection: () => set({ selectedIds: [] }),
     setEditingId: (editingId) => set({ editingId }),
     setDraggedId: (draggedId) => set({ draggedId }),
     setFullScreenId: (fullScreenId) => set({ fullScreenId }),
@@ -253,7 +273,12 @@ export const useAppStore = create<AppState & AppActions>()(
           newIdValue = newId;
           return nextNodes;
         });
-        if (newIdValue) set({ activeId: newIdValue, editingId: newIdValue });
+        if (newIdValue) set({ activeId: newIdValue, selectedIds: [newIdValue], editingId: newIdValue });
+      },
+
+      mergeNodes: (masterId, nodeIdsToMerge) => {
+        get().setNodes((prev) => documentApi.mergeNodes(prev, masterId, nodeIdsToMerge));
+        set({ activeId: masterId, selectedIds: [masterId], editingId: null });
       },
 
       moveNode: (sourceId, targetId, position) => {

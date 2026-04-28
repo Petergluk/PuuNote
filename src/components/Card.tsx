@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Plus, Maximize2, Trash2, Scissors } from "lucide-react";
+import { Plus, Maximize2, Trash2, Scissors, Combine } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
@@ -18,6 +18,7 @@ export const Card = React.memo(
   }) => {
     const hasActiveNode = useAppStore((s) => s.activeId !== null);
     const isActive = useAppStore((s) => s.activeId === node.id);
+    const isSelected = useAppStore((s) => s.selectedIds.includes(node.id));
     const isEditing = useAppStore((s) => s.editingId === node.id);
     const isDragged = useAppStore((s) => s.draggedId === node.id);
     const setDraggedId = useAppStore((s) => s.setDraggedId);
@@ -32,6 +33,10 @@ export const Card = React.memo(
     const splitNode = useAppStore((s) => s.splitNode);
     const deleteNode = useAppStore((s) => s.deleteNode);
     const moveNode = useAppStore((s) => s.moveNode);
+
+    const toggleSelection = useAppStore((s) => s.toggleSelection);
+    const mergeNodes = useAppStore((s) => s.mergeNodes);
+    const selectedIds = useAppStore((s) => s.selectedIds);
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,9 +62,12 @@ export const Card = React.memo(
     const shouldCollapse = cardsCollapsed && !isEditing && !isActive;
     let cardClasses =
       "bg-app-panel border border-app-border opacity-60 hover:opacity-100 transition-all duration-200 hover:bg-app-bg text-app-text-primary";
-    if (isActive) {
+    if (isActive || isSelected) {
       cardClasses =
         "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 transition-all duration-200 transform scale-[1.01] z-50 text-app-text-primary";
+      if (!isActive && isSelected) {
+         cardClasses = "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md transition-all duration-200 transform z-40 text-app-text-primary";
+      }
     } else if (!hasActiveNode) {
       cardClasses =
         "bg-app-card border border-app-border opacity-100 transition-all duration-200 hover:bg-app-card-hover hover:border-app-border-hover z-20 text-app-text-primary";
@@ -123,7 +131,11 @@ export const Card = React.memo(
           className={`w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col ${cardClasses}`}
           onClick={(e) => {
             e.stopPropagation();
-            if (!isActive) setActiveId(node.id);
+            if (e.metaKey || e.ctrlKey || e.shiftKey) {
+              toggleSelection(node.id, e.shiftKey);
+            } else {
+              if (!isActive) setActiveId(node.id);
+            }
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
@@ -230,6 +242,18 @@ export const Card = React.memo(
                 {" "}
                 <Trash2 size={12} />{" "}
               </button>{" "}
+              {selectedIds.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    mergeNodes(node.id, selectedIds);
+                  }}
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-app-card border border-app-accent text-app-accent hover:opacity-100 rounded-full p-1.5 shadow-lg hover:bg-app-card-hover transition-all z-20 flex items-center justify-center"
+                  title="Merge Selected"
+                >
+                  <Combine size={12} />
+                </button>
+              )}
             </motion.div>
           )}{" "}
         </AnimatePresence>{" "}

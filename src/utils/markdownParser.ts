@@ -200,7 +200,45 @@ const parseMindMapFormat = (mdText: string): PuuNode[] => {
   }
 
   imported.forEach((n) => {
-    n.content = n.content.trim();
+    const lines = n.content.split(/\n/);
+    if (lines.length > 1) {
+      let minIndent = Infinity;
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim().length > 0) {
+          const match = lines[i].match(/^[ \t]*/);
+          if (match) {
+            const indentMatch = match[0];
+            const len = indentMatch.replace(/\t/g, "    ").length;
+            minIndent = Math.min(minIndent, len);
+          }
+        }
+      }
+      if (minIndent > 0 && minIndent !== Infinity) {
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim().length > 0) {
+            let charsToStrip = 0;
+            let spaceCount = 0;
+            for (let c = 0; c < lines[i].length; c++) {
+              if (spaceCount >= minIndent) break;
+              if (lines[i][c] === " ") {
+                spaceCount += 1;
+                charsToStrip += 1;
+              } else if (lines[i][c] === "\t") {
+                spaceCount += 4;
+                charsToStrip += 1;
+              } else {
+                break;
+              }
+            }
+            lines[i] = lines[i].substring(charsToStrip);
+          }
+        }
+      }
+    }
+    n.content = lines.join("\n").trim();
+    // Some mindmap exporters use blockquotes (`> `) to represent node comments/notes. 
+    // We strip them so they appear as normal text inside the card.
+    n.content = n.content.replace(/^\s*>[ \t]?/gm, "");
     n.content = n.content.replace(/\n{3,}/g, "\n\n");
   });
   return imported;

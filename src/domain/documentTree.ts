@@ -161,4 +161,52 @@ export const documentApi = {
     }
     return copy;
   },
+
+  mergeNodes: (
+    nodes: PuuNode[],
+    masterId: string,
+    nodeIdsToMerge: string[]
+  ): PuuNode[] => {
+    let nextNodes = nodes.map(n => ({...n}));
+    const masterNode = nextNodes.find(n => n.id === masterId);
+    if (!masterNode) return nodes;
+
+    const idsToMerge = nodeIdsToMerge.filter(id => id !== masterId);
+    if (idsToMerge.length === 0) return nodes;
+
+    let combinedContent = masterNode.content;
+    const allChildrenToMove: PuuNode[] = [];
+
+    // Using the order they appear in the original nodes array
+    // Since tree representation usually reflects visual order if they are from a depth-first search, we just do it via nextNodes
+    for (const id of idsToMerge) {
+      const nodeToMerge = nextNodes.find(n => n.id === id);
+      if (nodeToMerge) {
+         if (nodeToMerge.content) {
+            combinedContent = combinedContent.trimEnd() + "\n\n" + nodeToMerge.content.trimStart();
+         }
+         const children = nextNodes.filter(n => n.parentId === id);
+         allChildrenToMove.push(...children);
+      }
+    }
+
+    let maxOrder = -1;
+    const masterChildren = nextNodes.filter(n => n.parentId === masterId);
+    if (masterChildren.length > 0) {
+       maxOrder = Math.max(...masterChildren.map(n => n.order || 0));
+    }
+
+    allChildrenToMove.forEach(child => {
+        child.parentId = masterId;
+        maxOrder++;
+        child.order = maxOrder;
+    });
+
+    masterNode.content = combinedContent;
+
+    const idsToRemove = new Set(idsToMerge);
+    nextNodes = nextNodes.filter(n => !idsToRemove.has(n.id));
+
+    return nextNodes;
+  },
 };

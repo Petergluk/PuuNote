@@ -50,4 +50,23 @@ describe("documentTree", () => {
     expect(node2?.parentId).toBe("1");
     expect(node2?.order).toBe(0);
   });
+
+  it("should merge nodes correctly", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "Master node" },
+      { id: "2", parentId: null, order: 1, content: "Second node" },
+      { id: "3", parentId: "2", order: 0, content: "Child of second" },
+      { id: "4", parentId: "1", order: 0, content: "Child of master" }
+    ];
+
+    const updated = documentApi.mergeNodes(nodes, "1", ["1", "2"]);
+
+    expect(updated.length).toBe(3); // 2 is removed
+    const master = updated.find(n => n.id === "1");
+    expect(master?.content).toBe("Master node\n\nSecond node");
+
+    const childOfSecond = updated.find(n => n.id === "3");
+    expect(childOfSecond?.parentId).toBe("1"); // reparented
+    expect(childOfSecond?.order).toBe(1); // after "Child of master"
+  });
 });

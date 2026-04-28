@@ -31,6 +31,7 @@ export function Header({ handleImport }: HeaderProps) {
   const undo = useAppStore((s) => s.undo);
   const redo = useAppStore((s) => s.redo);
   const setActiveId = useAppStore((s) => s.setActiveId);
+  const clearSelection = useAppStore((s) => s.clearSelection);
   const cardsCollapsed = useAppStore((s) => s.cardsCollapsed);
   const exportToMarkdown = useAppStore((s) => s.exportToMarkdown);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
@@ -112,6 +113,7 @@ export function Header({ handleImport }: HeaderProps) {
           <button
             onClick={() => {
               undo();
+              clearSelection();
               setActiveId(null);
             }}
             disabled={!canUndo}
@@ -123,6 +125,7 @@ export function Header({ handleImport }: HeaderProps) {
           <button
             onClick={() => {
               redo();
+              clearSelection();
               setActiveId(null);
             }}
             disabled={!canRedo}

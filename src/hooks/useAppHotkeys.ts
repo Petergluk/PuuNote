@@ -81,10 +81,12 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
           if (isUndoAction && state.past.length > 0) {
             e.preventDefault();
             state.undo();
+            state.clearSelection();
             state.setActiveId(null);
           } else if (isRedoAction && state.future.length > 0) {
             e.preventDefault();
             state.redo();
+            state.clearSelection();
             state.setActiveId(null);
           }
         }

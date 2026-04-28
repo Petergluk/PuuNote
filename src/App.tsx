@@ -47,6 +47,7 @@ export default function App() {
   const activeId = useAppStore((s) => s.activeId);
   const setActiveId = useAppStore((s) => s.setActiveId);
   const setEditingId = useAppStore((s) => s.setEditingId);
+  const clearSelection = useAppStore((s) => s.clearSelection);
   const fullScreenId = useAppStore((s) => s.fullScreenId);
   const setFullScreenId = useAppStore((s) => s.setFullScreenId);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
@@ -143,6 +144,7 @@ export default function App() {
           (e.target as HTMLElement).id === "main-scroller" ||
           (e.target as HTMLElement).classList.contains("col-spacer")
         ) {
+          clearSelection();
           setActiveId(null);
           setEditingId(null);
         }

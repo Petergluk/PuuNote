@@ -15,6 +15,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const { t } = useTranslation();
   const activeId = useAppStore((s) => s.activeId);
   const setActiveId = useAppStore((s) => s.setActiveId);
+  const clearSelection = useAppStore((s) => s.clearSelection);
   const updateContent = useAppStore((s) => s.updateContent);
   const [copied, setCopied] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(true);
@@ -76,7 +77,10 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
     <div
       className="w-full relative flex justify-center p-8 lg:p-16 col-spacer"
       onClick={(e) => {
-        if (e.target === e.currentTarget) setActiveId(null);
+        if (e.target === e.currentTarget) {
+           clearSelection();
+           setActiveId(null);
+        }
       }}
     >
       <div className="absolute top-8 right-8 lg:top-16 lg:right-12 z-20">
