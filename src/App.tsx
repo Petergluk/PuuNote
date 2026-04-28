@@ -6,6 +6,7 @@ import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { MAX_FILE_SIZE_BYTES } from "./constants";
 import { Minimize } from "lucide-react";
 
 const FullScreenModal = lazy(() =>
@@ -105,15 +106,17 @@ export default function App() {
     activeId,
     activePath,
     timelineOpen,
-    [columns],
+    columns.length,
   );
 
   /* Run when activePath is rebuilt */
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File is too large (max 5MB).");
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      useAppStore
+        .getState()
+        .openConfirm("File is too large (max 5MB).", () => {});
       return;
     }
     const reader = new FileReader();
@@ -133,7 +136,9 @@ export default function App() {
         }
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
-        alert("Imported file is invalid or corrupted.");
+        useAppStore
+          .getState()
+          .openConfirm("Imported file is invalid or corrupted.", () => {});
       }
     };
     reader.readAsText(file);
@@ -178,7 +183,7 @@ export default function App() {
                   }}
                   className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 sm:pl-2 sm:pr-8 sm:-mr-6 transition-all duration-200 col-spacer relative"
                 >
-                  <div className="column-inner relative flex flex-col gap-3 pt-[50vh] pb-[50vh] mx-auto transition-all duration-200 col-spacer">
+                  <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[50vh] mx-auto transition-all duration-200 col-spacer">
                     {colNodes.map((node) => (
                       <ErrorBoundary key={node.id}>
                         <Card

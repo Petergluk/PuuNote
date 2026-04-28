@@ -28,7 +28,7 @@ export function CommandPalette() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Toggle
-      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "f")) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setIsOpen(!isOpen);
       }

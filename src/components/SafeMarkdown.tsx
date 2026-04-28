@@ -23,7 +23,7 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
               ...defaultSchema,
               protocols: {
                 ...defaultSchema.protocols,
-                src: ["http", "https", "data"],
+                src: ["http", "https"],
                 href: ["http", "https", "mailto"], // Restrict href protocols for security
               },
             },

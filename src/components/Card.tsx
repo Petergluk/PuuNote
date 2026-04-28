@@ -93,7 +93,6 @@ export const Card = React.memo(
         id={`card-${node.id}`}
         ref={cardRef}
       >
-        {" "}
         <div
           draggable={!isEditing}
           onDragStart={(e) => {

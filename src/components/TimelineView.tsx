@@ -19,7 +19,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
 
   /* Use useMemo to prevent unnecessary calculations and mutations inside render */
   const orderedNodes = useMemo(() => {
-    return getDepthFirstNodes(nodes).map(({ depth, ...node }) => node);
+    return getDepthFirstNodes(nodes).map(({ depth: _depth, ...node }) => node);
   }, [nodes]);
 
   const handleToggleCheckbox = useCallback(

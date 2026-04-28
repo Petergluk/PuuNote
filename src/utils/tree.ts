@@ -29,7 +29,9 @@ export const computeActivePath = (
   const pathUp: string[] = [];
   const visitedUp = new Set<string>();
   let currUp: string | null = activeId;
-  while (currUp && !visitedUp.has(currUp)) {
+  let iterationsUp = 0;
+  while (currUp && !visitedUp.has(currUp) && iterationsUp < 1000) {
+    iterationsUp++;
     visitedUp.add(currUp);
     pathUp.push(currUp);
     const node = nodeMap.get(currUp);
@@ -40,7 +42,9 @@ export const computeActivePath = (
   const pathDown: string[] = [];
   const visitedDown = new Set<string>();
   let currDown = activeId;
-  while (currDown && !visitedDown.has(currDown)) {
+  let iterationsDown = 0;
+  while (currDown && !visitedDown.has(currDown) && iterationsDown < 1000) {
+    iterationsDown++;
     visitedDown.add(currDown);
     const children = childrenMap.get(currDown);
     if (!children || children.length === 0) break;

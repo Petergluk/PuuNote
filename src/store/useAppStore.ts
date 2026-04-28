@@ -197,14 +197,18 @@ export const useAppStore = create<AppState & AppActions>()(
         }
       }
       filename = filename || "puunote-export";
-      const md = exportNodesToMarkdown(nodes);
-      const blob = new Blob([md], { type: "text/markdown" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        const md = exportNodesToMarkdown(nodes);
+        const blob = new Blob([md], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filename}.md`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      } catch (err) {
+        console.error("Failed to export markdown", err);
+      }
     },
 
     updateContent: (id, content) => {

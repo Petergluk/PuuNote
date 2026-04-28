@@ -39,7 +39,7 @@ export function useActivePathScroll(
   activeId: string | null,
   activePath: string[],
   timelineOpen: boolean,
-  columnsContextDependencies: any[],
+  columnsLength: number,
 ) {
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initializedCols = useRef<Set<number>>(new Set());
@@ -51,14 +51,9 @@ export function useActivePathScroll(
   // Make deep comparison or just use length/first-element as heuristic
   // but standard React expects same reference or JSON stringification
   // Let's use activePath as a string key just for `useEffect` deps without doing split back
-  const activePathDep = activePath.join(",");
-
   useEffect(() => {
-    colRefs.current = colRefs.current.slice(
-      0,
-      columnsContextDependencies[0]?.length || 0,
-    );
-  }, [columnsContextDependencies[0]?.length]);
+    colRefs.current = colRefs.current.slice(0, columnsLength);
+  }, [columnsLength]);
 
   useEffect(() => {
     let rafId: number;
@@ -77,7 +72,7 @@ export function useActivePathScroll(
       rafId = requestAnimationFrame(updateScroll); // Double raf guarantees paint
     });
     return () => cancelAnimationFrame(rafId);
-  }, columnsContextDependencies); // trigger on columns change
+  }, [columnsLength]); // trigger on columns change
 
   // Center active path
   useEffect(() => {
@@ -118,10 +113,19 @@ export function useActivePathScroll(
             if (col) {
               const elRect = el.getBoundingClientRect();
               const colRect = col.getBoundingClientRect();
-              const desiredTop = Math.max(
+
+              const isFirstCardInColumn =
+                col.querySelector('[id^="card-"]') === el;
+
+              let desiredTop = Math.max(
                 colRect.top + 32,
                 colRect.top + col.clientHeight / 2 - el.offsetHeight / 2,
               );
+
+              if (isFirstCardInColumn) {
+                desiredTop = colRect.top + 64; // align entire branch horizontally
+              }
+
               const diff = elRect.top - desiredTop;
               if (Math.abs(diff) > 2) {
                 col.scrollTo({ top: col.scrollTop + diff, behavior: "smooth" });
@@ -135,7 +139,7 @@ export function useActivePathScroll(
       cancelAnimationFrame(r1);
       cancelAnimationFrame(r2);
     };
-  }, [activeId, activePathDep, timelineOpen]);
+  }, [activeId, activePath, timelineOpen]);
 
   return { colRefs, initializedCols };
 }

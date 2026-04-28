@@ -133,6 +133,21 @@ export function useFileSystemInit() {
 
       let newNodes = INITIAL_NODES;
       try {
+        let dirtySave = null;
+        const dirtySaveStr = localStorage.getItem("puu_dirty_save");
+        if (dirtySaveStr) {
+          try {
+            dirtySave = JSON.parse(dirtySaveStr);
+            if (dirtySave?.fileId && Array.isArray(dirtySave?.nodes)) {
+              await db.files.put({
+                id: dirtySave.fileId,
+                nodes: dirtySave.nodes,
+              });
+            }
+          } catch (e) {}
+          localStorage.removeItem("puu_dirty_save");
+        }
+
         const fileData = await db.files.get(active);
         const savedNodes = fileData?.nodes;
 
@@ -255,7 +270,18 @@ export function useFileSystemInit() {
     });
 
     const handleBeforeUnload = () => {
-      flushPendingSave();
+      if (pendingSave.timer) {
+        clearTimeout(pendingSave.timer);
+        try {
+          localStorage.setItem(
+            "puu_dirty_save",
+            JSON.stringify({
+              fileId: pendingSave.fileId,
+              nodes: pendingSave.nodes,
+            }),
+          );
+        } catch (e) {}
+      }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
 
@@ -309,9 +335,12 @@ export function useFileSystemActions() {
     }
 
     if (didFail && fileId !== "default") {
-      alert(
-        "Failed to read file from storage. It might be corrupted or missing.",
-      );
+      useAppStore
+        .getState()
+        .openConfirm(
+          "Failed to read file from storage. It might be corrupted or missing.",
+          () => {},
+        );
       return;
     }
 

@@ -1,9 +1,10 @@
 import { PuuNode } from "../types";
 import { generateId } from "./id";
 import { getOrderedChildren } from "./tree";
+import { PUUNOTE_FORMAT_MARKER } from "../constants";
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
-  let md = "<!-- puunote-format: 1 -->\n\n";
+  let md = `${PUUNOTE_FORMAT_MARKER}\n\n`;
   const visited = new Set<string>();
   const traverse = (parentId: string | null, depth: number) => {
     const children = getOrderedChildren(nodes, parentId);
@@ -32,7 +33,7 @@ export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
 };
 
 export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
-  const isPuuNoteFormat = mdText.includes("<!-- puunote-format: 1 -->");
+  const isPuuNoteFormat = mdText.includes(PUUNOTE_FORMAT_MARKER);
   if (isPuuNoteFormat) {
     return parsePuuNoteFormat(mdText);
   } else {
@@ -60,7 +61,9 @@ export const toggleCheckboxContent = (
 };
 
 const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
-  const cleanText = mdText.replace(/<!-- puunote-format: 1 -->\s*/g, "");
+  // Try dynamic replacement string to not escape everything
+  const markerRegex = new RegExp(`${PUUNOTE_FORMAT_MARKER}\\s*`, "g");
+  const cleanText = mdText.replace(markerRegex, "");
   const separatorRegex = cleanText.includes("<!-- puunote-node -->")
     ? /^[^\S\n]*<!-- puunote-node -->[^\S\n]*$/gm
     : /^[^\S\n]*---[^\S\n]*$/gm;
