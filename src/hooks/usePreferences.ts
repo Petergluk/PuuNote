@@ -1,6 +1,23 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 
+const safeLocalStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // ignore
+    }
+  },
+};
+
 export const applyTheme = (theme: string) => {
   document.documentElement.classList.remove(
     "dark",
@@ -21,9 +38,9 @@ export function usePreferencesInit() {
   /* Initial Load */
   useEffect(() => {
     const savedCollapsed =
-      localStorage.getItem("puu_cardsCollapsed") === "true";
-    const savedWidth = Number(localStorage.getItem("puu_colWidth")) || 357;
-    let savedTheme = localStorage.getItem("puu_theme");
+      safeLocalStorage.getItem("puu_cardsCollapsed") === "true";
+    const savedWidth = Number(safeLocalStorage.getItem("puu_colWidth")) || 357;
+    let savedTheme = safeLocalStorage.getItem("puu_theme");
     if (!savedTheme) {
       savedTheme =
         typeof window !== "undefined" &&
@@ -42,17 +59,17 @@ export function usePreferencesInit() {
   useEffect(() => {
     const unsubscribe = useAppStore.subscribe((state, prevState) => {
       if (state.cardsCollapsed !== prevState.cardsCollapsed) {
-        localStorage.setItem(
+        safeLocalStorage.setItem(
           "puu_cardsCollapsed",
           String(state.cardsCollapsed),
         );
       }
       if (state.colWidth !== prevState.colWidth) {
-        localStorage.setItem("puu_colWidth", state.colWidth.toString());
+        safeLocalStorage.setItem("puu_colWidth", state.colWidth.toString());
       }
       if (state.theme !== prevState.theme) {
         applyTheme(state.theme);
-        localStorage.setItem("puu_theme", state.theme);
+        safeLocalStorage.setItem("puu_theme", state.theme);
       }
     });
     return unsubscribe;

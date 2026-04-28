@@ -24,7 +24,7 @@ interface AppState {
   confirmDialog: {
     isOpen: boolean;
     message: string;
-    onConfirm?: () => void;
+    onConfirm?: () => void | Promise<void>;
   };
 }
 
@@ -42,7 +42,7 @@ interface AppActions {
   setFullScreenId: (id: string | null) => void;
   setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
   setFileMenuOpen: (open: boolean) => void;
-  openConfirm: (message: string, onConfirm: () => void) => void;
+  openConfirm: (message: string, onConfirm: () => void | Promise<void>) => void;
   closeConfirm: () => void;
   setNodesRaw: (nodes: PuuNode[]) => void;
   setNodes: (updater: PuuNode[] | ((prev: PuuNode[]) => PuuNode[])) => void;

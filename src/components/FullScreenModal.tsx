@@ -6,6 +6,7 @@ import { PuuNode } from "../types";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
+import { toggleCheckboxContent } from "../utils/markdownParser";
 
 export const FullScreenModal = ({
   nodeId,
@@ -49,17 +50,10 @@ export const FullScreenModal = ({
     index: number,
     newValue: boolean,
   ) => {
-    let count = 0;
-    const newContent = (node.content || "").replace(
-      /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
-      (match, p1, _p2, p3) => {
-        if (count === index) {
-          count++;
-          return p1 + (newValue ? "x" : " ") + p3;
-        }
-        count++;
-        return match;
-      },
+    const newContent = toggleCheckboxContent(
+      node.content || "",
+      index,
+      newValue,
     );
     if (newContent !== node.content) {
       updateContent(node.id, newContent);

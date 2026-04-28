@@ -278,6 +278,7 @@ export function useFileSystemActions() {
     await flushPendingSave();
 
     let newNodes = INITIAL_NODES;
+    let didFail = false;
     try {
       const fileData = await db.files.get(fileId);
       const saved = fileData?.nodes;
@@ -300,9 +301,18 @@ export function useFileSystemActions() {
           },
           [],
         );
+      } else if (!fileData) {
+        didFail = true;
       }
     } catch {
-      // ignore
+      didFail = true;
+    }
+
+    if (didFail && fileId !== "default") {
+      alert(
+        "Failed to read file from storage. It might be corrupted or missing.",
+      );
+      return;
     }
 
     useAppStore.setState({

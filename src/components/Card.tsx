@@ -3,6 +3,7 @@ import { Plus, Maximize2, Trash2, Scissors } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
+import { toggleCheckboxContent } from "../utils/markdownParser";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
 export const Card = React.memo(
@@ -40,17 +41,10 @@ export const Card = React.memo(
 
     const handleToggleCheckbox = React.useCallback(
       (index: number, newValue: boolean) => {
-        let count = 0;
-        const newContent = (node.content || "").replace(
-          /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
-          (match, p1, _p2, p3) => {
-            if (count === index) {
-              count++;
-              return p1 + (newValue ? "x" : " ") + p3;
-            }
-            count++;
-            return match;
-          },
+        const newContent = toggleCheckboxContent(
+          node.content || "",
+          index,
+          newValue,
         );
         if (newContent !== node.content) {
           updateContent(node.id, newContent);

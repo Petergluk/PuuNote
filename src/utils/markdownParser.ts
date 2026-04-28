@@ -4,10 +4,13 @@ import { getOrderedChildren } from "./tree";
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
   let md = "<!-- puunote-format: 1 -->\n\n";
+  const visited = new Set<string>();
   const traverse = (parentId: string | null, depth: number) => {
     const children = getOrderedChildren(nodes, parentId);
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
       const indent = " ".repeat(depth * 4);
       const lines = child.content.split("\n");
       const formattedText = lines
@@ -36,6 +39,26 @@ export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
     return parseMindMapFormat(mdText);
   }
 };
+
+export const toggleCheckboxContent = (
+  content: string,
+  index: number,
+  newValue: boolean,
+): string => {
+  let count = 0;
+  return (content || "").replace(
+    /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
+    (match, p1, _p2, p3) => {
+      if (count === index) {
+        count++;
+        return p1 + (newValue ? "x" : " ") + p3;
+      }
+      count++;
+      return match;
+    },
+  );
+};
+
 const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
   const cleanText = mdText.replace(/<!-- puunote-format: 1 -->\s*/g, "");
   const separatorRegex = cleanText.includes("<!-- puunote-node -->")

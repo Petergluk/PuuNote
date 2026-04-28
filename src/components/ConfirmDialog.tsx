@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from "../store/useAppStore";
@@ -7,6 +7,7 @@ export const ConfirmDialog: React.FC = () => {
   const { t } = useTranslation();
   const confirmDialog = useAppStore((s) => s.confirmDialog);
   const closeConfirm = useAppStore((s) => s.closeConfirm);
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!confirmDialog.isOpen) return null;
 
@@ -31,20 +32,29 @@ export const ConfirmDialog: React.FC = () => {
           <div className="flex gap-3 justify-end">
             <button
               onClick={closeConfirm}
-              className="px-4 py-2 text-sm font-medium text-app-text-secondary bg-app-card hover:bg-app-card-hover border border-app-border rounded transition-colors"
+              disabled={isLoading}
+              className="px-4 py-2 text-sm font-medium text-app-text-secondary bg-app-card hover:bg-app-card-hover border border-app-border rounded transition-colors disabled:opacity-50"
             >
               {t("Cancel")}
             </button>
             <button
-              onClick={() => {
+              disabled={isLoading}
+              onClick={async () => {
                 if (confirmDialog.onConfirm) {
-                  confirmDialog.onConfirm();
+                  setIsLoading(true);
+                  try {
+                    await confirmDialog.onConfirm();
+                  } finally {
+                    setIsLoading(false);
+                    closeConfirm();
+                  }
+                } else {
+                  closeConfirm();
                 }
-                closeConfirm();
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors disabled:opacity-50"
             >
-              {t("Confirm")}
+              {isLoading ? t("Wait...") : t("Confirm")}
             </button>
           </div>
         </motion.div>

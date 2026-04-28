@@ -48,56 +48,60 @@ export function FileMenu() {
               >
                 <Plus size={16} /> {t("New Document")}
               </button>
-              {documents.map((doc) => {
-                const isActive = doc.id === activeFileId;
-                return (
-                  <div
-                    key={doc.id}
-                    onClick={() => switchFile(doc.id)}
-                    className={`group flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <File
-                        size={16}
-                        className={
-                          isActive ? "text-app-accent" : "text-app-text-muted"
-                        }
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <span
-                          className={`text-sm font-medium truncate ${isActive ? "text-app-accent" : "text-app-text-secondary"}`}
-                        >
-                          {doc.title}
-                        </span>
-                        <span className="text-[10px] text-app-text-muted capitalize">
-                          {new Date(doc.updatedAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          • {new Date(doc.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        useAppStore
-                          .getState()
-                          .openConfirm(
-                            t("Are you sure you want to delete this document?"),
-                            () => {
-                              deleteFile(doc.id);
-                            },
-                          );
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
-                      title={t("Delete file")}
+              {[...documents]
+                .sort((a, b) => b.updatedAt - a.updatedAt)
+                .map((doc) => {
+                  const isActive = doc.id === activeFileId;
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => switchFile(doc.id)}
+                      className={`group flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                );
-              })}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <File
+                          size={16}
+                          className={
+                            isActive ? "text-app-accent" : "text-app-text-muted"
+                          }
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span
+                            className={`text-sm font-medium truncate ${isActive ? "text-app-accent" : "text-app-text-secondary"}`}
+                          >
+                            {doc.title}
+                          </span>
+                          <span className="text-[10px] text-app-text-muted capitalize">
+                            {new Date(doc.updatedAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}{" "}
+                            • {new Date(doc.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          useAppStore
+                            .getState()
+                            .openConfirm(
+                              t(
+                                "Are you sure you want to delete this document?",
+                              ),
+                              () => {
+                                deleteFile(doc.id);
+                              },
+                            );
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
+                        title={t("Delete file")}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
             </div>
           </motion.div>
         </motion.div>

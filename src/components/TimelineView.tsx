@@ -6,6 +6,8 @@ import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { COPY_SUCCESS_TIMEOUT_MS } from "../constants";
 import { useTranslation } from "react-i18next";
+import { getDepthFirstNodes } from "../utils/tree";
+import { toggleCheckboxContent } from "../utils/markdownParser";
 
 export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const { t } = useTranslation();
@@ -17,39 +19,15 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
 
   /* Use useMemo to prevent unnecessary calculations and mutations inside render */
   const orderedNodes = useMemo(() => {
-    const parentMap = new Map<string | null, PuuNode[]>();
-    for (const node of nodes) {
-      if (!parentMap.has(node.parentId)) parentMap.set(node.parentId, []);
-      parentMap.get(node.parentId)!.push(node);
-    }
-    for (const children of parentMap.values()) {
-      children.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-    const result: PuuNode[] = [];
-    const traverse = (parentId: string | null) => {
-      const children = parentMap.get(parentId) || [];
-      for (const child of children) {
-        result.push(child);
-        traverse(child.id);
-      }
-    };
-    traverse(null);
-    return result;
+    return getDepthFirstNodes(nodes).map(({ depth, ...node }) => node);
   }, [nodes]);
 
   const handleToggleCheckbox = useCallback(
     (node: PuuNode, index: number, newValue: boolean) => {
-      let count = 0;
-      const newContent = (node.content || "").replace(
-        /^(\s*(?:[-*+]|\d+\.)\s+\[)([\sXx])(\](?:\s+|$))/gm,
-        (match, p1, _p2, p3) => {
-          if (count === index) {
-            count++;
-            return p1 + (newValue ? "x" : " ") + p3;
-          }
-          count++;
-          return match;
-        },
+      const newContent = toggleCheckboxContent(
+        node.content || "",
+        index,
+        newValue,
       );
       if (newContent !== node.content) {
         updateContent(node.id, newContent);

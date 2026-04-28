@@ -40,6 +40,7 @@ export default function App() {
   useFileSystemInit();
   usePreferencesInit();
   const { handleKeyDown } = useAppHotkeys(containerRef);
+  const activeFileId = useAppStore((s) => s.activeFileId);
   const activeId = useAppStore((s) => s.activeId);
   const setActiveId = useAppStore((s) => s.setActiveId);
   const setEditingId = useAppStore((s) => s.setEditingId);
@@ -99,13 +100,13 @@ export default function App() {
   /* Build column arrays */
   const columns = useColumns(nodes);
 
-  useEffect(() => {
-    colRefs.current = colRefs.current.slice(0, columns.length);
-  }, [columns.length]);
-
-  const { colRefs } = useActivePathScroll(activeId, activePath, timelineOpen, [
-    columns,
-  ]);
+  const { colRefs } = useActivePathScroll(
+    activeFileId,
+    activeId,
+    activePath,
+    timelineOpen,
+    [columns],
+  );
 
   /* Run when activePath is rebuilt */
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {

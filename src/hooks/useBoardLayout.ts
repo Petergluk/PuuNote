@@ -35,6 +35,7 @@ export function useColumns(nodes: PuuNode[]) {
 }
 
 export function useActivePathScroll(
+  activeFileId: string | null,
   activeId: string | null,
   activePath: string[],
   timelineOpen: boolean,
@@ -43,7 +44,21 @@ export function useActivePathScroll(
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initializedCols = useRef<Set<number>>(new Set());
 
-  const activePathString = activePath.join(",");
+  useEffect(() => {
+    initializedCols.current.clear();
+  }, [activeFileId]);
+
+  // Make deep comparison or just use length/first-element as heuristic
+  // but standard React expects same reference or JSON stringification
+  // Let's use activePath as a string key just for `useEffect` deps without doing split back
+  const activePathDep = activePath.join(",");
+
+  useEffect(() => {
+    colRefs.current = colRefs.current.slice(
+      0,
+      columnsContextDependencies[0]?.length || 0,
+    );
+  }, [columnsContextDependencies[0]?.length]);
 
   useEffect(() => {
     let rafId: number;
@@ -96,8 +111,7 @@ export function useActivePathScroll(
         }
 
         // Vertical Alignment for all path items
-        const currentPath = activePathString ? activePathString.split(",") : [];
-        for (const pathId of currentPath) {
+        for (const pathId of activePath) {
           const el = document.getElementById(`card-${pathId}`);
           if (el) {
             const col = el.closest(".overflow-y-auto");
@@ -121,7 +135,7 @@ export function useActivePathScroll(
       cancelAnimationFrame(r1);
       cancelAnimationFrame(r2);
     };
-  }, [activeId, activePathString, timelineOpen]);
+  }, [activeId, activePathDep, timelineOpen]);
 
   return { colRefs, initializedCols };
 }
