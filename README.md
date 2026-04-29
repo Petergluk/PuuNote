@@ -1,49 +1,68 @@
-# PuuNote 0.4
+# PuuNote 0.4 (Local-first нелинейный редактор)
 
-PuuNote is an innovative horizontal-tree, card-based text editor. Instead of writing in a single, never-ending vertical document, your thoughts are broken down into cards (nodes) that branch out from left to right. This structure naturally maps to how human thought expands—starting with a core premise and branching into logical details.
+PuuNote — это инновационный текстовый редактор, в котором концепция единого бесконечного полотна заменена на горизонтальное ветвящееся (древовидное) пространство карточек. 
+Вместо того чтобы писать текст сверху вниз, ваши идеи развиваются слева направо. Структура дерева идеально ложится на процесс человеческого мышления: от корня и главной идеи к бесконечной детализации и расширению контекста. Проект построен по принципам Local-first (данные хранятся прямо в браузере) и предлагает мощный API для разработки AI-плагинов.
 
-## 🚀 Features
+## 🚀 Основные возможности
 
-- **Horizontal Tree Architecture:** Keep the top-level context visible on the left while exploring detailed depths on the right. Columns act independently so adding text to one doesn't break the layout of another.
-- **Focus Highlighting:** The active thought path (from the root down to your current node) is vividly highlighted, whilst neighboring nodes fade into the background.
-- **Fluid Keyboard Navigation:** Designed to keep your hands on the keyboard.
-  - Use `Arrow Keys` to traverse the tree.
-  - `Enter` to edit a card.
-  - `Shift + Enter` to create a new sibling card.
-  - `Tab` to create a new child card in the next column.
-- **Robust Markdown Engine:** Full GitHub Flavored Markdown inside of cards. Render links, code blocks, tables, and lists. Safeguarded by `rehype-sanitize` to guarantee XSS protection.
-- **Semantic Export & Import:** Markdown isn't just visually parsed. When you export or import `.md` files, PuuNote understands the actual branches of the document, gracefully indenting hierarchy rather than blindly flattening the structure.
-- **Timeline View:** Want to read the document linearly? Switch to Timeline View. It traverses the document branch-by-branch (depth-first) to present your thought process coherently.
-- **Complete Privacy (Local-First IndexedDB):** Autosaves all state directly into the browser's `IndexedDB` (via Dexie) ensuring high performance. External markdown content (such as images) might still request external resources.
-- **Drag & Drop:** Reorder your thoughts naturally by dragging cards to different nodes or sorting siblings.
-- **Column Focus Mode:** Expand a node to edit it alongside its siblings in an immersive distraction-free view.
+- **Горизонтальная архитектура дерева:** Глобальный контекст всегда виден слева, в то время как глубокая детализация раскрывается справа. Колонки независимы — добавление текста или новых карточек в одну из них не сдвигает и не ломает общую структуру соседних веток.
+- **Интеллектуальная фокусировка (Focus Path):** Активный путь мысли (от корня до текущей карточки) подсвечивается, а соседние узлы затемняются, чтобы минимизировать визуальный шум.
+- **Горячие клавиши (Keyboard-First):** 
+  - `Стрелки` для быстрого перемещения по дереву.
+  - `Enter` для входа в режим редактирования карточки.
+  - `Shift + Enter` для создания новой соседней карточки (сиблинга).
+  - `Tab` для создания дочерней карточки (в следующей колонке).
+- **Продвинутый Markdown:** Полная поддержка GitHub Flavored Markdown внутри карточек (ссылки, код-блоки, таблицы, списки задач). Защищено с помощью `rehype-sanitize` (Zero XSS risks).
+- **Семантический Импорт и Экспорт:** Markdown не просто визуализируется. При экспорте или импорте файлов `.md` PuuNote читает отступы (иерархию заголовков и списков) и автоматически восстанавливает древовидную структуру.
+- **Timeline View (Линейный режим):** Возможность прочитать сложный ветвящийся документ линейно (поддерживается Depth-First обход графа).
+- **Drag & Drop:** Изменяйте порядок карточек или пересаживайте ветки дерева с помощью мыши.
+- **Column Focus Mode:** Расширенный режим фокусировки на конкретном узле (редактирование в полноразмерной модалке без отвлекающих элементов).
+- **Command Palette:** Глобальный нечеткий поиск (Fuzzy Search) по всем документам (вызывается через `Cmd/Ctrl+K`).
+- **Снепшоты (Macro Undo):** При массовых изменениях или AI-генерациях создается снимок состояния, к которому можно моментально откатиться.
 
-## 🛠 Tech Stack
+## 🛠 Стек технологий
 
-- **Framework**: React 19 + TypeScript
-- **Bundler**: Vite 6
-- **Styling**: Tailwind CSS 4
-- **Animations**: Framer Motion (motion/react)
-- **Icons**: Lucide React
-- **Markdown parsing**: react-markdown + remark-gfm + rehype-sanitize
+- **Фреймворк**: React 19 + TypeScript
+- **Сборщик**: Vite 6 (с Code Splitting)
+- **Стилизация**: Tailwind CSS 4
+- **Анимации**: Framer Motion
+- **БД**: Dexie.js (IndexedDB)
+- **Markdown**: react-markdown + remark-gfm + rehype-sanitize
 
-## 🌐 Quick Start
+---
 
-1. Install dependencies:
+## 🧩 API для плагинов и ИИ-агентов (AI Plugin API)
 
+PuuNote спроектирован так, чтобы поверх него можно было легко настраивать LLM-агентов и скрипты автоматизации. 
+
+### 1. Document API (Слой манипуляции графом)
+Для безопасного изменения структуры дерева без поломки связей, Undo/Redo и React-состояния, используйте изолированные методы (в обход сырого `setNodes`):
+
+- `documentApi.addNode(nodes, parentId, content, metadata?)`: Создает новый дочерний узел.
+- `documentApi.updateNode(nodes, nodeId, content, metadata?)`: Обновляет текст и/или метаданные узла.
+- `documentApi.deleteNode(nodes, nodeId)`: Безопасно удаляет узел (и всех его потомков).
+- `documentApi.moveNode(nodes, nodeId, newParentId, insertAfterId?)`: Перемещает ветку графа в новый родительский узел.
+- `documentApi.mergeNodes(nodes, targetId, idsToMerge)`: Объединяет контент нескольких узлов в один.
+
+**Пример (извление контекста LLM):** 
+Метод `buildContextForLLM(nodes, targetNodeId)` возвращает сериализованный в текст контекст ветки (включающий предков от корня и всех потомков), готовый для отправки в системный промпт LLM.
+
+### 2. Operational API & Job Runner
+Работы, связанные с сетью, генерацией или затяжными операциями, должны оборачиваться в `JobRunner`:
+- `JobRunner.runJob(name, async (updateProgress, checkCancelled) => { ... })`: Регистрирует фоновую задачу, которая будет отображаться в UI. Поддерживает отмену (`checkCancelled`).
+- Поддержка трансляции стейта: В схему карточки интегрировано поле `metadata.isGenerating` (оно активирует визуальный shimmer-эффект на UI, показывая, что карточка переписывается/дополняется).
+- `takeDocumentSnapshot(description)`: Перед выполнением крупной генерации сохраняет копию всего документа в IndexedDB для защиты от деструктивных LLM-мутаций.
+
+---
+
+## 🌐 Как запустить локально
+
+1. Установите зависимости:
    ```bash
    npm install
    ```
-
-2. Run the development server:
-
+2. Запустите сервер для разработки:
    ```bash
    npm run dev
    ```
-
-3. Open `http://localhost:3000` to start mapping your thoughts!
-
-## 🔮 Roadmap / Future Capabilities
-
-- **AI Capabilities:** Option for server-side AI or BYOK (Bring Your Own Key) for brainstorm expansion.
-- **Syncing:** Workspace export capabilities and potential CRDT-based cloud sync.
+3. Откройте `http://localhost:3000` в браузере.

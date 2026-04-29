@@ -5,6 +5,7 @@ export const PuuNodeSchema = z.object({
   content: z.string().max(5_000_000), // Limit size to 5MB characters to prevent DoS
   parentId: z.string().nullable(),
   order: z.number().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const PuuNodesArraySchema = z

@@ -180,13 +180,18 @@ export const Card = React.memo(
               </div>{" "}
             </div>
           ) : (
-            <div
-              className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-p:text-app-text-primary dark:prose-p:text-app-text-primary prose-li:text-app-text-primary dark:prose-li:text-app-text-primary prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary" : "prose-headings:text-app-text-muted dark:prose-headings:text-app-text-muted prose-p:text-app-text-muted dark:prose-p:text-app-text-muted prose-li:text-app-text-muted dark:prose-li:text-app-text-muted prose-strong:text-app-text-secondary dark:prose-strong:text-app-text-secondary"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""}`}
-            >
-              {" "}
-              <SafeMarkdown onToggleCheckbox={(idx, val) => toggleCheckbox(node.id, node.content || "", idx, val)}>
-                {node.content || "*Empty node...*"}
-              </SafeMarkdown>{" "}
+            <div className="relative">
+              {node.metadata?.isGenerating && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-app-accent/10 to-transparent transform -skew-x-12 animate-[shimmer_2s_infinite] overflow-hidden rounded pointer-events-none" />
+              )}
+              <div
+                className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-p:text-app-text-primary dark:prose-p:text-app-text-primary prose-li:text-app-text-primary dark:prose-li:text-app-text-primary prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary" : "prose-headings:text-app-text-muted dark:prose-headings:text-app-text-muted prose-p:text-app-text-muted dark:prose-p:text-app-text-muted prose-li:text-app-text-muted dark:prose-li:text-app-text-muted prose-strong:text-app-text-secondary dark:prose-strong:text-app-text-secondary"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""} ${node.metadata?.isGenerating ? "opacity-70 motion-safe:animate-pulse" : ""}`}
+              >
+                {" "}
+                <SafeMarkdown onToggleCheckbox={(idx, val) => toggleCheckbox(node.id, node.content || "", idx, val)}>
+                  {node.content || (node.metadata?.isGenerating ? "*Generating...*" : "*Empty node...*")}
+                </SafeMarkdown>{" "}
+              </div>
             </div>
           )}{" "}
         </div>{" "}
