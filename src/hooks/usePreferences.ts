@@ -40,6 +40,25 @@ export function usePreferencesInit() {
     const savedCollapsed =
       safeLocalStorage.getItem("puu_cardsCollapsed") === "true";
     const savedWidth = Number(safeLocalStorage.getItem("puu_colWidth")) || 357;
+    const savedInactiveBranchesMode =
+      safeLocalStorage.getItem("puu_inactiveBranchesMode") === "hide"
+        ? "hide"
+        : "dim";
+    const savedFocusModeScope = safeLocalStorage.getItem("puu_focusModeScope");
+    const focusModeScope =
+      savedFocusModeScope === "single" ||
+      savedFocusModeScope === "column" ||
+      savedFocusModeScope === "branchLevel"
+        ? savedFocusModeScope
+        : "branchLevel";
+    const savedEditorMode =
+      safeLocalStorage.getItem("puu_editorMode") === "visual"
+        ? "visual"
+        : "markdown";
+    const savedPasteSplitMode =
+      safeLocalStorage.getItem("puu_pasteSplitMode") === "paragraph"
+        ? "paragraph"
+        : "separator";
     let savedTheme = safeLocalStorage.getItem("puu_theme");
     if (!savedTheme) {
       savedTheme =
@@ -51,6 +70,10 @@ export function usePreferencesInit() {
     useAppStore.setState({
       cardsCollapsed: savedCollapsed,
       colWidth: savedWidth,
+      inactiveBranchesMode: savedInactiveBranchesMode,
+      focusModeScope,
+      editorMode: savedEditorMode,
+      pasteSplitMode: savedPasteSplitMode,
       theme: savedTheme,
     });
     applyTheme(savedTheme);
@@ -66,6 +89,21 @@ export function usePreferencesInit() {
       }
       if (state.colWidth !== prevState.colWidth) {
         safeLocalStorage.setItem("puu_colWidth", state.colWidth.toString());
+      }
+      if (state.inactiveBranchesMode !== prevState.inactiveBranchesMode) {
+        safeLocalStorage.setItem(
+          "puu_inactiveBranchesMode",
+          state.inactiveBranchesMode,
+        );
+      }
+      if (state.focusModeScope !== prevState.focusModeScope) {
+        safeLocalStorage.setItem("puu_focusModeScope", state.focusModeScope);
+      }
+      if (state.editorMode !== prevState.editorMode) {
+        safeLocalStorage.setItem("puu_editorMode", state.editorMode);
+      }
+      if (state.pasteSplitMode !== prevState.pasteSplitMode) {
+        safeLocalStorage.setItem("puu_pasteSplitMode", state.pasteSplitMode);
       }
       if (state.theme !== prevState.theme) {
         applyTheme(state.theme);

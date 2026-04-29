@@ -9,6 +9,8 @@ import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
 import { JobPanel } from "./components/JobPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { FloatingCardActions } from "./components/FloatingCardActions";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { MAX_FILE_SIZE_BYTES } from "./constants";
 import { Minimize } from "lucide-react";
 
@@ -35,7 +37,7 @@ import { useAppStore } from "./store/useAppStore";
 import { parseImportFile } from "./domain/documentExport";
 import {
   buildTreeIndex,
-  computeActivePathFromIndex,
+  computeAncestorPathFromIndex,
   computeDescendantIdsFromIndex,
 } from "./utils/tree";
 import { useColumns, useActivePathScroll } from "./hooks/useBoardLayout";
@@ -59,6 +61,7 @@ export default function App() {
   const nodes = useAppStore((s) => s.nodes);
   const addChild = useAppStore((s) => s.addChild);
   const uiMode = useAppStore((s) => s.uiMode);
+  const inactiveBranchesMode = useAppStore((s) => s.inactiveBranchesMode);
 
   const { createNewFile } = useFileSystemActions();
 
@@ -85,8 +88,8 @@ export default function App() {
 
   const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
 
-  const activePath = useMemo(
-    () => computeActivePathFromIndex(treeIndex, activeId),
+  const activeAncestorPath = useMemo(
+    () => computeAncestorPathFromIndex(treeIndex, activeId),
     [treeIndex, activeId],
   );
 
@@ -96,12 +99,19 @@ export default function App() {
   );
 
   /* Build column arrays */
-  const columns = useColumns(nodes, treeIndex, activePath);
+  const columns = useColumns(
+    nodes,
+    treeIndex,
+    activeAncestorPath,
+    activeId,
+    inactiveBranchesMode === "hide",
+  );
 
   const { colRefs } = useActivePathScroll(
     activeFileId,
     activeId,
-    activePath,
+    activeAncestorPath,
+    activeDescendantIds,
     timelineOpen,
     columns.length,
   );
@@ -173,7 +183,7 @@ export default function App() {
               return (
                 <div
                   key={colIndex}
-                  style={{ zIndex: 100 - colIndex }}
+                  style={{ zIndex: Math.max(1, 30 - colIndex) }}
                   ref={(el) => {
                     colRefs.current[colIndex] = el;
                   }}
@@ -184,7 +194,7 @@ export default function App() {
                       <ErrorBoundary key={node.id}>
                         <Card
                           node={node}
-                          isInPath={activePath.includes(node.id)}
+                          isInPath={activeAncestorPath.includes(node.id)}
                           isDescendantFromActive={activeDescendantIds.has(
                             node.id,
                           )}
@@ -216,6 +226,7 @@ export default function App() {
           </Suspense>
         )}{" "}
       </main>{" "}
+      {!timelineOpen && <FloatingCardActions />}{" "}
       {uiMode !== "zen" && <Footer />}{" "}
       {uiMode === "zen" && (
         <button
@@ -255,6 +266,7 @@ export default function App() {
         <FileMenu />
         <CommandPalette />
         <JobPanel />
+        <SettingsPanel />
         <ConfirmDialog />
       </Suspense>
     </div>

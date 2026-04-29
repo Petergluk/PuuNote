@@ -1,10 +1,20 @@
 import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
 
+export type InactiveBranchesMode = "dim" | "hide";
+export type FocusModeScope = "single" | "branchLevel" | "column";
+export type EditorMode = "markdown" | "visual";
+export type PasteSplitMode = "separator" | "paragraph";
+
 export interface UiSlice {
   fileMenuOpen: boolean;
   theme: string;
   cardsCollapsed: boolean;
+  inactiveBranchesMode: InactiveBranchesMode;
+  focusModeScope: FocusModeScope;
+  editorMode: EditorMode;
+  pasteSplitMode: PasteSplitMode;
+  settingsOpen: boolean;
   timelineOpen: boolean;
   colWidth: number;
   commandPaletteOpen: boolean;
@@ -19,6 +29,11 @@ export interface UiSlice {
   toggleTheme: () => void;
   setCardsCollapsed: (collapsed: boolean) => void;
   toggleCardsCollapsed: () => void;
+  setInactiveBranchesMode: (mode: InactiveBranchesMode) => void;
+  setFocusModeScope: (scope: FocusModeScope) => void;
+  setEditorMode: (mode: EditorMode) => void;
+  setPasteSplitMode: (mode: PasteSplitMode) => void;
+  setSettingsOpen: (open: boolean) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
   setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
@@ -64,6 +79,11 @@ export interface DocumentSlice {
   mergeNodes: (masterId: string, nodeIdsToMerge: string[]) => void;
   moveNode: (
     sourceId: string,
+    targetId: string,
+    position: "before" | "after" | "child",
+  ) => void;
+  moveNodes: (
+    sourceIds: string[],
     targetId: string,
     position: "before" | "after" | "child",
   ) => void;

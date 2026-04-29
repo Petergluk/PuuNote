@@ -21,6 +21,9 @@ const normalizeSiblingOrder = (nodes: PuuNode[], parentId: string | null) => {
   });
 };
 
+const sortByOrder = (nodes: PuuNode[]) =>
+  [...nodes].sort((a, b) => (a.order || 0) - (b.order || 0));
+
 export const canMergeNodes = (
   nodes: PuuNode[],
   masterId: string,
@@ -181,6 +184,20 @@ export const documentApi = {
     targetId: string,
     position: "before" | "after" | "child",
   ): PuuNode[] => {
+    return documentApi.moveNodes(nodes, [sourceId], targetId, position);
+  },
+
+  moveNodes: (
+    nodes: PuuNode[],
+    sourceIds: string[],
+    targetId: string,
+    position: "before" | "after" | "child",
+  ): PuuNode[] => {
+    const idsToMove = Array.from(new Set(sourceIds));
+    if (idsToMove.length === 0 || idsToMove.includes(targetId)) {
+      return nodes;
+    }
+
     const isDescendant = (childId: string, parentId: string) => {
       let curr = nodes.find((n) => n.id === childId);
       while (curr) {
@@ -190,55 +207,66 @@ export const documentApi = {
       return false;
     };
 
-    if (sourceId === targetId || isDescendant(targetId, sourceId)) {
+    if (idsToMove.some((sourceId) => isDescendant(targetId, sourceId))) {
       return nodes;
     }
 
     const copy = nodes.map((n) => ({ ...n }));
     const targetNode = copy.find((n) => n.id === targetId);
-    const sourceIdx = copy.findIndex((n) => n.id === sourceId);
+    const movingNodes = sortByOrder(
+      idsToMove
+        .map((sourceId) => copy.find((n) => n.id === sourceId))
+        .filter((node): node is PuuNode => Boolean(node)),
+    );
 
-    if (!targetNode || sourceIdx === -1) {
+    if (!targetNode || movingNodes.length !== idsToMove.length) {
       return nodes;
     }
 
-    const source = copy[sourceIdx];
-    copy.splice(sourceIdx, 1); // remove source
+    const originalParentId = movingNodes[0].parentId;
+    if (movingNodes.some((node) => node.parentId !== originalParentId)) {
+      return nodes;
+    }
+
+    let withoutMoving = copy.filter((node) => !idsToMove.includes(node.id));
 
     let newParentId = targetNode.parentId;
     if (position === "child") {
       newParentId = targetId;
-      const destSiblings = copy
-        .filter((n) => n.parentId === newParentId)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      source.parentId = newParentId;
-      source.order =
+      const destSiblings = sortByOrder(
+        withoutMoving.filter((n) => n.parentId === newParentId),
+      );
+      let nextOrder =
         destSiblings.length > 0
           ? (destSiblings[destSiblings.length - 1].order || 0) + 1
           : 0;
-      copy.push(source);
+      for (const source of movingNodes) {
+        source.parentId = newParentId;
+        source.order = nextOrder++;
+      }
+      withoutMoving = [...withoutMoving, ...movingNodes];
     } else {
       newParentId = targetNode.parentId;
-      source.parentId = newParentId;
-      const destSiblings = copy
-        .filter((n) => n.parentId === newParentId)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      const targetIdx = destSiblings.findIndex((n) => n.id === targetId);
-      destSiblings.splice(
-        position === "before" ? targetIdx : targetIdx + 1,
-        0,
-        source,
+      const destSiblings = sortByOrder(
+        withoutMoving.filter((n) => n.parentId === newParentId),
       );
-      // Reorder siblings
+      const targetIdx = destSiblings.findIndex((n) => n.id === targetId);
+      if (targetIdx === -1) return nodes;
+
+      movingNodes.forEach((source) => {
+        source.parentId = newParentId;
+      });
+      destSiblings.splice(position === "before" ? targetIdx : targetIdx + 1, 0, ...movingNodes);
       destSiblings.forEach((n, i) => {
         n.order = i;
-        const objInCopy = copy.find((x) => x.id === n.id);
+        const objInCopy = withoutMoving.find((x) => x.id === n.id);
         if (objInCopy) objInCopy.order = i;
-        if (n.id === source.id) source.order = i;
       });
-      copy.push(source);
+      withoutMoving = [...withoutMoving, ...movingNodes];
     }
-    return copy;
+    normalizeSiblingOrder(withoutMoving, originalParentId);
+    normalizeSiblingOrder(withoutMoving, newParentId);
+    return withoutMoving;
   },
 
   mergeNodes: (

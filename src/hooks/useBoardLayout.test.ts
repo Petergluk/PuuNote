@@ -23,10 +23,33 @@ describe("buildBoardColumns", () => {
   });
 
   it("builds active-corridor columns for large documents", () => {
-    const columns = buildBoardColumns(buildTreeIndex(nodes), ["a", "a1"], true);
+    const columns = buildBoardColumns(
+      buildTreeIndex(nodes),
+      ["a", "a1"],
+      "a1",
+      true,
+    );
     expect(columns.map((column) => column.map((node) => node.id))).toEqual([
       ["a", "b"],
       ["a1", "a2"],
+      ["a1a"],
+    ]);
+  });
+
+  it("expands the whole active subtree in active-corridor mode", () => {
+    const columns = buildBoardColumns(buildTreeIndex(nodes), ["a"], "a", true);
+    expect(columns.map((column) => column.map((node) => node.id))).toEqual([
+      ["a", "b"],
+      ["a1", "a2"],
+      ["a1a"],
+    ]);
+  });
+
+  it("shows the full tree in active-corridor mode when focus is cleared", () => {
+    const columns = buildBoardColumns(buildTreeIndex(nodes), [], null, true);
+    expect(columns.map((column) => column.map((node) => node.id))).toEqual([
+      ["a", "b"],
+      ["a1", "a2", "b1"],
       ["a1a"],
     ]);
   });

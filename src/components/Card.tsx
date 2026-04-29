@@ -1,12 +1,10 @@
 import React, { useRef, useState } from "react";
-import { Plus, Maximize2, Trash2, Scissors, Combine } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { Maximize2, Scissors } from "lucide-react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
-import { canMergeNodes } from "../domain/documentTree";
 export const Card = React.memo(
   ({
     node,
@@ -27,18 +25,12 @@ export const Card = React.memo(
     const setActiveId = useAppStore((s) => s.setActiveId);
     const setEditingId = useAppStore((s) => s.setEditingId);
     const setFullScreenId = useAppStore((s) => s.setFullScreenId);
-    const addChild = useAppStore((s) => s.addChild);
-    const addSibling = useAppStore((s) => s.addSibling);
 
     const updateContent = useAppStore((s) => s.updateContent);
     const splitNode = useAppStore((s) => s.splitNode);
-    const deleteNode = useAppStore((s) => s.deleteNode);
-    const moveNode = useAppStore((s) => s.moveNode);
+    const moveNodes = useAppStore((s) => s.moveNodes);
 
     const toggleSelection = useAppStore((s) => s.toggleSelection);
-    const mergeNodes = useAppStore((s) => s.mergeNodes);
-    const selectedIds = useAppStore((s) => s.selectedIds);
-    const nodes = useAppStore((s) => s.nodes);
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -62,10 +54,6 @@ export const Card = React.memo(
     const isBright =
       !hasActiveNode || isActive || isInPath || isDescendantFromActive;
     const shouldCollapse = cardsCollapsed && !isEditing && !isActive;
-    const mergeValidation =
-      selectedIds.length > 1
-        ? canMergeNodes(nodes, node.id, selectedIds)
-        : { ok: false, orderedIds: [] };
     let cardClasses =
       "bg-app-panel border border-app-border opacity-60 hover:opacity-100 transition-all duration-200 hover:bg-app-bg text-app-text-primary";
     if (isActive || isSelected) {
@@ -82,7 +70,7 @@ export const Card = React.memo(
       cardClasses =
         "bg-app-card border border-app-border opacity-100 shadow-sm transition-all duration-200 hover:bg-app-card-hover hover:border-app-border-hover z-20 text-app-text-primary";
     }
-    if (isDragged) cardClasses += " !opacity-30 scale-95";
+    if (isDragged) cardClasses += " !opacity-10 scale-95";
     if (dropTarget === "top")
       cardClasses += " !border-t-app-accent !border-t-4";
     if (dropTarget === "bottom")
@@ -132,7 +120,13 @@ export const Card = React.memo(
                   : dropTarget === "top"
                     ? "before"
                     : "after";
-              moveNode(sourceId, node.id, position);
+              const state = useAppStore.getState();
+              const sourceIds =
+                state.selectedIds.length > 1 &&
+                state.selectedIds.includes(sourceId)
+                  ? state.selectedIds
+                  : [sourceId];
+              moveNodes(sourceIds, node.id, position);
             }
           }}
           className={`w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col ${cardClasses}`}
@@ -209,77 +203,6 @@ export const Card = React.memo(
             </div>
           )}{" "}
         </div>{" "}
-        {/* Actions Menu */}
-        <AnimatePresence>
-          {isActive && !isEditing && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-            >
-              {" "}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addSibling(node.id);
-                }}
-                className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-app-card border border-app-border text-app-accent rounded-full p-1.5 shadow-lg hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent transition-colors z-20 flex items-center justify-center"
-                title="Add Sibling (Shift+Enter)"
-              >
-                {" "}
-                <Plus size={14} />{" "}
-              </button>{" "}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addChild(node.id);
-                }}
-                className="absolute top-1/2 right-[-13px] -translate-y-1/2 bg-app-card border border-app-border text-app-accent rounded-full p-1.5 shadow-lg hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent transition-colors z-20 flex items-center justify-center"
-                title="Add Child (Tab)"
-              >
-                {" "}
-                <Plus size={14} />{" "}
-              </button>{" "}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const state = useAppStore.getState();
-                  const childrenCount = state.nodes.filter(
-                    (n) => n.parentId === node.id,
-                  ).length;
-                  if (childrenCount > 0) {
-                    state.openConfirm(
-                      `This will delete the card and its ${childrenCount} descendant branches. Are you sure?`,
-                      () => {
-                        deleteNode(node.id);
-                      },
-                    );
-                  } else {
-                    deleteNode(node.id);
-                  }
-                }}
-                className="absolute -top-3 right-[-13px] bg-app-card border border-app-border text-app-text-muted opacity-75 hover:opacity-100 rounded-full p-1.5 shadow-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all z-20 flex items-center justify-center"
-                title="Delete"
-              >
-                {" "}
-                <Trash2 size={12} />{" "}
-              </button>{" "}
-              {mergeValidation.ok && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    mergeNodes(node.id, selectedIds);
-                  }}
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-app-card border border-app-accent text-app-accent hover:opacity-100 rounded-full p-1.5 shadow-lg hover:bg-app-card-hover transition-all z-20 flex items-center justify-center"
-                  title="Merge Selected"
-                >
-                  <Combine size={12} />
-                </button>
-              )}
-            </motion.div>
-          )}{" "}
-        </AnimatePresence>{" "}
       </div>
     );
   },

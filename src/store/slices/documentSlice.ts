@@ -167,4 +167,29 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
     set({ activeId: sourceId, draggedId: null });
     if (updatedNode) PluginRegistry.emitNodeUpdated(updatedNode);
   },
+
+  moveNodes: (sourceIds, targetId, position) => {
+    let updatedNodes: PuuNode[] = [];
+    const uniqueSourceIds = Array.from(new Set(sourceIds));
+    get().setNodes((prev) => {
+      const next = documentApi.moveNodes(
+        prev,
+        uniqueSourceIds,
+        targetId,
+        position,
+      );
+      if (next !== prev) {
+        const movedIds = new Set(uniqueSourceIds);
+        updatedNodes = next.filter((node) => movedIds.has(node.id));
+      }
+      return next;
+    });
+    const activeId = uniqueSourceIds[0] || null;
+    set({
+      activeId,
+      selectedIds: uniqueSourceIds,
+      draggedId: null,
+    });
+    updatedNodes.forEach((node) => PluginRegistry.emitNodeUpdated(node));
+  },
 });

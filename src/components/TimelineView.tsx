@@ -18,6 +18,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const setActiveId = useAppStore((s) => s.setActiveId);
   const clearSelection = useAppStore((s) => s.clearSelection);
   const updateContent = useAppStore((s) => s.updateContent);
+  const editorMode = useAppStore((s) => s.editorMode);
   const [copied, setCopied] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(true);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -28,7 +29,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
 
   /* Use useMemo to prevent unnecessary calculations and mutations inside render */
   const orderedNodes = useMemo(() => {
-    return getDepthFirstNodes(nodes).map(({ depth: _depth, ...node }) => node);
+    return getDepthFirstNodes(nodes);
   }, [nodes]);
 
   const nodeIndexById = useMemo(() => {
@@ -104,7 +105,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
 
   return (
     <div
-      className="w-full relative flex justify-center p-8 lg:p-16 col-spacer"
+      className="w-full relative flex justify-center p-6 lg:p-12 col-spacer"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           clearSelection();
@@ -175,7 +176,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
         </div>
       )}
 
-      <div className="w-full max-w-3xl flex flex-col gap-8 pb-[20vh] min-w-0 pointer-events-auto">
+      <div className="w-full max-w-3xl flex flex-col gap-4 pb-[20vh] min-w-0 pointer-events-auto">
         {orderedNodes.length === 0 ? (
           <div className="text-app-text-muted italic">
             {t("Document is empty")}
@@ -187,13 +188,46 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
               customScrollParent={scrollParent}
               data={orderedNodes}
               computeItemKey={(_index, node) => node.id}
-              itemContent={(_index, n) => {
+              itemContent={(index, n) => {
                 const isLocalActive = n.id === activeId;
+                const isVisualMode = editorMode === "visual";
+                const previousDepth =
+                  index > 0 ? orderedNodes[index - 1]?.depth : undefined;
+                const showLevelSeparator =
+                  isVisualMode && (index === 0 || previousDepth !== n.depth);
+
                 return (
-                  <div key={n.id} id={`tl-node-${n.id}`} className="mb-8">
+                  <div
+                    key={n.id}
+                    id={`tl-node-${n.id}`}
+                    className={isVisualMode ? "mb-2" : "mb-4"}
+                  >
+                    {showLevelSeparator && (
+                      <div className="my-5 flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-app-text-muted">
+                        <span className="shrink-0">Уровень {n.depth + 1}</span>
+                        <span className="h-px flex-1 bg-app-border/70" />
+                      </div>
+                    )}
                     <div
                       onClick={() => setActiveId(n.id)}
-                      className={`transition-all duration-200 cursor-text rounded-lg border-2 ${isLocalActive ? "p-4 border-app-accent bg-app-card shadow-sm" : "border-transparent hover:bg-app-card-hover"}`}
+                      className={
+                        isVisualMode
+                          ? `cursor-text rounded px-0 py-1 transition-opacity duration-200 ${
+                              isLocalActive
+                                ? "opacity-100"
+                                : "opacity-70 hover:opacity-100"
+                            }`
+                          : `transition-all duration-200 cursor-text rounded-lg border-2 ${
+                              isLocalActive
+                                ? "p-3 border-app-accent bg-app-card shadow-sm"
+                                : "border-transparent hover:bg-app-card-hover"
+                            }`
+                      }
+                      style={
+                        isVisualMode
+                          ? { paddingLeft: `${Math.min(n.depth * 18, 72)}px` }
+                          : undefined
+                      }
                     >
                       {isLocalActive ? (
                         <AutoSizeTextarea
@@ -201,10 +235,10 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
                           onChange={(val: string) => updateContent(n.id, val)}
                           autoFocus
                           placeholder={t("Empty node")}
-                          className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
+                          className="w-full h-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed"
                         />
                       ) : (
-                        <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
+                        <div className="prose dark:prose-invert max-w-none prose-base prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-p:my-2 prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2em] prose-h2:text-[1.55em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
                           <SafeMarkdown
                             onToggleCheckbox={(idx, val) =>
                               toggleCheckbox(n.id, n.content || "", idx, val)

@@ -2,7 +2,6 @@ import { useMemo, useEffect, useRef } from "react";
 import { PuuNode } from "../types";
 
 import { buildTreeIndex, TreeIndex } from "../utils/tree";
-import { BOARD_ACTIVE_CORRIDOR_NODE_THRESHOLD } from "../constants";
 
 const orderedChildren = (
   treeIndex: TreeIndex,
@@ -16,6 +15,7 @@ const orderedChildren = (
 export function buildBoardColumns(
   treeIndex: TreeIndex,
   activePath: string[] = [],
+  activeId: string | null = null,
   useActiveCorridor = false,
 ) {
   const cols: PuuNode[][] = [];
@@ -23,15 +23,38 @@ export function buildBoardColumns(
   if (useActiveCorridor) {
     const roots = orderedChildren(treeIndex, null);
     cols.push(roots);
-    if (roots.length === 0 || activePath.length === 0) return cols;
-
-    for (let index = 1; index < activePath.length; index++) {
-      cols.push(orderedChildren(treeIndex, activePath[index - 1]));
+    if (roots.length === 0) {
+      return cols;
     }
 
-    const lastPathId = activePath[activePath.length - 1];
-    const children = orderedChildren(treeIndex, lastPathId);
-    if (children.length > 0) cols.push(children);
+    if (activePath.length === 0 || !activeId) {
+      let currentLevel = roots;
+      while (currentLevel.length > 0) {
+        const nextLevel: PuuNode[] = [];
+        for (const parent of currentLevel) {
+          nextLevel.push(...orderedChildren(treeIndex, parent.id));
+        }
+        if (nextLevel.length > 0) cols.push(nextLevel);
+        currentLevel = nextLevel;
+      }
+      return cols;
+    }
+
+    for (const pathId of activePath) {
+      const children = orderedChildren(treeIndex, pathId);
+      if (children.length > 0) cols.push(children);
+    }
+
+    let currentLevel = orderedChildren(treeIndex, activeId);
+    while (currentLevel.length > 0) {
+      const nextLevel: PuuNode[] = [];
+      for (const parent of currentLevel) {
+        nextLevel.push(...orderedChildren(treeIndex, parent.id));
+      }
+      if (nextLevel.length > 0) cols.push(nextLevel);
+      currentLevel = nextLevel;
+    }
+
     return cols;
   }
 
@@ -57,15 +80,13 @@ export function useColumns(
   nodes: PuuNode[],
   treeIndex?: TreeIndex,
   activePath: string[] = [],
+  activeId: string | null = null,
+  useActiveCorridor = false,
 ) {
   const columns = useMemo(() => {
     const index = treeIndex || buildTreeIndex(nodes);
-    return buildBoardColumns(
-      index,
-      activePath,
-      nodes.length > BOARD_ACTIVE_CORRIDOR_NODE_THRESHOLD,
-    );
-  }, [activePath, nodes, treeIndex]);
+    return buildBoardColumns(index, activePath, activeId, useActiveCorridor);
+  }, [activeId, activePath, nodes, treeIndex, useActiveCorridor]);
 
   return columns;
 }
@@ -73,7 +94,8 @@ export function useColumns(
 export function useActivePathScroll(
   activeFileId: string | null,
   activeId: string | null,
-  activePath: string[],
+  activeAncestorPath: string[],
+  activeDescendantIds: Set<string>,
   timelineOpen: boolean,
   columnsLength: number,
 ) {
@@ -92,9 +114,6 @@ export function useActivePathScroll(
     };
   }, []);
 
-  // Make deep comparison or just use length/first-element as heuristic
-  // but standard React expects same reference or JSON stringification
-  // Let's use activePath as a string key just for `useEffect` deps without doing split back
   useEffect(() => {
     colRefs.current = colRefs.current.slice(0, columnsLength);
   }, [columnsLength]);
@@ -118,7 +137,7 @@ export function useActivePathScroll(
     return () => cancelAnimationFrame(rafId);
   }, [columnsLength]); // trigger on columns change
 
-  // Center active path
+  // Align active path by top edge.
   useEffect(() => {
     let r2: number;
     const r1 = requestAnimationFrame(() => {
@@ -127,6 +146,7 @@ export function useActivePathScroll(
         if (timelineOpen) return;
         const activeEl = document.getElementById(`card-${activeId}`);
         if (!activeEl) return;
+        const activeRect = activeEl.getBoundingClientRect();
 
         // Horizontal Scroll onto active column
         const mainScroller = document.getElementById("main-scroller");
@@ -146,15 +166,26 @@ export function useActivePathScroll(
           }
         }
 
-        colRefs.current.forEach((col, colIndex) => {
+        const activeAncestorIds = new Set(activeAncestorPath);
+        const isInActiveBranch = (id: string) => {
+          return (
+            id === activeId ||
+            activeAncestorIds.has(id) ||
+            activeDescendantIds.has(id)
+          );
+        };
+
+        colRefs.current.forEach((col) => {
           if (!col) return;
 
-          let activeNodeInCol: Element | null = null;
-          // Find the active node in this column
-          for (const pathId of activePath) {
-            const el = document.getElementById(`card-${pathId}`);
-            if (el && col.contains(el)) {
-              activeNodeInCol = el;
+          let activeNodeInCol: HTMLElement | null = null;
+          const cards = Array.from(
+            col.querySelectorAll<HTMLElement>('[id^="card-"]'),
+          );
+          for (const card of cards) {
+            const id = card.id.replace(/^card-/, "");
+            if (isInActiveBranch(id)) {
+              activeNodeInCol = card;
               break;
             }
           }
@@ -163,31 +194,19 @@ export function useActivePathScroll(
             const elRect = activeNodeInCol.getBoundingClientRect();
             const colRect = col.getBoundingClientRect();
 
-            let desiredCenterY = elRect.top + elRect.height / 2;
-
-            if (colIndex > 0) {
-              // Align to parent's vertical center
-              const parentId = activeNodeInCol.getAttribute("data-parent-id");
-              if (parentId) {
-                const parentEl = document.getElementById(`card-${parentId}`);
-                if (parentEl) {
-                  const pRect = parentEl.getBoundingClientRect();
-                  desiredCenterY = pRect.top + pRect.height / 2;
-                }
-              }
-            } else {
-              // First column keeps its scroll, just ensure it's not totally out of bounds
-              const minCenterY = colRect.top + 64 + elRect.height / 2;
-              const maxCenterY = colRect.bottom - 16 - elRect.height / 2;
-              if (desiredCenterY < minCenterY) {
-                desiredCenterY = minCenterY;
-              } else if (desiredCenterY > maxCenterY) {
-                desiredCenterY = maxCenterY;
-              }
+            let desiredTop = activeRect.top;
+            const minTop = colRect.top + 64;
+            const maxTop = Math.max(
+              minTop,
+              colRect.bottom - 16 - elRect.height,
+            );
+            if (desiredTop < minTop) {
+              desiredTop = minTop;
+            } else if (desiredTop > maxTop) {
+              desiredTop = maxTop;
             }
 
-            const currentCenterY = elRect.top + elRect.height / 2;
-            const targetDiff = currentCenterY - desiredCenterY;
+            const targetDiff = elRect.top - desiredTop;
 
             let maxScrollTop = col.scrollHeight - col.clientHeight;
             if (maxScrollTop < 0) maxScrollTop = 0;
@@ -199,7 +218,7 @@ export function useActivePathScroll(
             );
 
             if (Math.abs(clampedScrollTop - col.scrollTop) > 2) {
-              col.scrollTo({ top: clampedScrollTop, behavior: "smooth" });
+              col.scrollTop = clampedScrollTop;
             }
           }
         });
@@ -209,7 +228,7 @@ export function useActivePathScroll(
       cancelAnimationFrame(r1);
       cancelAnimationFrame(r2);
     };
-  }, [activeId, activePath, timelineOpen]);
+  }, [activeAncestorPath, activeDescendantIds, activeId, timelineOpen]);
 
   return { colRefs, initializedCols };
 }

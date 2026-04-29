@@ -56,6 +56,63 @@ describe("documentTree", () => {
     expect(node2?.order).toBe(0);
   });
 
+  it("should move sibling nodes as an ordered group", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "A" },
+      { id: "2", parentId: null, order: 1, content: "B" },
+      { id: "3", parentId: null, order: 2, content: "C" },
+      { id: "4", parentId: null, order: 3, content: "D" },
+      { id: "5", parentId: null, order: 4, content: "E" },
+    ];
+
+    const updated = documentApi.moveNodes(nodes, ["2", "3"], "5", "after");
+    const orderedRootIds = updated
+      .filter((node) => node.parentId === null)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((node) => node.id);
+
+    expect(orderedRootIds).toEqual(["1", "4", "5", "2", "3"]);
+  });
+
+  it("should move sibling nodes as children while preserving group order", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "A" },
+      { id: "2", parentId: null, order: 1, content: "B" },
+      { id: "3", parentId: null, order: 2, content: "C" },
+      { id: "4", parentId: null, order: 3, content: "D" },
+    ];
+
+    const updated = documentApi.moveNodes(nodes, ["2", "3"], "1", "child");
+    const childIds = updated
+      .filter((node) => node.parentId === "1")
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((node) => node.id);
+
+    expect(childIds).toEqual(["2", "3"]);
+  });
+
+  it("should reject group moves across different parent levels", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "A" },
+      { id: "2", parentId: null, order: 1, content: "B" },
+      { id: "3", parentId: "1", order: 0, content: "A child" },
+    ];
+
+    const updated = documentApi.moveNodes(nodes, ["1", "3"], "2", "after");
+    expect(updated).toBe(nodes);
+  });
+
+  it("should reject group moves into a descendant", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "A" },
+      { id: "2", parentId: null, order: 1, content: "B" },
+      { id: "3", parentId: "1", order: 0, content: "A child" },
+    ];
+
+    const updated = documentApi.moveNodes(nodes, ["1", "2"], "3", "child");
+    expect(updated).toBe(nodes);
+  });
+
   it("should merge nodes correctly", () => {
     const nodes: PuuNode[] = [
       { id: "1", parentId: null, order: 0, content: "Master node" },

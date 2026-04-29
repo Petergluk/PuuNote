@@ -52,11 +52,11 @@ export async function takeDocumentSnapshot(
 
 export async function getDocumentSnapshots(documentId: string) {
   try {
-    return await db.snapshots
+    const snapshots = await db.snapshots
       .where("documentId")
       .equals(documentId)
-      .reverse()
       .sortBy("createdAt");
+    return snapshots.reverse();
   } catch (err) {
     console.error("Failed to load snapshots", err);
     return [];

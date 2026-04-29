@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Upload,
   Download,
@@ -14,6 +14,7 @@ import {
   Search,
   Maximize,
   Minimize,
+  Settings,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import {
@@ -27,8 +28,12 @@ interface HeaderProps {
 }
 
 export function Header({ handleImport }: HeaderProps) {
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   const fileMenuOpen = useAppStore((s) => s.fileMenuOpen);
   const setFileMenuOpen = useAppStore((s) => s.setFileMenuOpen);
+  const settingsOpen = useAppStore((s) => s.settingsOpen);
+  const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
   const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
   const canUndo = useAppStore((s) => s.past.length > 0);
@@ -45,6 +50,20 @@ export function Header({ handleImport }: HeaderProps) {
 
   const uiMode = useAppStore((s) => s.uiMode);
   const setUiMode = useAppStore((s) => s.setUiMode);
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(event.target as Node)
+      ) {
+        setExportMenuOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [exportMenuOpen]);
 
   const toggleFullscreen = () => {
     if (!isFullscreen(document)) {
@@ -182,19 +201,49 @@ export function Header({ handleImport }: HeaderProps) {
             onChange={handleImport}
           />
         </label>
+        <div ref={exportMenuRef} className="relative">
+          <button
+            onClick={() => setExportMenuOpen((open) => !open)}
+            className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${
+              exportMenuOpen
+                ? "text-app-text-primary bg-app-card-hover"
+                : "text-app-text-secondary"
+            }`}
+            title="Export"
+          >
+            <Upload size={16} />
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute right-0 top-full z-[90] mt-2 w-44 overflow-hidden rounded border border-app-border bg-app-panel shadow-xl">
+              <button
+                onClick={() => {
+                  exportToMarkdown();
+                  setExportMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
+              >
+                <Upload size={14} />
+                Markdown
+              </button>
+              <button
+                onClick={() => {
+                  exportToJson();
+                  setExportMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
+              >
+                <FileJson size={14} />
+                Lossless JSON
+              </button>
+            </div>
+          )}
+        </div>
         <button
-          onClick={exportToMarkdown}
-          className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center gap-2"
-          title="Export Markdown"
+          onClick={() => setSettingsOpen(!settingsOpen)}
+          className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${settingsOpen ? "text-app-text-primary bg-app-card-hover" : "text-app-text-secondary"}`}
+          title="Settings"
         >
-          <Upload size={16} />
-        </button>
-        <button
-          onClick={exportToJson}
-          className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center gap-2"
-          title="Export lossless JSON"
-        >
-          <FileJson size={16} />
+          <Settings size={16} />
         </button>
       </div>
     </header>

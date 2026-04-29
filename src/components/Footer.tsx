@@ -3,7 +3,11 @@ import { useMemo, useState } from "react";
 import { Keyboard, Columns, History } from "lucide-react";
 import { INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE } from "../constants";
 import { useAppStore } from "../store/useAppStore";
-import { computeActivePath, computeDescendantIds } from "../utils/tree";
+import {
+  buildTreeIndex,
+  computeAncestorPathFromIndex,
+  computeDescendantIdsFromIndex,
+} from "../utils/tree";
 import { useFileSystemActions } from "../hooks/useFileSystem";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { TutorialModal } from "./TutorialModal";
@@ -28,34 +32,32 @@ export function Footer() {
     null,
   );
 
-  const activePathLength = useMemo(
-    () => computeActivePath(nodes, activeId).length,
-    [nodes, activeId],
-  );
-
-  const wordCount = useMemo(() => {
+  const branchStats = useMemo(() => {
+    const treeIndex = buildTreeIndex(nodes);
     let targetNodes = nodes;
+    let activePathLength = 0;
+    let cardsCount = nodes.length;
 
-    // If there's an active node, only count words for it and its descendants
     if (activeId) {
-      const descendantIds = computeDescendantIds(nodes, activeId);
+      activePathLength = computeAncestorPathFromIndex(
+        treeIndex,
+        activeId,
+      ).length;
+      const descendantIds = computeDescendantIdsFromIndex(treeIndex, activeId);
       const idsToInclude = new Set([activeId, ...descendantIds]);
       targetNodes = nodes.filter((n) => idsToInclude.has(n.id));
+      cardsCount = descendantIds.size + 1;
     }
 
-    return targetNodes.reduce((acc, n) => {
+    const wordCount = targetNodes.reduce((acc, n) => {
       const words = n.content
         .trim()
         .split(/\s+/)
         .filter((w) => w.length > 0);
       return acc + words.length;
     }, 0);
-  }, [nodes, activeId]);
 
-  const cardsCount = useMemo(() => {
-    if (!activeId) return nodes.length;
-    const descendantIds = computeDescendantIds(nodes, activeId);
-    return descendantIds.size + 1;
+    return { activePathLength, cardsCount, wordCount };
   }, [nodes, activeId]);
 
   return (
@@ -65,12 +67,12 @@ export function Footer() {
         <div className="flex gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase hidden lg:flex">
           {" "}
           <span>
-            {activeId ? "BRANCH CARDS:" : "CARDS:"} {cardsCount}
+            {activeId ? "BRANCH CARDS:" : "CARDS:"} {branchStats.cardsCount}
           </span>{" "}
           <span>
-            {activeId ? "BRANCH WORDS:" : "WORDS:"} {wordCount}
+            {activeId ? "BRANCH WORDS:" : "WORDS:"} {branchStats.wordCount}
           </span>{" "}
-          {activeId && <span>DEPTH: {activePathLength}</span>}{" "}
+          {activeId && <span>DEPTH: {branchStats.activePathLength}</span>}{" "}
         </div>{" "}
         <div className="flex items-center gap-4 sm:gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase ml-auto">
           {" "}

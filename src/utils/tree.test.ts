@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildTreeIndex,
-  computeActivePath,
+  computeAncestorPathFromIndex,
   computeDescendantIds,
   getDepthFirstNodes,
 } from "./tree";
@@ -23,10 +23,12 @@ describe("tree", () => {
     expect(childrenMap.get(null)?.length).toBe(2);
   });
 
-  it("should compute active path", () => {
-    // If activeId is 2, it should include 1 (parent) and 3 (first child)
-    const activePath = computeActivePath(mockNodes, "2");
-    expect(activePath).toEqual(["1", "2", "3"]);
+  it("should compute ancestor-only path", () => {
+    const ancestorPath = computeAncestorPathFromIndex(
+      buildTreeIndex(mockNodes),
+      "2",
+    );
+    expect(ancestorPath).toEqual(["1", "2"]);
   });
 
   it("should compute descendant ids", () => {
@@ -53,14 +55,16 @@ describe("tree", () => {
     expect(df[4].depth).toBe(0);
   });
 
-  it("should prevent infinite loop in computeActivePath", () => {
+  it("should prevent infinite loop in computeAncestorPathFromIndex", () => {
     const circularNodes: PuuNode[] = [
       { id: "1", parentId: "2", order: 0, content: "Child" },
       { id: "2", parentId: "1", order: 0, content: "Parent" },
     ];
 
-    // Should not throw and array length should be 2
-    const path = computeActivePath(circularNodes, "1");
+    const path = computeAncestorPathFromIndex(
+      buildTreeIndex(circularNodes),
+      "1",
+    );
     expect(path.length).toBe(2);
   });
 });

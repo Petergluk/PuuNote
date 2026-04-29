@@ -165,12 +165,9 @@ export function buildContextForLLM(
   if (descendants.length > 0) {
     appendWithBudget(chunks, "Descendants:\n", options.maxChars, warnings);
     const descSet = new Set(descendants.map((d) => d.id));
-    const allDfNodes = getDepthFirstNodesFromIndex(treeIndex).filter((df) =>
-      descSet.has(df.id),
-    );
-    const targetDepthInfo = getDepthFirstNodesFromIndex(treeIndex).find(
-      (n) => n.id === targetNodeId,
-    );
+    const depthFirstNodes = getDepthFirstNodesFromIndex(treeIndex);
+    const allDfNodes = depthFirstNodes.filter((df) => descSet.has(df.id));
+    const targetDepthInfo = depthFirstNodes.find((n) => n.id === targetNodeId);
     const baseDepth = targetDepthInfo?.depth || 0;
 
     allDfNodes.forEach((n) => {

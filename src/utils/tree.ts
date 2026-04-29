@@ -27,49 +27,30 @@ const orderedChildrenFromIndex = (
   return [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
-export const computeActivePathFromIndex = (
+export const computeAncestorPathFromIndex = (
   index: TreeIndex,
   activeId: string | null,
 ): string[] => {
   if (!activeId) return [];
-  const { nodeMap } = index;
 
-  const pathUp: string[] = [];
-  const visitedUp = new Set<string>();
-  let currUp: string | null = activeId;
-  let iterationsUp = 0;
-  while (currUp && !visitedUp.has(currUp) && iterationsUp < 1000) {
-    iterationsUp++;
-    visitedUp.add(currUp);
-    pathUp.push(currUp);
-    const node = nodeMap.get(currUp);
-    currUp = node?.parentId || null;
-  }
-  pathUp.reverse();
+  const path: string[] = [];
+  const visited = new Set<string>();
+  let currentId: string | null = activeId;
 
-  const pathDown: string[] = [];
-  const visitedDown = new Set<string>();
-  let currDown = activeId;
-  let iterationsDown = 0;
-  while (currDown && !visitedDown.has(currDown) && iterationsDown < 1000) {
-    iterationsDown++;
-    visitedDown.add(currDown);
-    const children = orderedChildrenFromIndex(index, currDown);
-    if (children.length === 0) break;
-    currDown = children[0].id;
-    if (!visitedDown.has(currDown)) {
-      pathDown.push(currDown);
-    }
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    path.push(currentId);
+    currentId = index.nodeMap.get(currentId)?.parentId || null;
   }
 
-  return Array.from(new Set([...pathUp, ...pathDown]));
+  return path.reverse();
 };
 
-export const computeActivePath = (
+export const computeAncestorPath = (
   nodes: PuuNode[],
   activeId: string | null,
 ): string[] => {
-  return computeActivePathFromIndex(buildTreeIndex(nodes), activeId);
+  return computeAncestorPathFromIndex(buildTreeIndex(nodes), activeId);
 };
 
 export const computeDescendantIdsFromIndex = (
