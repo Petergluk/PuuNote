@@ -21,9 +21,14 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
             rehypeSanitize,
             {
               ...defaultSchema,
-              tagNames: defaultSchema.tagNames ? defaultSchema.tagNames.filter(
-                (tag) => !["svg", "math", "style", "script", "iframe"].includes(tag)
-              ) : [],
+              tagNames: defaultSchema.tagNames
+                ? defaultSchema.tagNames.filter(
+                    (tag) =>
+                      !["svg", "math", "style", "script", "iframe"].includes(
+                        tag,
+                      ),
+                  )
+                : [],
               protocols: {
                 ...defaultSchema.protocols,
                 src: ["http", "https"],

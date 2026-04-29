@@ -2,6 +2,7 @@ import React from "react";
 import {
   Upload,
   Download,
+  FileJson,
   Undo2,
   Redo2,
   Network,
@@ -15,7 +16,11 @@ import {
   Minimize,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
-import { requestFullscreen, exitFullscreen, isFullscreen } from "../utils/fullscreen";
+import {
+  requestFullscreen,
+  exitFullscreen,
+  isFullscreen,
+} from "../utils/fullscreen";
 
 interface HeaderProps {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -34,6 +39,7 @@ export function Header({ handleImport }: HeaderProps) {
   const clearSelection = useAppStore((s) => s.clearSelection);
   const cardsCollapsed = useAppStore((s) => s.cardsCollapsed);
   const exportToMarkdown = useAppStore((s) => s.exportToMarkdown);
+  const exportToJson = useAppStore((s) => s.exportToJson);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
 
@@ -171,7 +177,7 @@ export function Header({ handleImport }: HeaderProps) {
           <Download size={16} />
           <input
             type="file"
-            accept=".md"
+            accept=".md,.markdown,.json"
             className="hidden"
             onChange={handleImport}
           />
@@ -179,9 +185,16 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={exportToMarkdown}
           className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center gap-2"
-          title="Export"
+          title="Export Markdown"
         >
           <Upload size={16} />
+        </button>
+        <button
+          onClick={exportToJson}
+          className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center gap-2"
+          title="Export lossless JSON"
+        >
+          <FileJson size={16} />
         </button>
       </div>
     </header>

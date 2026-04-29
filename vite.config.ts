@@ -15,10 +15,18 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks: {
-            "react-vendor": ["react", "react-dom"],
-            "markdown": ["react-markdown", "rehype-sanitize", "remark-gfm"],
+            "react-vendor": ["react", "react-dom", "react-dom/client"],
+            storage: ["dexie"],
+            validation: ["zod"],
+            i18n: [
+              "i18next",
+              "react-i18next",
+              "i18next-browser-languagedetector",
+            ],
+            toast: ["sonner"],
+            markdown: ["react-markdown", "rehype-sanitize", "remark-gfm"],
             "ui-icons": ["lucide-react"],
-            "motion": ["motion"],
+            motion: ["motion"],
           },
         },
       },

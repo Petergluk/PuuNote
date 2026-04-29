@@ -1,11 +1,26 @@
 import { z } from "zod";
 
+export const PuuNodeMetadataSchema = z
+  .object({
+    isGenerating: z.boolean().optional(),
+    ai: z
+      .object({
+        provider: z.string().optional(),
+        jobId: z.string().optional(),
+        generatedAt: z.string().optional(),
+        operation: z.string().optional(),
+      })
+      .optional(),
+    plugin: z.record(z.string(), z.unknown()).optional(),
+  })
+  .catchall(z.unknown());
+
 export const PuuNodeSchema = z.object({
   id: z.string().min(1).max(256),
   content: z.string().max(5_000_000), // Limit size to 5MB characters to prevent DoS
   parentId: z.string().nullable(),
   order: z.number().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
+  metadata: PuuNodeMetadataSchema.optional(),
 });
 
 export const PuuNodesArraySchema = z
@@ -23,7 +38,10 @@ export const validateNodes = (data: unknown) => {
     const nodeMap = new Map();
     for (const node of nodes) {
       if (nodeMap.has(node.id)) {
-        console.warn("Duplicate node ID detected, keeping last occurrence:", node.id);
+        console.warn(
+          "Duplicate node ID detected, keeping last occurrence:",
+          node.id,
+        );
       }
       nodeMap.set(node.id, node);
     }

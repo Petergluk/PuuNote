@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
-import { Keyboard, Columns } from "lucide-react";
+import { Keyboard, Columns, History } from "lucide-react";
 import { INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE } from "../constants";
 import { useAppStore } from "../store/useAppStore";
 import { computeActivePath, computeDescendantIds } from "../utils/tree";
 import { useFileSystemActions } from "../hooks/useFileSystem";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { TutorialModal } from "./TutorialModal";
+import { SnapshotPanel } from "./SnapshotPanel";
 
 export function Footer() {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ export function Footer() {
   const { createNewFile, switchFile } = useFileSystemActions();
 
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isSnapshotsOpen, setIsSnapshotsOpen] = useState(false);
   const [tutorialModalState, setTutorialModalState] = useState<
     "closed" | "exists"
   >("closed");
@@ -79,7 +81,9 @@ export function Footer() {
                 const s = document.getElementById("main-scroller");
                 const aw = s ? s.clientWidth : window.innerWidth;
                 const cw = Math.floor(aw / 3) - 32;
-                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
+                useAppStore.setState({
+                  colWidth: Math.max(220, Math.min(1200, cw)),
+                });
               }}
               className="text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer"
               title={t("Fit 3 columns")}
@@ -92,8 +96,10 @@ export function Footer() {
                 const aw = s ? s.clientWidth : window.innerWidth;
                 const cC = aw / (useAppStore.getState().colWidth + 32);
                 const tC = Math.floor(cC + 0.1) + 1;
-                const cw = (aw / tC) - 32;
-                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
+                const cw = aw / tC - 32;
+                useAppStore.setState({
+                  colWidth: Math.max(220, Math.min(1200, cw)),
+                });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Decrease width")}
@@ -118,8 +124,10 @@ export function Footer() {
                 const cC = aw / (useAppStore.getState().colWidth + 32);
                 let tC = Math.ceil(cC - 0.1) - 1;
                 tC = Math.max(1, tC);
-                const cw = (aw / tC) - 32;
-                useAppStore.setState({ colWidth: Math.max(220, Math.min(1200, cw)) });
+                const cw = aw / tC - 32;
+                useAppStore.setState({
+                  colWidth: Math.max(220, Math.min(1200, cw)),
+                });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Increase width")}
@@ -127,6 +135,13 @@ export function Footer() {
               +
             </button>
           </div>{" "}
+          <button
+            onClick={() => setIsSnapshotsOpen(true)}
+            className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
+            title="Snapshots"
+          >
+            <History size={16} />
+          </button>{" "}
           <button
             onClick={() => setIsShortcutsOpen(true)}
             className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
@@ -176,6 +191,10 @@ export function Footer() {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+      <SnapshotPanel
+        isOpen={isSnapshotsOpen}
+        onClose={() => setIsSnapshotsOpen(false)}
       />
 
       <TutorialModal

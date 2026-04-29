@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
 import { INITIAL_NODES } from "../constants";
-import { validateNodes } from "../utils/schema";
-import { db } from "../db/db";
 import { toast } from "sonner";
+import { DocumentService, normalizeNodes } from "../domain/documentService";
+import type { PuuDocument, PuuDocumentMetadata } from "../types";
 
 const pendingSave: {
   timer: ReturnType<typeof setTimeout> | null;
@@ -19,13 +19,16 @@ export const flushPendingSave = async () => {
     const { fileId, nodes } = pendingSave;
     if (fileId && nodes.length > 0) {
       try {
-        localStorage.setItem("puu_active_file", fileId);
+        DocumentService.storeActiveFileId(fileId);
       } catch (err) {
         console.error("Failed to store active file", err);
       }
-      await db.files.put({ id: fileId, nodes }).catch((err) => {
+      await DocumentService.saveNodes(fileId, nodes).catch((err) => {
         console.error("Failed to save data into dexie", err);
-        if (err?.name === "QuotaExceededError" || err?.message?.includes("Quota")) {
+        if (
+          err?.name === "QuotaExceededError" ||
+          err?.message?.includes("Quota")
+        ) {
           toast.error("Storage space is full. Could not save your notes.");
         }
       });
@@ -38,60 +41,10 @@ export function useFileSystemInit() {
 
   useEffect(() => {
     async function init() {
-      let savedDocs: Array<{ id: string; title: string; updatedAt: number }> =
-        [];
+      let savedDocs: PuuDocument[] = [];
       try {
-        // Run one-time migration if needed
-        if (localStorage.getItem("puu_documents") !== null) {
-          try {
-            const lsDocs = JSON.parse(
-              localStorage.getItem("puu_documents") || "[]",
-            );
-            if (Array.isArray(lsDocs)) {
-              for (const doc of lsDocs) {
-                // Ignore missing document IDs
-                if (!doc || !doc.id) continue;
-
-                let nodesData = null;
-                const lsStr = localStorage.getItem(`puu_file_${doc.id}`);
-                if (lsStr) {
-                  nodesData = JSON.parse(lsStr);
-                } else if (doc.id === "default") {
-                  const scribeStr = localStorage.getItem("scribe_nodes");
-                  if (scribeStr) nodesData = JSON.parse(scribeStr);
-                }
-
-                if (nodesData && Array.isArray(nodesData)) {
-                  await db.files.put({ id: doc.id, nodes: nodesData });
-                }
-              }
-              const mappedDocs = lsDocs.map((d) => ({
-                ...d,
-                updatedAt: parseInt(String(d.updatedAt), 10) || Date.now(),
-              }));
-              await db.documents.bulkPut(mappedDocs);
-
-              // Only remove legacy keys if all Dexie writes succeeded
-              for (const doc of lsDocs) {
-                if (!doc || !doc.id) continue;
-                localStorage.removeItem(`puu_file_${doc.id}`);
-              }
-              localStorage.removeItem("puu_documents");
-              localStorage.removeItem("scribe_nodes");
-            }
-          } catch (err) {
-            console.error("Migration error: ", err);
-          }
-        }
-
-        const stored = await db.documents.toArray();
-        if (stored && stored.length > 0) {
-          savedDocs = stored.map((d) => ({
-            ...d,
-            updatedAt:
-              parseInt(d.updatedAt as unknown as string, 10) || Date.now(),
-          }));
-        }
+        await DocumentService.migrateLegacyLocalStorage();
+        savedDocs = await DocumentService.listDocuments();
       } catch (err) {
         console.error("Failed to init documents from db", err);
       }
@@ -120,14 +73,14 @@ export function useFileSystemInit() {
       }
       useAppStore.setState({ documents: savedDocs });
 
-      let active = localStorage.getItem("puu_active_file"); // migrate or use ls for active id
+      let active = DocumentService.readActiveFileId();
 
       if (!active || !savedDocs.find((d) => d.id === active)) {
         active = savedDocs[0].id;
       }
       useAppStore.setState({ activeFileId: active });
       try {
-        localStorage.setItem("puu_active_file", active); // persist active id in ls since it's just one string
+        DocumentService.storeActiveFileId(active);
       } catch (err) {
         console.error(
           "Failed to save active file reference to localStorage",
@@ -137,52 +90,10 @@ export function useFileSystemInit() {
 
       let newNodes = INITIAL_NODES;
       try {
-        let dirtySave = null;
-        const dirtySaveStr = localStorage.getItem("puu_dirty_save");
-        if (dirtySaveStr) {
-          try {
-            dirtySave = JSON.parse(dirtySaveStr);
-            if (dirtySave?.fileId && Array.isArray(dirtySave?.nodes)) {
-              await db.files.put({
-                id: dirtySave.fileId,
-                nodes: dirtySave.nodes,
-              });
-            }
-          } catch (e) {
-            console.error("Failed to parse puu_dirty_save", e);
-          }
-          localStorage.removeItem("puu_dirty_save");
-        }
+        await DocumentService.restoreDirtySave();
 
-        const fileData = await db.files.get(active);
-        const savedNodes = fileData?.nodes;
-
-        if (savedNodes) {
-          const validated = validateNodes(savedNodes);
-          if (validated.length > 0) {
-            const seenIds = new Set<string>();
-            newNodes = validated.reduce(
-              (
-                acc: typeof INITIAL_NODES,
-                n: (typeof INITIAL_NODES)[0],
-                i: number,
-              ) => {
-                let id = n.id;
-                if (seenIds.has(id)) {
-                  id = generateId();
-                }
-                seenIds.add(id);
-                acc.push({
-                  ...n,
-                  id,
-                  order: n.order ?? i,
-                });
-                return acc;
-              },
-              [],
-            );
-          }
-        }
+        const savedNodes = await DocumentService.loadNodes(active);
+        if (savedNodes && savedNodes.length > 0) newNodes = savedNodes;
       } catch (err) {
         console.error("Failed to load active file nodes", err);
       }
@@ -212,11 +123,11 @@ export function useFileSystemInit() {
         pendingSave.timer = setTimeout(() => {
           pendingSave.timer = null;
           try {
-            localStorage.setItem("puu_active_file", activeFileId);
+            DocumentService.storeActiveFileId(activeFileId);
           } catch (err) {
             console.error("Failed to update active file in ls", err);
           }
-          db.files.put({ id: activeFileId, nodes }).catch((err) => {
+          DocumentService.saveNodes(activeFileId, nodes).catch((err) => {
             console.error("Failed to save data into dexie", err);
           });
         }, 1000);
@@ -261,16 +172,9 @@ export function useFileSystemInit() {
       // Handle documents metadata changing
       if (state.documents !== prevState.documents) {
         if (state.documents.length > 0) {
-          db.documents
-            .bulkPut(
-              state.documents.map((d) => ({
-                ...d,
-                updatedAt: String(d.updatedAt),
-              })),
-            )
-            .catch((err) => {
-              console.error("Failed to save documents metadata", err);
-            });
+          DocumentService.saveDocuments(state.documents).catch((err) => {
+            console.error("Failed to save documents metadata", err);
+          });
         }
       }
     });
@@ -279,13 +183,7 @@ export function useFileSystemInit() {
       if (pendingSave.timer) {
         clearTimeout(pendingSave.timer);
         try {
-          localStorage.setItem(
-            "puu_dirty_save",
-            JSON.stringify({
-              fileId: pendingSave.fileId,
-              nodes: pendingSave.nodes,
-            }),
-          );
+          DocumentService.saveDirtyNodes(pendingSave.fileId, pendingSave.nodes);
         } catch (e) {
           console.error("Failed to stringify dirty save", e);
         }
@@ -314,28 +212,10 @@ export function useFileSystemActions() {
     let newNodes = INITIAL_NODES;
     let didFail = false;
     try {
-      const fileData = await db.files.get(fileId);
-      const saved = fileData?.nodes;
-
-      if (saved && Array.isArray(saved) && saved.length > 0) {
-        const seenIds = new Set<string>();
-        newNodes = saved.reduce(
-          (
-            acc: typeof INITIAL_NODES,
-            n: (typeof INITIAL_NODES)[0],
-            i: number,
-          ) => {
-            let id = n.id;
-            if (seenIds.has(id)) {
-              id = generateId();
-            }
-            seenIds.add(id);
-            acc.push({ ...n, id, order: n.order ?? i });
-            return acc;
-          },
-          [],
-        );
-      } else if (!fileData) {
+      const saved = await DocumentService.loadNodes(fileId);
+      if (saved && saved.length > 0) {
+        newNodes = saved;
+      } else {
         didFail = true;
       }
     } catch {
@@ -363,15 +243,10 @@ export function useFileSystemActions() {
   const createNewFile = async (
     initialNodes?: typeof INITIAL_NODES,
     title?: string,
+    metadata?: PuuDocumentMetadata,
   ) => {
     await flushPendingSave();
 
-    const newId = generateId();
-    const newDoc = {
-      id: newId,
-      title: title || "New Document",
-      updatedAt: Date.now(),
-    };
     const nodesToUse = initialNodes || [
       {
         id: generateId(),
@@ -380,31 +255,36 @@ export function useFileSystemActions() {
         order: 0,
       },
     ];
+    let newDoc: PuuDocument | null = null;
 
     try {
-      await db.transaction('rw', db.files, db.documents, async () => {
-        await db.documents.put({
-          ...newDoc,
-          updatedAt: String(newDoc.updatedAt),
-        });
-        await db.files.put({ id: newId, nodes: nodesToUse });
+      newDoc = await DocumentService.createDocument({
+        title: title || "New Document",
+        nodes: nodesToUse,
+        metadata,
       });
     } catch (err) {
       console.error("Failed to insert new file into db", err);
-      if (err instanceof Error && (err.name === "QuotaExceededError" || err.message.includes("Quota"))) {
+      if (
+        err instanceof Error &&
+        (err.name === "QuotaExceededError" || err.message.includes("Quota"))
+      ) {
         toast.error("Storage space is full. Could not save your new document.");
       } else {
         toast.error("Failed to create new file.");
       }
+      return;
     }
+
+    if (!newDoc) return;
 
     useAppStore.setState((s) => ({
       documents: [newDoc, ...s.documents],
-      activeFileId: newId,
+      activeFileId: newDoc.id,
       fileMenuOpen: false,
       activeId: nodesToUse[0]?.id || null,
     }));
-    useAppStore.getState().setNodesRaw(nodesToUse);
+    useAppStore.getState().setNodesRaw(normalizeNodes(nodesToUse));
   };
 
   const deleteFile = async (fileId: string) => {
@@ -419,11 +299,7 @@ export function useFileSystemActions() {
 
     // Explicitly delete from DB BEFORE changing state
     try {
-      await db.transaction('rw', db.files, db.documents, async () => {
-        await db.files.delete(fileId);
-        await db.documents.delete(fileId);
-      });
-      localStorage.removeItem(`puu_file_${fileId}`); // cleanup legacy
+      await DocumentService.deleteDocument(fileId);
     } catch (err) {
       console.error("Failed to delete from db", err);
       toast.error("Failed to delete the file.");

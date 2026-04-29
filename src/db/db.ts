@@ -1,10 +1,11 @@
 import Dexie, { type Table } from "dexie";
-import type { PuuNode } from "../types";
+import type { PuuDocumentMetadata, PuuNode } from "../types";
 
 export interface DocumentMeta {
   id: string;
   title: string;
   updatedAt: string;
+  metadata?: PuuDocumentMetadata;
 }
 
 export interface DocumentData {
@@ -34,7 +35,7 @@ export class AppDatabase extends Dexie {
     this.version(2).stores({
       documents: "id, updatedAt",
       files: "id",
-      snapshots: "id, documentId, createdAt", 
+      snapshots: "id, documentId, createdAt",
     });
   }
 }

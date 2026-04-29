@@ -41,7 +41,10 @@ export const FullScreenModal = ({
   const sortedColumnNodes = useMemo(() => {
     if (!targetNode) return [];
     // Basic cycle check to prevent infinite loops or broken UI if data provides a cycle
-    const isDescendant = (childId: string, ancestorId: string | null): boolean => {
+    const isDescendant = (
+      childId: string,
+      ancestorId: string | null,
+    ): boolean => {
       let currentId = ancestorId;
       while (currentId) {
         if (currentId === childId) return true;
@@ -50,11 +53,11 @@ export const FullScreenModal = ({
       }
       return false;
     };
-    
+
     let targetParentId = targetNode.parentId;
     if (isDescendant(nodeId, targetParentId)) {
-       console.warn("Cycle detected in node hierarchy, falling back to root");
-       targetParentId = null;
+      console.warn("Cycle detected in node hierarchy, falling back to root");
+      targetParentId = null;
     }
 
     const columnNodes = nodes.filter(
@@ -84,38 +87,37 @@ export const FullScreenModal = ({
       </button>
 
       <div className="flex-1 overflow-auto p-12 lg:p-24 max-w-4xl mx-auto w-full flex flex-col gap-12 relative pb-[50vh]">
-        {sortedColumnNodes
-          .map((n: PuuNode) => {
-            const isLocalActive = n.id === localActiveId;
-            return (
-              <div
-                key={n.id}
-                ref={n.id === nodeId ? activeElRef : null}
-                onClick={() => setLocalActiveId(n.id)}
-                className={`transition-opacity duration-200 cursor-text min-h-[100px] ${isLocalActive ? "opacity-100" : "opacity-40 hover:opacity-100 "}`}
-              >
-                {isLocalActive ? (
-                  <AutoSizeTextarea
-                    value={n.content}
-                    onChange={(val: string) => updateContent(n.id, val)}
-                    autoFocus
-                    placeholder="Type here..."
-                    className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-xl"
-                  />
-                ) : (
-                  <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
-                    <SafeMarkdown
-                      onToggleCheckbox={(idx, val) =>
-                        toggleCheckbox(n.id, n.content || "", idx, val)
-                      }
-                    >
-                      {n.content || "*Empty card...*"}
-                    </SafeMarkdown>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {sortedColumnNodes.map((n: PuuNode) => {
+          const isLocalActive = n.id === localActiveId;
+          return (
+            <div
+              key={n.id}
+              ref={n.id === nodeId ? activeElRef : null}
+              onClick={() => setLocalActiveId(n.id)}
+              className={`transition-opacity duration-200 cursor-text min-h-[100px] ${isLocalActive ? "opacity-100" : "opacity-40 hover:opacity-100 "}`}
+            >
+              {isLocalActive ? (
+                <AutoSizeTextarea
+                  value={n.content}
+                  onChange={(val: string) => updateContent(n.id, val)}
+                  autoFocus
+                  placeholder="Type here..."
+                  className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-xl"
+                />
+              ) : (
+                <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
+                  <SafeMarkdown
+                    onToggleCheckbox={(idx, val) =>
+                      toggleCheckbox(n.id, n.content || "", idx, val)
+                    }
+                  >
+                    {n.content || "*Empty card...*"}
+                  </SafeMarkdown>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </motion.div>
   );

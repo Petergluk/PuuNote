@@ -6,7 +6,9 @@ export const generateId = () => {
     // secure context only check bypass issues with loops
     try {
       return crypto.randomUUID();
-    } catch(e) {}
+    } catch {
+      // Fall back below in restricted browser contexts.
+    }
   }
   return (
     Date.now().toString(36) +

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { 
-  buildTreeIndex, 
-  computeActivePath, 
-  computeDescendantIds, 
-  getDepthFirstNodes 
+import {
+  buildTreeIndex,
+  computeActivePath,
+  computeDescendantIds,
+  getDepthFirstNodes,
 } from "./tree";
 import { PuuNode } from "../types";
 
@@ -13,7 +13,7 @@ describe("tree", () => {
     { id: "2", parentId: "1", order: 0, content: "Child 1" },
     { id: "3", parentId: "2", order: 0, content: "Grandchild" },
     { id: "4", parentId: "1", order: 1, content: "Child 2" },
-    { id: "5", parentId: null, order: 1, content: "Another root" }
+    { id: "5", parentId: null, order: 1, content: "Another root" },
   ];
 
   it("should build tree index correctly", () => {
@@ -58,7 +58,7 @@ describe("tree", () => {
       { id: "1", parentId: "2", order: 0, content: "Child" },
       { id: "2", parentId: "1", order: 0, content: "Parent" },
     ];
-    
+
     // Should not throw and array length should be 2
     const path = computeActivePath(circularNodes, "1");
     expect(path.length).toBe(2);

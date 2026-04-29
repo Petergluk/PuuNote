@@ -236,7 +236,7 @@ const parseMindMapFormat = (mdText: string): PuuNode[] => {
       }
     }
     n.content = lines.join("\n").trim();
-    // Some mindmap exporters use blockquotes (`> `) to represent node comments/notes. 
+    // Some mindmap exporters use blockquotes (`> `) to represent node comments/notes.
     // We strip them so they appear as normal text inside the card.
     n.content = n.content.replace(/^\s*>[ \t]?/gm, "");
     n.content = n.content.replace(/\n{3,}/g, "\n\n");

@@ -6,6 +6,7 @@ import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
+import { canMergeNodes } from "../domain/documentTree";
 export const Card = React.memo(
   ({
     node,
@@ -37,6 +38,7 @@ export const Card = React.memo(
     const toggleSelection = useAppStore((s) => s.toggleSelection);
     const mergeNodes = useAppStore((s) => s.mergeNodes);
     const selectedIds = useAppStore((s) => s.selectedIds);
+    const nodes = useAppStore((s) => s.nodes);
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,13 +62,18 @@ export const Card = React.memo(
     const isBright =
       !hasActiveNode || isActive || isInPath || isDescendantFromActive;
     const shouldCollapse = cardsCollapsed && !isEditing && !isActive;
+    const mergeValidation =
+      selectedIds.length > 1
+        ? canMergeNodes(nodes, node.id, selectedIds)
+        : { ok: false, orderedIds: [] };
     let cardClasses =
       "bg-app-panel border border-app-border opacity-60 hover:opacity-100 transition-all duration-200 hover:bg-app-bg text-app-text-primary";
     if (isActive || isSelected) {
       cardClasses =
         "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 transition-all duration-200 transform scale-[1.01] z-50 text-app-text-primary";
       if (!isActive && isSelected) {
-         cardClasses = "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md transition-all duration-200 transform z-40 text-app-text-primary";
+        cardClasses =
+          "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md transition-all duration-200 transform z-40 text-app-text-primary";
       }
     } else if (!hasActiveNode) {
       cardClasses =
@@ -188,8 +195,15 @@ export const Card = React.memo(
                 className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-p:text-app-text-primary dark:prose-p:text-app-text-primary prose-li:text-app-text-primary dark:prose-li:text-app-text-primary prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary" : "prose-headings:text-app-text-muted dark:prose-headings:text-app-text-muted prose-p:text-app-text-muted dark:prose-p:text-app-text-muted prose-li:text-app-text-muted dark:prose-li:text-app-text-muted prose-strong:text-app-text-secondary dark:prose-strong:text-app-text-secondary"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""} ${node.metadata?.isGenerating ? "opacity-70 motion-safe:animate-pulse" : ""}`}
               >
                 {" "}
-                <SafeMarkdown onToggleCheckbox={(idx, val) => toggleCheckbox(node.id, node.content || "", idx, val)}>
-                  {node.content || (node.metadata?.isGenerating ? "*Generating...*" : "*Empty node...*")}
+                <SafeMarkdown
+                  onToggleCheckbox={(idx, val) =>
+                    toggleCheckbox(node.id, node.content || "", idx, val)
+                  }
+                >
+                  {node.content ||
+                    (node.metadata?.isGenerating
+                      ? "*Generating...*"
+                      : "*Empty node...*")}
                 </SafeMarkdown>{" "}
               </div>
             </div>
@@ -231,12 +245,16 @@ export const Card = React.memo(
                 onClick={(e) => {
                   e.stopPropagation();
                   const state = useAppStore.getState();
-                  const childrenCount = state.nodes.filter(n => n.parentId === node.id).length;
+                  const childrenCount = state.nodes.filter(
+                    (n) => n.parentId === node.id,
+                  ).length;
                   if (childrenCount > 0) {
-                     state.openConfirm(
-                       `This will delete the card and its ${childrenCount} descendant branches. Are you sure?`,
-                       () => { deleteNode(node.id); }
-                     );
+                    state.openConfirm(
+                      `This will delete the card and its ${childrenCount} descendant branches. Are you sure?`,
+                      () => {
+                        deleteNode(node.id);
+                      },
+                    );
                   } else {
                     deleteNode(node.id);
                   }
@@ -247,7 +265,7 @@ export const Card = React.memo(
                 {" "}
                 <Trash2 size={12} />{" "}
               </button>{" "}
-              {selectedIds.length > 1 && (
+              {mergeValidation.ok && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

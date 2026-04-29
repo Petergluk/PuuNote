@@ -1,5 +1,79 @@
 import { PuuNode } from "../types";
 import { generateId } from "../utils/id";
+import {
+  buildTreeIndex,
+  computeDescendantIdsFromIndex,
+  getDepthFirstNodesFromIndex,
+} from "../utils/tree";
+
+export interface MergeValidationResult {
+  ok: boolean;
+  orderedIds: string[];
+  reason?: string;
+}
+
+const normalizeSiblingOrder = (nodes: PuuNode[], parentId: string | null) => {
+  const siblings = nodes
+    .filter((n) => n.parentId === parentId)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  siblings.forEach((sibling, index) => {
+    sibling.order = index;
+  });
+};
+
+export const canMergeNodes = (
+  nodes: PuuNode[],
+  masterId: string,
+  nodeIdsToMerge: string[],
+): MergeValidationResult => {
+  const uniqueIds = Array.from(new Set([masterId, ...nodeIdsToMerge]));
+  if (uniqueIds.length < 2) {
+    return {
+      ok: false,
+      orderedIds: uniqueIds,
+      reason: "Select at least two cards to merge.",
+    };
+  }
+
+  const index = buildTreeIndex(nodes);
+  const mergeNodes = uniqueIds.map((id) => index.nodeMap.get(id));
+  if (mergeNodes.some((node) => !node)) {
+    return {
+      ok: false,
+      orderedIds: uniqueIds,
+      reason: "One or more selected cards no longer exist.",
+    };
+  }
+
+  const parentId = mergeNodes[0]!.parentId;
+  if (mergeNodes.some((node) => node!.parentId !== parentId)) {
+    return {
+      ok: false,
+      orderedIds: uniqueIds,
+      reason: "Only sibling cards can be merged.",
+    };
+  }
+
+  for (const id of uniqueIds) {
+    const descendants = computeDescendantIdsFromIndex(index, id);
+    if (uniqueIds.some((selectedId) => descendants.has(selectedId))) {
+      return {
+        ok: false,
+        orderedIds: uniqueIds,
+        reason: "Ancestor and descendant cards cannot be merged together.",
+      };
+    }
+  }
+
+  const depthFirstIds = getDepthFirstNodesFromIndex(index).map(
+    (node) => node.id,
+  );
+  const orderedIds = uniqueIds.sort(
+    (a, b) => depthFirstIds.indexOf(a) - depthFirstIds.indexOf(b),
+  );
+
+  return { ok: true, orderedIds };
+};
 
 export const documentApi = {
   updateContent: (nodes: PuuNode[], id: string, content: string): PuuNode[] => {
@@ -10,7 +84,7 @@ export const documentApi = {
 
   addChild: (
     nodes: PuuNode[],
-    parentId: string | null
+    parentId: string | null,
   ): { nextNodes: PuuNode[]; newId: string } => {
     const newId = generateId();
     const siblings = nodes.filter((n) => n.parentId === parentId);
@@ -26,29 +100,34 @@ export const documentApi = {
 
   addSibling: (
     nodes: PuuNode[],
-    targetId: string | null
+    targetId: string | null,
   ): { nextNodes: PuuNode[]; newId: string | null } => {
     const newId = generateId();
     const targetNode = nodes.find((n) => n.id === targetId);
     if (!targetNode) return { nextNodes: nodes, newId: null };
-    
+
     const parentId = targetNode.parentId;
     const targetOrder = targetNode.order || 0;
-    
+
     const nextNodes = nodes.map((n) => {
       if (n.parentId === parentId && (n.order || 0) > targetOrder) {
         return { ...n, order: (n.order || 0) + 1 };
       }
       return n;
     });
-    
-    nextNodes.push({ id: newId, content: "", parentId, order: targetOrder + 1 });
+
+    nextNodes.push({
+      id: newId,
+      content: "",
+      parentId,
+      order: targetOrder + 1,
+    });
     return { nextNodes, newId };
   },
 
   deleteNode: (
     nodes: PuuNode[],
-    id: string
+    id: string,
   ): { nextNodes: PuuNode[]; parentFallback: string | null } => {
     const idsToRemove = new Set<string>();
     const queue = [id];
@@ -67,12 +146,12 @@ export const documentApi = {
     nodes: PuuNode[],
     id: string,
     textBefore: string,
-    textAfter: string
+    textAfter: string,
   ): { nextNodes: PuuNode[]; newId: string | null } => {
     const newId = generateId();
     const targetNode = nodes.find((n) => n.id === id);
     if (!targetNode) return { nextNodes: nodes, newId: null };
-    
+
     const next = nodes.map((n) => {
       if (n.id === id) return { ...n, content: textBefore };
       if (
@@ -83,7 +162,7 @@ export const documentApi = {
       }
       return n;
     });
-    
+
     const nextNodes = [
       ...next,
       {
@@ -100,7 +179,7 @@ export const documentApi = {
     nodes: PuuNode[],
     sourceId: string,
     targetId: string,
-    position: "before" | "after" | "child"
+    position: "before" | "after" | "child",
   ): PuuNode[] => {
     const isDescendant = (childId: string, parentId: string) => {
       let curr = nodes.find((n) => n.id === childId);
@@ -110,22 +189,22 @@ export const documentApi = {
       }
       return false;
     };
-    
+
     if (sourceId === targetId || isDescendant(targetId, sourceId)) {
       return nodes;
     }
-    
+
     const copy = nodes.map((n) => ({ ...n }));
     const targetNode = copy.find((n) => n.id === targetId);
     const sourceIdx = copy.findIndex((n) => n.id === sourceId);
-    
+
     if (!targetNode || sourceIdx === -1) {
       return nodes;
     }
-    
+
     const source = copy[sourceIdx];
     copy.splice(sourceIdx, 1); // remove source
-    
+
     let newParentId = targetNode.parentId;
     if (position === "child") {
       newParentId = targetId;
@@ -148,7 +227,7 @@ export const documentApi = {
       destSiblings.splice(
         position === "before" ? targetIdx : targetIdx + 1,
         0,
-        source
+        source,
       );
       // Reorder siblings
       destSiblings.forEach((n, i) => {
@@ -165,47 +244,53 @@ export const documentApi = {
   mergeNodes: (
     nodes: PuuNode[],
     masterId: string,
-    nodeIdsToMerge: string[]
+    nodeIdsToMerge: string[],
   ): PuuNode[] => {
-    let nextNodes = nodes.map(n => ({...n}));
-    const masterNode = nextNodes.find(n => n.id === masterId);
+    const validation = canMergeNodes(nodes, masterId, nodeIdsToMerge);
+    if (!validation.ok) return nodes;
+
+    let nextNodes = nodes.map((n) => ({ ...n }));
+    const masterNode = nextNodes.find((n) => n.id === masterId);
     if (!masterNode) return nodes;
 
-    const idsToMerge = nodeIdsToMerge.filter(id => id !== masterId);
+    const idsToMerge = validation.orderedIds.filter((id) => id !== masterId);
     if (idsToMerge.length === 0) return nodes;
 
-    let combinedContent = masterNode.content;
+    const orderedNodes = validation.orderedIds
+      .map((id) => nextNodes.find((n) => n.id === id))
+      .filter((node): node is PuuNode => Boolean(node));
+    const combinedContent = orderedNodes
+      .map((node) => node.content.trim())
+      .filter(Boolean)
+      .join("\n\n");
     const allChildrenToMove: PuuNode[] = [];
 
-    // Using the order they appear in the original nodes array
-    // Since tree representation usually reflects visual order if they are from a depth-first search, we just do it via nextNodes
     for (const id of idsToMerge) {
-      const nodeToMerge = nextNodes.find(n => n.id === id);
+      const nodeToMerge = nextNodes.find((n) => n.id === id);
       if (nodeToMerge) {
-         if (nodeToMerge.content) {
-            combinedContent = combinedContent.trimEnd() + "\n\n" + nodeToMerge.content.trimStart();
-         }
-         const children = nextNodes.filter(n => n.parentId === id);
-         allChildrenToMove.push(...children);
+        const children = nextNodes.filter((n) => n.parentId === id);
+        allChildrenToMove.push(...children);
       }
     }
 
     let maxOrder = -1;
-    const masterChildren = nextNodes.filter(n => n.parentId === masterId);
+    const masterChildren = nextNodes.filter((n) => n.parentId === masterId);
     if (masterChildren.length > 0) {
-       maxOrder = Math.max(...masterChildren.map(n => n.order || 0));
+      maxOrder = Math.max(...masterChildren.map((n) => n.order || 0));
     }
 
-    allChildrenToMove.forEach(child => {
-        child.parentId = masterId;
-        maxOrder++;
-        child.order = maxOrder;
+    allChildrenToMove.forEach((child) => {
+      child.parentId = masterId;
+      maxOrder++;
+      child.order = maxOrder;
     });
 
     masterNode.content = combinedContent;
 
     const idsToRemove = new Set(idsToMerge);
-    nextNodes = nextNodes.filter(n => !idsToRemove.has(n.id));
+    nextNodes = nextNodes.filter((n) => !idsToRemove.has(n.id));
+    normalizeSiblingOrder(nextNodes, masterNode.parentId);
+    normalizeSiblingOrder(nextNodes, masterId);
 
     return nextNodes;
   },

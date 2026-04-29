@@ -1,11 +1,22 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import Fuse from "fuse.js";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "../hooks/useFileSystem";
-import { Search, Palette, FileText, Plus, Trash2 } from "lucide-react";
-import { db } from "../db/db";
+import {
+  Search,
+  Palette,
+  FileText,
+  Plus,
+  Trash2,
+  Sparkles,
+} from "lucide-react";
+import {
+  DocumentService,
+  type SearchDocumentNode,
+} from "../domain/documentService";
+import { runMockExpandSelectedCard } from "../domain/aiOperations";
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -14,9 +25,8 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [searchResults, setSearchResults] = useState<
-    { id: string; content: string; fileId: string; fileTitle: string }[]
-  >([]);
+  const [searchDocs, setSearchDocs] = useState<SearchDocumentNode[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchDocumentNode[]>([]);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const setActiveId = useAppStore((s) => s.setActiveId);
@@ -25,6 +35,14 @@ export function CommandPalette() {
   const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
 
   const { createNewFile, deleteFile, switchFile } = useFileSystemActions();
+  const fuse = useMemo(() => {
+    if (searchDocs.length === 0) return null;
+    return new Fuse(searchDocs, {
+      keys: ["content", "fileTitle"],
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+  }, [searchDocs]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,52 +66,42 @@ export function CommandPalette() {
   }, [isOpen]);
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (!query.trim()) {
+    if (!isOpen) return;
+    let cancelled = false;
+    const loadSearchDocs = async () => {
+      const docs = await DocumentService.getSearchNodes(documents);
+      if (!cancelled) setSearchDocs(docs);
+    };
+
+    void loadSearchDocs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, documents]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!query.trim() || !fuse) {
         setSearchResults([]);
         return;
       }
 
-
-      const allFiles = await db.files.toArray();
-      const docs: {
-        id: string;
-        content: string;
-        fileId: string;
-        fileTitle: string;
-      }[] = [];
-
-      for (const file of allFiles) {
-        const doc = documents.find((d) => d.id === file.id);
-        const title = doc ? doc.title : "Unknown Document";
-
-        for (const node of file.nodes) {
-          docs.push({
-            id: node.id,
-            content: node.content,
-            fileId: file.id,
-            fileTitle: title,
-          });
-        }
-      }
-
-      const fuse = new Fuse(docs, {
-        keys: ["content"],
-        threshold: 0.4,
-        ignoreLocation: true,
-      });
-
-      const results = fuse.search(query).slice(0, 15).map(res => res.item);
-
-      setSearchResults(results);
+      setSearchResults(
+        fuse
+          .search(query)
+          .slice(0, 15)
+          .map((res) => res.item),
+      );
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, documents]);
+  }, [query, fuse]);
 
   const closePalette = () => {
     setIsOpen(false);
     setQuery("");
+    setSearchResults([]);
   };
 
   const handleSelectNode = async (fileId: string, nodeId: string) => {
@@ -212,6 +220,15 @@ export function CommandPalette() {
                   >
                     <Plus size={16} className="text-app-accent" />
                     {t("New Document")}
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleExecuteCommand(runMockExpandSelectedCard)
+                    }
+                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
+                  >
+                    <Sparkles size={16} className="text-app-accent" />
+                    AI: Draft child cards
                   </button>
                   <button
                     onClick={() =>

@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
+import { JobPanel } from "./components/JobPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { MAX_FILE_SIZE_BYTES } from "./constants";
 import { Minimize } from "lucide-react";
@@ -27,13 +28,16 @@ const CommandPalette = lazy(() =>
   })),
 );
 
-import { parseMarkdownToNodes } from "./utils/markdownParser";
-import { validateNodes } from "./utils/schema";
 import { useFileSystemInit, useFileSystemActions } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
 import { useAppStore } from "./store/useAppStore";
-import { computeActivePath, computeDescendantIds } from "./utils/tree";
+import { parseImportFile } from "./domain/documentExport";
+import {
+  buildTreeIndex,
+  computeActivePathFromIndex,
+  computeDescendantIdsFromIndex,
+} from "./utils/tree";
 import { useColumns, useActivePathScroll } from "./hooks/useBoardLayout";
 
 export default function App() {
@@ -70,24 +74,29 @@ export default function App() {
     document.addEventListener("MSFullscreenChange", onFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        onFullscreenChange,
+      );
       document.removeEventListener("mozfullscreenchange", onFullscreenChange);
       document.removeEventListener("MSFullscreenChange", onFullscreenChange);
     };
   }, []);
 
+  const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
+
   const activePath = useMemo(
-    () => computeActivePath(nodes, activeId),
-    [nodes, activeId],
+    () => computeActivePathFromIndex(treeIndex, activeId),
+    [treeIndex, activeId],
   );
 
   const activeDescendantIds = useMemo(
-    () => computeDescendantIds(nodes, activeId),
-    [nodes, activeId],
+    () => computeDescendantIdsFromIndex(treeIndex, activeId),
+    [treeIndex, activeId],
   );
 
   /* Build column arrays */
-  const columns = useColumns(nodes);
+  const columns = useColumns(nodes, treeIndex, activePath);
 
   const { colRefs } = useActivePathScroll(
     activeFileId,
@@ -111,20 +120,20 @@ export default function App() {
     reader.onload = (event) => {
       const mdText = event.target?.result as string;
       if (!mdText) return;
-      const imported = parseMarkdownToNodes(mdText);
       try {
-        const validated = validateNodes(imported);
-        if (validated.length > 0) {
+        const imported = parseImportFile(file.name, mdText);
+        if (imported.nodes.length > 0) {
           useAppStore
             .getState()
             .openConfirm("Import will create a new document. Proceed?", () => {
-              const title = file.name.replace(/\.md$/i, "");
-              createNewFile(validated, title);
+              createNewFile(imported.nodes, imported.title, imported.metadata);
             });
         }
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
-        toast.error("Import failed", { description: "Imported file is invalid or corrupted." });
+        toast.error("Import failed", {
+          description: "Imported file is invalid or corrupted.",
+        });
       }
     };
     reader.readAsText(file);
@@ -150,8 +159,7 @@ export default function App() {
         }
       }}
     >
-      <Toaster theme="system" position="bottom-right" richColors />
-      {" "}
+      <Toaster theme="system" position="bottom-right" richColors />{" "}
       {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
       <main
         id="main-scroller"
@@ -246,6 +254,7 @@ export default function App() {
         </AnimatePresence>
         <FileMenu />
         <CommandPalette />
+        <JobPanel />
         <ConfirmDialog />
       </Suspense>
     </div>

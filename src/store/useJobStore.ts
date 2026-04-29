@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { generateId } from "../utils/id";
 
-export type JobStatus = "pending" | "running" | "completed" | "failed";
+export type JobStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface Job {
   id: string;
@@ -23,7 +28,7 @@ interface JobStore {
 
 export const useJobStore = create<JobStore>((set) => ({
   jobs: [],
-  
+
   addJob: (name: string) => {
     const id = generateId();
     set((state) => ({
@@ -38,7 +43,7 @@ export const useJobStore = create<JobStore>((set) => ({
   updateJob: (id: string, updates: Partial<Job>) => {
     set((state) => ({
       jobs: state.jobs.map((job) =>
-        job.id === id ? { ...job, ...updates } : job
+        job.id === id ? { ...job, ...updates } : job,
       ),
     }));
   },
@@ -52,7 +57,7 @@ export const useJobStore = create<JobStore>((set) => ({
   clearCompleted: () => {
     set((state) => ({
       jobs: state.jobs.filter(
-        (job) => job.status !== "completed" && job.status !== "failed"
+        (job) => job.status !== "completed" && job.status !== "failed",
       ),
     }));
   },

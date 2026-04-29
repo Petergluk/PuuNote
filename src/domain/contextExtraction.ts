@@ -1,12 +1,116 @@
 import { PuuNode } from "../types";
-import { getDepthFirstNodes, buildTreeIndex } from "../utils/tree";
+import {
+  getDepthFirstNodesFromIndex,
+  buildTreeIndex,
+  type TreeIndex,
+} from "../utils/tree";
+
+export interface LLMContextOptions {
+  maxLevels?: number;
+  maxChars?: number;
+  includeAncestors?: boolean;
+  includeDescendants?: boolean;
+  includeNodeIds?: boolean;
+}
 
 export interface ContextExtractionResult {
   node: PuuNode;
   ancestors: PuuNode[];
   descendants: PuuNode[];
   textContext: string;
+  truncated: boolean;
+  estimatedTokens: number;
+  warnings: string[];
+  options: Required<LLMContextOptions>;
 }
+
+const DEFAULT_CONTEXT_OPTIONS: Required<LLMContextOptions> = {
+  maxLevels: -1,
+  maxChars: 12_000,
+  includeAncestors: true,
+  includeDescendants: true,
+  includeNodeIds: true,
+};
+
+const normalizeOptions = (
+  optionsOrMaxLevels: number | LLMContextOptions = DEFAULT_CONTEXT_OPTIONS,
+): Required<LLMContextOptions> => {
+  const input =
+    typeof optionsOrMaxLevels === "number"
+      ? { maxLevels: optionsOrMaxLevels }
+      : optionsOrMaxLevels;
+
+  return {
+    ...DEFAULT_CONTEXT_OPTIONS,
+    ...input,
+  };
+};
+
+const estimateTokens = (text: string) => Math.ceil(text.length / 4);
+
+const formatNodeLine = (node: PuuNode, includeNodeIds: boolean) => {
+  const content = node.content.split("\n")[0] || "Untitled";
+  return includeNodeIds ? `[${node.id}] ${content}` : content;
+};
+
+const appendWithBudget = (
+  chunks: string[],
+  text: string,
+  maxChars: number,
+  warnings: string[],
+) => {
+  const currentLength = chunks.join("").length;
+  if (currentLength >= maxChars) return false;
+  if (currentLength + text.length <= maxChars) {
+    chunks.push(text);
+    return true;
+  }
+
+  const remaining = Math.max(0, maxChars - currentLength);
+  if (remaining > 0) {
+    chunks.push(text.slice(0, remaining));
+  }
+  warnings.push(`Context truncated at ${maxChars} characters.`);
+  return false;
+};
+
+const getAncestors = (index: TreeIndex, targetNode: PuuNode) => {
+  const ancestors: PuuNode[] = [];
+  let curr = targetNode.parentId;
+  while (curr) {
+    const parent = index.nodeMap.get(curr);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    curr = parent.parentId;
+  }
+  return ancestors;
+};
+
+const getDescendants = (
+  index: TreeIndex,
+  targetNodeId: string,
+  maxLevels: number,
+) => {
+  const descendants: PuuNode[] = [];
+  const stack = [{ id: targetNodeId, depth: 0 }];
+
+  while (stack.length > 0) {
+    const { id, depth } = stack.pop()!;
+    if (id !== targetNodeId) {
+      const node = index.nodeMap.get(id);
+      if (node) descendants.push(node);
+    }
+
+    if (maxLevels === -1 || depth < maxLevels) {
+      const children = index.childrenMap.get(id) || [];
+      for (let i = children.length - 1; i >= 0; i--) {
+        stack.push({ id: children[i].id, depth: depth + 1 });
+      }
+    }
+  }
+
+  return descendants;
+};
 
 /**
  * Provides a text representation of a node and its descendants for LLM context.
@@ -14,81 +118,84 @@ export interface ContextExtractionResult {
 export function buildContextForLLM(
   nodes: PuuNode[],
   targetNodeId: string,
-  maxLevels: number = -1
+  optionsOrMaxLevels: number | LLMContextOptions = DEFAULT_CONTEXT_OPTIONS,
 ): ContextExtractionResult | null {
-  const { nodeMap, childrenMap } = buildTreeIndex(nodes);
-  const targetNode = nodeMap.get(targetNodeId);
+  const options = normalizeOptions(optionsOrMaxLevels);
+  const treeIndex = buildTreeIndex(nodes);
+  const targetNode = treeIndex.nodeMap.get(targetNodeId);
 
   if (!targetNode) return null;
 
-  // 1. Get ancestors (Root to target)
-  const ancestors: PuuNode[] = [];
-  let curr = targetNode.parentId;
-  while (curr) {
-    const parent = nodeMap.get(curr);
-    if (parent) {
-      ancestors.unshift(parent);
-      curr = parent.parentId;
-    } else {
-      break;
-    }
-  }
+  const warnings: string[] = [];
+  const ancestors = options.includeAncestors
+    ? getAncestors(treeIndex, targetNode)
+    : [];
+  const descendants = options.includeDescendants
+    ? getDescendants(treeIndex, targetNodeId, options.maxLevels)
+    : [];
 
-  // 2. Get descendants
-  const descendants: PuuNode[] = [];
-  const stack = [{ id: targetNodeId, depth: 0 }];
-
-  while (stack.length > 0) {
-    const { id, depth } = stack.pop()!;
-    if (id !== targetNodeId) {
-      const n = nodeMap.get(id);
-      if (n) descendants.push(n);
-    }
-
-    if (maxLevels === -1 || depth < maxLevels) {
-      const children = childrenMap.get(id) || [];
-      // Push in reverse so they pop in order
-      for (let i = children.length - 1; i >= 0; i--) {
-        stack.push({ id: children[i].id, depth: depth + 1 });
-      }
-    }
-  }
-
-  // 3. Serialize as Markdown outline
-  let textContext = `Context for Node [${targetNodeId}]:\n\n`;
+  const chunks: string[] = [];
+  appendWithBudget(
+    chunks,
+    `Context for Node ${options.includeNodeIds ? `[${targetNodeId}]` : ""}:\n\n`,
+    options.maxChars,
+    warnings,
+  );
   if (ancestors.length > 0) {
-    textContext += "Ancestors path:\n";
+    appendWithBudget(chunks, "Ancestors path:\n", options.maxChars, warnings);
     ancestors.forEach((anc, i) => {
-      textContext += `${" ".repeat(i * 2)}- ${anc.content.split("\n")[0]}\n`;
+      appendWithBudget(
+        chunks,
+        `${" ".repeat(i * 2)}- ${formatNodeLine(anc, options.includeNodeIds)}\n`,
+        options.maxChars,
+        warnings,
+      );
     });
-    textContext += "\n";
+    appendWithBudget(chunks, "\n", options.maxChars, warnings);
   }
 
-  textContext += "Target Node:\n";
-  textContext += `[${targetNode.id}] ${targetNode.content}\n\n`;
+  appendWithBudget(chunks, "Target Node:\n", options.maxChars, warnings);
+  appendWithBudget(
+    chunks,
+    `${options.includeNodeIds ? `[${targetNode.id}] ` : ""}${targetNode.content}\n\n`,
+    options.maxChars,
+    warnings,
+  );
 
   if (descendants.length > 0) {
-    textContext += "Descendants:\n";
-    // Quick and dirty depth for string representation
-    const descSet = new Set(descendants.map(d => d.id));
-    const allDfNodes = getDepthFirstNodes(nodes).filter(df => descSet.has(df.id));
-    
-    // Normalize depth relative to target
-    const targetDepthInfo = getDepthFirstNodes(nodes).find(n => n.id === targetNodeId);
+    appendWithBudget(chunks, "Descendants:\n", options.maxChars, warnings);
+    const descSet = new Set(descendants.map((d) => d.id));
+    const allDfNodes = getDepthFirstNodesFromIndex(treeIndex).filter((df) =>
+      descSet.has(df.id),
+    );
+    const targetDepthInfo = getDepthFirstNodesFromIndex(treeIndex).find(
+      (n) => n.id === targetNodeId,
+    );
     const baseDepth = targetDepthInfo?.depth || 0;
 
     allDfNodes.forEach((n) => {
       const relDepth = n.depth - baseDepth;
       if (relDepth > 0) {
-        textContext += `${" ".repeat((relDepth - 1) * 2)}- [${n.id}] ${n.content.split("\n")[0]}\n`;
+        appendWithBudget(
+          chunks,
+          `${" ".repeat((relDepth - 1) * 2)}- ${formatNodeLine(n, options.includeNodeIds)}\n`,
+          options.maxChars,
+          warnings,
+        );
       }
     });
   }
+
+  const textContext = chunks.join("");
 
   return {
     node: targetNode,
     ancestors,
     descendants,
     textContext,
+    truncated: warnings.length > 0,
+    estimatedTokens: estimateTokens(textContext),
+    warnings: Array.from(new Set(warnings)),
+    options,
   };
 }

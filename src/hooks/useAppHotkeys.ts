@@ -44,7 +44,7 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
             siblings.length > 0
               ? Math.max(...siblings.map((n) => n.order || 0))
               : -1;
-              
+
           const newIds = parts.map(() => generateId());
           const newNodes: PuuNode[] = parts.map((part, i) => {
             return {

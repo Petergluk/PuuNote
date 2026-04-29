@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { Virtuoso } from "react-virtuoso";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { PuuNode } from "../types";
 import { useAppStore } from "../store/useAppStore";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
@@ -20,13 +20,38 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const updateContent = useAppStore((s) => s.updateContent);
   const [copied, setCopied] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(true);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const scrollParent =
+    typeof document === "undefined"
+      ? undefined
+      : document.getElementById("main-scroller") || undefined;
 
   /* Use useMemo to prevent unnecessary calculations and mutations inside render */
   const orderedNodes = useMemo(() => {
     return getDepthFirstNodes(nodes).map(({ depth: _depth, ...node }) => node);
   }, [nodes]);
 
+  const nodeIndexById = useMemo(() => {
+    return new Map(orderedNodes.map((node, index) => [node.id, index]));
+  }, [orderedNodes]);
+  const nodeIndexByIdRef = useRef(nodeIndexById);
+
   const toggleCheckbox = useToggleCheckbox();
+
+  useEffect(() => {
+    nodeIndexByIdRef.current = nodeIndexById;
+  }, [nodeIndexById]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const index = nodeIndexByIdRef.current.get(activeId);
+    if (index === undefined) return;
+    virtuosoRef.current?.scrollToIndex({
+      index,
+      align: "center",
+      behavior: "smooth",
+    });
+  }, [activeId]);
 
   /* Extract outline (headings) from nodes */
   const outline = useMemo(() => {
@@ -55,11 +80,14 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   }, [orderedNodes]);
 
   const scrollToNode = (nodeId: string) => {
-    const element = document.getElementById(`tl-node-${nodeId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveId(nodeId);
-    }
+    const index = nodeIndexById.get(nodeId);
+    if (index === undefined) return;
+    virtuosoRef.current?.scrollToIndex({
+      index,
+      align: "start",
+      behavior: "smooth",
+    });
+    setActiveId(nodeId);
   };
 
   const handleCopyAll = async (e: React.MouseEvent) => {
@@ -79,8 +107,8 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
       className="w-full relative flex justify-center p-8 lg:p-16 col-spacer"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-           clearSelection();
-           setActiveId(null);
+          clearSelection();
+          setActiveId(null);
         }
       }}
     >
@@ -155,8 +183,10 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
         ) : (
           <div className="w-full">
             <Virtuoso
-              useWindowScroll
+              ref={virtuosoRef}
+              customScrollParent={scrollParent}
               data={orderedNodes}
+              computeItemKey={(_index, node) => node.id}
               itemContent={(_index, n) => {
                 const isLocalActive = n.id === activeId;
                 return (

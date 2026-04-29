@@ -19,12 +19,20 @@ export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
   return { nodeMap, childrenMap };
 };
 
-export const computeActivePath = (
-  nodes: PuuNode[],
+const orderedChildrenFromIndex = (
+  index: TreeIndex,
+  parentId: string | null,
+): PuuNode[] => {
+  const children = index.childrenMap.get(parentId) || [];
+  return [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
+};
+
+export const computeActivePathFromIndex = (
+  index: TreeIndex,
   activeId: string | null,
 ): string[] => {
   if (!activeId) return [];
-  const { nodeMap, childrenMap } = buildTreeIndex(nodes);
+  const { nodeMap } = index;
 
   const pathUp: string[] = [];
   const visitedUp = new Set<string>();
@@ -46,9 +54,8 @@ export const computeActivePath = (
   while (currDown && !visitedDown.has(currDown) && iterationsDown < 1000) {
     iterationsDown++;
     visitedDown.add(currDown);
-    const children = childrenMap.get(currDown);
-    if (!children || children.length === 0) break;
-    children.sort((a, b) => (a.order || 0) - (b.order || 0));
+    const children = orderedChildrenFromIndex(index, currDown);
+    if (children.length === 0) break;
     currDown = children[0].id;
     if (!visitedDown.has(currDown)) {
       pathDown.push(currDown);
@@ -58,12 +65,19 @@ export const computeActivePath = (
   return Array.from(new Set([...pathUp, ...pathDown]));
 };
 
-export const computeDescendantIds = (
+export const computeActivePath = (
   nodes: PuuNode[],
+  activeId: string | null,
+): string[] => {
+  return computeActivePathFromIndex(buildTreeIndex(nodes), activeId);
+};
+
+export const computeDescendantIdsFromIndex = (
+  index: TreeIndex,
   activeId: string | null,
 ): Set<string> => {
   if (!activeId) return new Set<string>();
-  const { childrenMap } = buildTreeIndex(nodes);
+  const { childrenMap } = index;
 
   const ids = new Set<string>();
   const visited = new Set<string>();
@@ -82,25 +96,28 @@ export const computeDescendantIds = (
   return ids;
 };
 
+export const computeDescendantIds = (
+  nodes: PuuNode[],
+  activeId: string | null,
+): Set<string> => {
+  return computeDescendantIdsFromIndex(buildTreeIndex(nodes), activeId);
+};
+
 export const getOrderedChildren = (
   nodes: PuuNode[],
   parentId: string | null,
 ): PuuNode[] => {
-  const { childrenMap } = buildTreeIndex(nodes);
-  const children = childrenMap.get(parentId) || [];
-  return children.sort((a, b) => (a.order || 0) - (b.order || 0));
+  return orderedChildrenFromIndex(buildTreeIndex(nodes), parentId);
 };
 
-export const getDepthFirstNodes = (
-  nodes: PuuNode[],
+export const getDepthFirstNodesFromIndex = (
+  index: TreeIndex,
 ): (PuuNode & { depth: number })[] => {
-  const { childrenMap } = buildTreeIndex(nodes);
   const result: (PuuNode & { depth: number })[] = [];
   const visited = new Set<string>();
 
   const traverse = (parentId: string | null, depth: number) => {
-    const children = childrenMap.get(parentId) || [];
-    children.sort((a, b) => (a.order || 0) - (b.order || 0));
+    const children = orderedChildrenFromIndex(index, parentId);
     for (const child of children) {
       if (visited.has(child.id)) continue;
       visited.add(child.id);
@@ -111,4 +128,10 @@ export const getDepthFirstNodes = (
 
   traverse(null, 0);
   return result;
+};
+
+export const getDepthFirstNodes = (
+  nodes: PuuNode[],
+): (PuuNode & { depth: number })[] => {
+  return getDepthFirstNodesFromIndex(buildTreeIndex(nodes));
 };
