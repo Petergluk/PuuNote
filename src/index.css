@@ -143,7 +143,7 @@
 }
 @media (min-width: 640px) {
   .column-container {
-    width: calc(var(--col-width) + 32px);
+    width: calc(var(--col-width) + 16px);
     scroll-snap-align: none;
   }
   .column-inner {

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
 import { PuuNode } from "../types";
 import { useAppStore } from "../store/useAppStore";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
@@ -152,38 +153,42 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
             {t("Document is empty")}
           </div>
         ) : (
-          <div className="w-full flex flex-col gap-8">
-            {orderedNodes.map((n) => {
-              const isLocalActive = n.id === activeId;
-              return (
-                <div key={n.id} id={`tl-node-${n.id}`}>
-                  <div
-                    onClick={() => setActiveId(n.id)}
-                    className={`transition-all duration-200 cursor-text rounded-lg border-2 ${isLocalActive ? "p-4 border-app-accent bg-app-card shadow-sm" : "border-transparent hover:bg-app-card-hover"}`}
-                  >
-                    {isLocalActive ? (
-                      <AutoSizeTextarea
-                        value={n.content}
-                        onChange={(val: string) => updateContent(n.id, val)}
-                        autoFocus
-                        placeholder={t("Empty node")}
-                        className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
-                      />
-                    ) : (
-                      <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
-                        <SafeMarkdown
-                          onToggleCheckbox={(idx, val) =>
-                            toggleCheckbox(n.id, n.content || "", idx, val)
-                          }
-                        >
-                          {n.content || `*${t("Empty node")}*`}
-                        </SafeMarkdown>
-                      </div>
-                    )}
+          <div className="w-full">
+            <Virtuoso
+              useWindowScroll
+              data={orderedNodes}
+              itemContent={(_index, n) => {
+                const isLocalActive = n.id === activeId;
+                return (
+                  <div key={n.id} id={`tl-node-${n.id}`} className="mb-8">
+                    <div
+                      onClick={() => setActiveId(n.id)}
+                      className={`transition-all duration-200 cursor-text rounded-lg border-2 ${isLocalActive ? "p-4 border-app-accent bg-app-card shadow-sm" : "border-transparent hover:bg-app-card-hover"}`}
+                    >
+                      {isLocalActive ? (
+                        <AutoSizeTextarea
+                          value={n.content}
+                          onChange={(val: string) => updateContent(n.id, val)}
+                          autoFocus
+                          placeholder={t("Empty node")}
+                          className="w-full h-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
+                        />
+                      ) : (
+                        <div className="prose dark:prose-invert max-w-none prose-lg prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2.2em] prose-h2:text-[1.8em] prose-h3:text-[1.4em] prose-h4:text-[1.1em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-6 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
+                          <SafeMarkdown
+                            onToggleCheckbox={(idx, val) =>
+                              toggleCheckbox(n.id, n.content || "", idx, val)
+                            }
+                          >
+                            {n.content || `*${t("Empty node")}*`}
+                          </SafeMarkdown>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              }}
+            />
           </div>
         )}
       </div>

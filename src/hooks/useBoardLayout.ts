@@ -110,7 +110,6 @@ export function useActivePathScroll(
           }
         }
 
-        // Vertical Alignment for all columns
         colRefs.current.forEach((col, colIndex) => {
           if (!col) return;
           
