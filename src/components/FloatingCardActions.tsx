@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Combine, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { canMergeNodes } from "../domain/documentTree";
+import { computeDescendantIds } from "../utils/tree";
 import { useAppStore } from "../store/useAppStore";
 
 interface CardRect {
@@ -40,6 +41,9 @@ export function FloatingCardActions() {
   const addSibling = useAppStore((state) => state.addSibling);
   const deleteNode = useAppStore((state) => state.deleteNode);
   const mergeNodes = useAppStore((state) => state.mergeNodes);
+  const floatingActionsVisible = useAppStore(
+    (state) => state.floatingActionsVisible,
+  );
 
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,6 +59,12 @@ export function FloatingCardActions() {
     }
     return canMergeNodes(nodes, activeId, selectedIds);
   }, [activeId, nodes, selectedIds]);
+
+  /** True on touch-primary devices (phones, tablets) */
+  const isTouchDevice = useMemo(
+    () => window.matchMedia("(pointer: coarse)").matches,
+    [],
+  );
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current) {
@@ -144,9 +154,20 @@ export function FloatingCardActions() {
     activeCard.addEventListener("mouseenter", handleCardEnter);
     activeCard.addEventListener("mouseleave", handleCardLeave);
 
-    const rect = activeCard.getBoundingClientRect();
-    if (pointInsideRect(pointerRef.current, rect)) {
-      showActions();
+    // M9: keyboard-triggered visibility (Space)
+    if (floatingActionsVisible) {
+      requestAnimationFrame(() => {
+        updateCardRect();
+        showActions();
+      });
+    } else if (isTouchDevice) {
+      // UX-1: on touch devices, show actions immediately without hover
+      requestAnimationFrame(showActions);
+    } else {
+      const rect = activeCard.getBoundingClientRect();
+      if (pointInsideRect(pointerRef.current, rect)) {
+        requestAnimationFrame(showActions);
+      }
     }
 
     return () => {
@@ -157,11 +178,18 @@ export function FloatingCardActions() {
     activeId,
     clearHideTimer,
     editingId,
+    floatingActionsVisible,
     hideActionsSoon,
+    isTouchDevice,
     scheduleRectUpdate,
     showActions,
     updateCardRect,
   ]);
+
+  // Reset keyboard-triggered visibility when activeId changes
+  useEffect(() => {
+    useAppStore.getState().setFloatingActionsVisible(false);
+  }, [activeId]);
 
   useEffect(() => {
     if (!activeId || editingId) return;
@@ -258,12 +286,13 @@ export function FloatingCardActions() {
             onClick={(event) => {
               event.stopPropagation();
               const state = useAppStore.getState();
-              const childrenCount = state.nodes.filter(
-                (node) => node.parentId === activeId,
-              ).length;
-              if (childrenCount > 0) {
+              const descendantCount = computeDescendantIds(
+                state.nodes,
+                activeId,
+              ).size;
+              if (descendantCount > 0) {
                 state.openConfirm(
-                  `This will delete the card and its ${childrenCount} descendant branches. Are you sure?`,
+                  `This will delete the card and its ${descendantCount} descendant branches. Are you sure?`,
                   () => deleteNode(activeId),
                 );
               } else {
@@ -286,7 +315,13 @@ export function FloatingCardActions() {
               title="Merge Selected"
               onClick={(event) => {
                 event.stopPropagation();
-                mergeNodes(activeId, selectedIds);
+                const count = mergeValidation.orderedIds.length;
+                useAppStore
+                  .getState()
+                  .openConfirm(
+                    `Merge ${count} cards into one? This cannot be undone easily.`,
+                    () => mergeNodes(activeId, selectedIds),
+                  );
               }}
               {...keepVisibleHandlers}
             >

@@ -48,7 +48,7 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     set({
       past: past.slice(0, -1),
       nodes: previous,
-      future: [nodes, ...future],
+      future: [nodes, ...future].slice(0, 50),
     });
   },
 
@@ -56,6 +56,10 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     const { past, nodes, future } = get();
     if (future.length === 0) return;
     const next = future[0];
-    set({ past: [...past, nodes], nodes: next, future: future.slice(1) });
+    set({
+      past: [...past, nodes].slice(-50),
+      nodes: next,
+      future: future.slice(1),
+    });
   },
 });

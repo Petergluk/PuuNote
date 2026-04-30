@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import type {
   EditorMode,
+  EditorEnterMode,
   FocusModeScope,
   InactiveBranchesMode,
   PasteSplitMode,
@@ -11,17 +12,17 @@ const branchModes: Array<{
   value: InactiveBranchesMode;
   label: string;
 }> = [
-  { value: "dim", label: "Затенять" },
-  { value: "hide", label: "Скрывать" },
+  { value: "dim", label: "Dim" },
+  { value: "hide", label: "Hide" },
 ];
 
 const focusScopes: Array<{
   value: FocusModeScope;
   label: string;
 }> = [
-  { value: "single", label: "Одна" },
-  { value: "branchLevel", label: "Уровень" },
-  { value: "column", label: "Колонка" },
+  { value: "single", label: "Single" },
+  { value: "branchLevel", label: "Level" },
+  { value: "column", label: "Column" },
 ];
 
 const editorModes: Array<{
@@ -29,15 +30,23 @@ const editorModes: Array<{
   label: string;
 }> = [
   { value: "markdown", label: "Markdown" },
-  { value: "visual", label: "Визуально" },
+  { value: "visual", label: "Visual" },
+];
+
+const editorEnterModes: Array<{
+  value: EditorEnterMode;
+  label: string;
+}> = [
+  { value: "enterNewline", label: "Enter = Line" },
+  { value: "enterCard", label: "Enter = Card" },
 ];
 
 const pasteSplitModes: Array<{
   value: PasteSplitMode;
   label: string;
 }> = [
-  { value: "separator", label: "Разделители" },
-  { value: "paragraph", label: "Абзацы" },
+  { value: "separator", label: "Separators" },
+  { value: "paragraph", label: "Paragraphs" },
 ];
 
 export function SettingsPanel() {
@@ -53,6 +62,8 @@ export function SettingsPanel() {
   const setFocusModeScope = useAppStore((state) => state.setFocusModeScope);
   const editorMode = useAppStore((state) => state.editorMode);
   const setEditorMode = useAppStore((state) => state.setEditorMode);
+  const editorEnterMode = useAppStore((state) => state.editorEnterMode);
+  const setEditorEnterMode = useAppStore((state) => state.setEditorEnterMode);
   const pasteSplitMode = useAppStore((state) => state.pasteSplitMode);
   const setPasteSplitMode = useAppStore((state) => state.setPasteSplitMode);
 
@@ -69,7 +80,7 @@ export function SettingsPanel() {
       >
         <header className="flex items-center justify-between border-b border-app-border px-4 py-3">
           <h2 className="text-sm font-semibold text-app-text-primary">
-            Настройки
+            Settings
           </h2>
           <button
             onClick={() => setSettingsOpen(false)}
@@ -83,7 +94,7 @@ export function SettingsPanel() {
         <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm text-app-text-secondary">
-              Неактивные ветки
+              Inactive branches
             </span>
             <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
               {branchModes.map((mode) => (
@@ -122,7 +133,7 @@ export function SettingsPanel() {
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm text-app-text-secondary">Редактор</span>
+            <span className="text-sm text-app-text-secondary">Editor</span>
             <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
               {editorModes.map((mode) => (
                 <button
@@ -141,7 +152,28 @@ export function SettingsPanel() {
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm text-app-text-secondary">Вставка</span>
+            <span className="text-sm text-app-text-secondary">
+              Editor Enter
+            </span>
+            <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
+              {editorEnterModes.map((mode) => (
+                <button
+                  key={mode.value}
+                  onClick={() => setEditorEnterMode(mode.value)}
+                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
+                    editorEnterMode === mode.value
+                      ? "bg-app-accent text-white"
+                      : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm text-app-text-secondary">Paste split</span>
             <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
               {pasteSplitModes.map((mode) => (
                 <button

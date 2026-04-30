@@ -145,7 +145,7 @@ export const AutoSizeTextarea = forwardRef<
     const wrapSelection = (
       before: string,
       after = before,
-      fallback = "текст",
+      fallback = "text",
     ) => {
       const textarea = internalRef.current;
       if (!textarea) return;
@@ -163,7 +163,7 @@ export const AutoSizeTextarea = forwardRef<
       if (!textarea) return;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const selected = localValue.slice(start, end) || "ссылка";
+      const selected = localValue.slice(start, end) || "link";
       replaceRange(start, end, `[${selected}](https://)`, {
         start: start + selected.length + 3,
         end: start + selected.length + 11,

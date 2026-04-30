@@ -55,20 +55,22 @@ const formatNodeLine = (node: PuuNode, includeNodeIds: boolean) => {
 
 const appendWithBudget = (
   chunks: string[],
+  currentLength: { value: number },
   text: string,
   maxChars: number,
   warnings: string[],
 ) => {
-  const currentLength = chunks.join("").length;
-  if (currentLength >= maxChars) return false;
-  if (currentLength + text.length <= maxChars) {
+  if (currentLength.value >= maxChars) return false;
+  if (currentLength.value + text.length <= maxChars) {
     chunks.push(text);
+    currentLength.value += text.length;
     return true;
   }
 
-  const remaining = Math.max(0, maxChars - currentLength);
+  const remaining = Math.max(0, maxChars - currentLength.value);
   if (remaining > 0) {
     chunks.push(text.slice(0, remaining));
+    currentLength.value += remaining;
   }
   warnings.push(`Context truncated at ${maxChars} characters.`);
   return false;
@@ -135,35 +137,45 @@ export function buildContextForLLM(
     : [];
 
   const chunks: string[] = [];
+  const len = { value: 0 };
   appendWithBudget(
     chunks,
+    len,
     `Context for Node ${options.includeNodeIds ? `[${targetNodeId}]` : ""}:\n\n`,
     options.maxChars,
     warnings,
   );
   if (ancestors.length > 0) {
-    appendWithBudget(chunks, "Ancestors path:\n", options.maxChars, warnings);
+    appendWithBudget(
+      chunks,
+      len,
+      "Ancestors path:\n",
+      options.maxChars,
+      warnings,
+    );
     ancestors.forEach((anc, i) => {
       appendWithBudget(
         chunks,
+        len,
         `${" ".repeat(i * 2)}- ${formatNodeLine(anc, options.includeNodeIds)}\n`,
         options.maxChars,
         warnings,
       );
     });
-    appendWithBudget(chunks, "\n", options.maxChars, warnings);
+    appendWithBudget(chunks, len, "\n", options.maxChars, warnings);
   }
 
-  appendWithBudget(chunks, "Target Node:\n", options.maxChars, warnings);
+  appendWithBudget(chunks, len, "Target Node:\n", options.maxChars, warnings);
   appendWithBudget(
     chunks,
+    len,
     `${options.includeNodeIds ? `[${targetNode.id}] ` : ""}${targetNode.content}\n\n`,
     options.maxChars,
     warnings,
   );
 
   if (descendants.length > 0) {
-    appendWithBudget(chunks, "Descendants:\n", options.maxChars, warnings);
+    appendWithBudget(chunks, len, "Descendants:\n", options.maxChars, warnings);
     const descSet = new Set(descendants.map((d) => d.id));
     const depthFirstNodes = getDepthFirstNodesFromIndex(treeIndex);
     const allDfNodes = depthFirstNodes.filter((df) => descSet.has(df.id));
@@ -175,6 +187,7 @@ export function buildContextForLLM(
       if (relDepth > 0) {
         appendWithBudget(
           chunks,
+          len,
           `${" ".repeat((relDepth - 1) * 2)}- ${formatNodeLine(n, options.includeNodeIds)}\n`,
           options.maxChars,
           warnings,

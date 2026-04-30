@@ -1,8 +1,10 @@
 import type { PuuDocument, PuuNode } from "../types";
 import {
   exportNodesToMarkdown,
+  exportNodesToStructuredMarkdown,
   parseMarkdownToNodes,
 } from "../utils/markdownParser";
+import { PuuNodeSchema } from "../utils/schema";
 import { normalizeNodes } from "./documentService";
 
 export const PUUNOTE_JSON_FORMAT = "puunote.document";
@@ -58,6 +60,10 @@ export function buildMarkdownExport(nodes: PuuNode[]) {
   return exportNodesToMarkdown(nodes);
 }
 
+export function buildStructuredMarkdownExport(nodes: PuuNode[]) {
+  return exportNodesToStructuredMarkdown(nodes);
+}
+
 export function buildJsonExport(
   document: PuuDocument | null | undefined,
   nodes: PuuNode[],
@@ -79,7 +85,13 @@ export function buildJsonExport(
 }
 
 export function parseJsonExport(raw: string): ParsedImport {
-  const parsed = JSON.parse(raw) as Partial<PuuNoteJsonExport>;
+  let parsed: Partial<PuuNoteJsonExport>;
+  try {
+    parsed = JSON.parse(raw) as Partial<PuuNoteJsonExport>;
+  } catch {
+    throw new Error("Invalid JSON file.");
+  }
+
   if (
     parsed.format !== PUUNOTE_JSON_FORMAT ||
     parsed.schemaVersion !== PUUNOTE_JSON_SCHEMA_VERSION ||
@@ -89,7 +101,16 @@ export function parseJsonExport(raw: string): ParsedImport {
     throw new Error("Unsupported PuuNote JSON export.");
   }
 
-  const nodes = normalizeNodes(parsed.nodes);
+  // Validate each node through Zod schema before trusting the data
+  const validNodes: PuuNode[] = [];
+  for (const rawNode of parsed.nodes) {
+    const result = PuuNodeSchema.safeParse(rawNode);
+    if (result.success) {
+      validNodes.push(result.data);
+    }
+  }
+
+  const nodes = normalizeNodes(validNodes);
   if (nodes.length === 0) {
     throw new Error("PuuNote JSON export does not contain valid nodes.");
   }

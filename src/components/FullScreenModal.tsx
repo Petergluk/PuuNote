@@ -6,6 +6,7 @@ import { PuuNode } from "../types";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
+import { PROSE_FULL } from "../utils/proseClasses";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { getDepthFirstNodes } from "../utils/tree";
 
@@ -122,7 +123,7 @@ export const FullScreenModal = ({
                   className="block w-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
                 />
               ) : (
-                <div className="prose dark:prose-invert max-w-none prose-base prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-muted prose-p:leading-relaxed prose-p:my-2 prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-secondary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-muted prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-muted prose-h1:text-[2em] prose-h2:text-[1.6em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover prose-code:px-1 prose-code:rounded">
+                <div className={PROSE_FULL}>
                   <SafeMarkdown
                     onToggleCheckbox={(idx, val) =>
                       toggleCheckbox(n.id, n.content || "", idx, val)

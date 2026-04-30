@@ -5,6 +5,7 @@ export type InactiveBranchesMode = "dim" | "hide";
 export type FocusModeScope = "single" | "branchLevel" | "column";
 export type EditorMode = "markdown" | "visual";
 export type PasteSplitMode = "separator" | "paragraph";
+export type EditorEnterMode = "enterNewline" | "enterCard";
 
 export interface UiSlice {
   fileMenuOpen: boolean;
@@ -13,6 +14,7 @@ export interface UiSlice {
   inactiveBranchesMode: InactiveBranchesMode;
   focusModeScope: FocusModeScope;
   editorMode: EditorMode;
+  editorEnterMode: EditorEnterMode;
   pasteSplitMode: PasteSplitMode;
   settingsOpen: boolean;
   timelineOpen: boolean;
@@ -24,6 +26,7 @@ export interface UiSlice {
     message: string;
     onConfirm?: () => void | Promise<void>;
   };
+  floatingActionsVisible: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
   setTheme: (theme: string) => void;
   toggleTheme: () => void;
@@ -32,12 +35,14 @@ export interface UiSlice {
   setInactiveBranchesMode: (mode: InactiveBranchesMode) => void;
   setFocusModeScope: (scope: FocusModeScope) => void;
   setEditorMode: (mode: EditorMode) => void;
+  setEditorEnterMode: (mode: EditorEnterMode) => void;
   setPasteSplitMode: (mode: PasteSplitMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
   setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
   setFileMenuOpen: (open: boolean) => void;
+  setFloatingActionsVisible: (visible: boolean) => void;
   openConfirm: (message: string, onConfirm: () => void | Promise<void>) => void;
   closeConfirm: () => void;
 }
@@ -70,6 +75,7 @@ export interface DocumentSlice {
   documents: PuuDocument[];
   activeFileId: string | null;
   exportToMarkdown: () => void;
+  exportToStructuredMarkdown: () => void;
   exportToJson: () => void;
   updateContent: (id: string, content: string) => void;
   addChild: (parentId: string | null) => void;

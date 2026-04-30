@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, RotateCcw, Trash2, X } from "lucide-react";
 import {
   clearDocumentSnapshots,
@@ -19,15 +19,23 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
   const openConfirm = useAppStore((s) => s.openConfirm);
   const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [newSnapshotName, setNewSnapshotName] = useState("Manual snapshot");
 
-  const reloadSnapshots = async () => {
-    if (!activeFileId) {
+  // H1 fix: use a ref so async callbacks always read the latest fileId
+  const activeFileIdRef = useRef(activeFileId);
+  useEffect(() => {
+    activeFileIdRef.current = activeFileId;
+  }, [activeFileId]);
+
+  const reloadSnapshots = async (fileId: string | null) => {
+    if (!fileId) {
       setSnapshots([]);
       return;
     }
     setIsLoading(true);
     try {
-      setSnapshots(await getDocumentSnapshots(activeFileId));
+      setSnapshots(await getDocumentSnapshots(fileId));
     } finally {
       setIsLoading(false);
     }
@@ -36,10 +44,9 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
+    const fileId = activeFileIdRef.current;
     void (async () => {
-      const nextSnapshots = activeFileId
-        ? await getDocumentSnapshots(activeFileId)
-        : [];
+      const nextSnapshots = fileId ? await getDocumentSnapshots(fileId) : [];
       if (!cancelled) setSnapshots(nextSnapshots);
     })();
     return () => {
@@ -48,6 +55,36 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
   }, [isOpen, activeFileId]);
 
   if (!isOpen) return null;
+
+  const handleCreate = async () => {
+    const fileId = activeFileIdRef.current;
+    const name = newSnapshotName.trim() || "Manual snapshot";
+    await takeDocumentSnapshot(name);
+    await reloadSnapshots(fileId);
+  };
+
+  const handleClearAll = () => {
+    const fileId = activeFileIdRef.current;
+    openConfirm("Delete all snapshots for this document?", async () => {
+      if (!fileId) return;
+      await clearDocumentSnapshots(fileId);
+      await reloadSnapshots(fileId);
+    });
+  };
+
+  const handleRestore = (snapshot: DocumentSnapshot) => {
+    const fileId = activeFileIdRef.current;
+    openConfirm("Restore this snapshot?", async () => {
+      setIsRestoring(true);
+      try {
+        await restoreSnapshot(snapshot.id);
+        await reloadSnapshots(fileId);
+        onClose();
+      } finally {
+        setIsRestoring(false);
+      }
+    });
+  };
 
   return (
     <div
@@ -65,41 +102,50 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
           <button
             onClick={onClose}
             className="rounded p-1 text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+            aria-label="Close snapshots panel"
           >
             <X size={16} />
           </button>
         </header>
 
+        {/* UX-4: editable snapshot name */}
         <div className="flex items-center gap-2 border-b border-app-border px-4 py-3">
+          <input
+            type="text"
+            value={newSnapshotName}
+            onChange={(e) => setNewSnapshotName(e.target.value)}
+            placeholder="Snapshot name…"
+            className="flex-1 rounded border border-app-border bg-app-card px-2 py-1 text-xs text-app-text-primary placeholder:text-app-text-muted focus:outline-none focus:ring-1 focus:ring-app-accent"
+            aria-label="Snapshot name"
+          />
           <button
-            onClick={async () => {
-              await takeDocumentSnapshot("Manual snapshot");
-              await reloadSnapshots();
-            }}
-            className="flex items-center gap-2 rounded border border-app-border bg-app-card px-3 py-1.5 text-xs text-app-text-secondary hover:bg-app-card-hover"
+            onClick={handleCreate}
+            disabled={isRestoring}
+            className="flex items-center gap-2 rounded border border-app-border bg-app-card px-3 py-1.5 text-xs text-app-text-secondary hover:bg-app-card-hover disabled:opacity-50"
+            aria-label="Create snapshot"
           >
             <Camera size={14} />
             Create
           </button>
           {snapshots.length > 0 && (
             <button
-              onClick={() =>
-                openConfirm(
-                  "Delete all snapshots for this document?",
-                  async () => {
-                    if (!activeFileId) return;
-                    await clearDocumentSnapshots(activeFileId);
-                    await reloadSnapshots();
-                  },
-                )
-              }
-              className="flex items-center gap-2 rounded border border-app-border bg-app-card px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10"
+              onClick={handleClearAll}
+              disabled={isRestoring}
+              className="flex items-center gap-2 rounded border border-app-border bg-app-card px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+              aria-label="Clear all snapshots"
             >
               <Trash2 size={14} />
               Clear
             </button>
           )}
         </div>
+
+        {/* M3: loading state during restore */}
+        {isRestoring && (
+          <div className="px-3 py-2 text-center text-xs text-app-text-muted border-b border-app-border bg-app-card">
+            Restoring snapshot…
+          </div>
+        )}
 
         <div className="max-h-[50vh] overflow-y-auto p-2">
           {isLoading ? (
@@ -125,15 +171,11 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
                   </div>
                 </div>
                 <button
-                  onClick={() =>
-                    openConfirm("Restore this snapshot?", async () => {
-                      await restoreSnapshot(snapshot.id);
-                      await reloadSnapshots();
-                      onClose();
-                    })
-                  }
-                  className="shrink-0 rounded p-1.5 text-app-text-muted hover:bg-app-card hover:text-app-accent"
+                  onClick={() => handleRestore(snapshot)}
+                  disabled={isRestoring}
+                  className="shrink-0 rounded p-1.5 text-app-text-muted hover:bg-app-card hover:text-app-accent disabled:opacity-50"
                   title="Restore snapshot"
+                  aria-label={`Restore snapshot: ${snapshot.description || "Snapshot"}`}
                 >
                   <RotateCcw size={15} />
                 </button>

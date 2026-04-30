@@ -63,15 +63,16 @@ export const computeDescendantIdsFromIndex = (
   const ids = new Set<string>();
   const visited = new Set<string>();
   const queue = [activeId];
-  while (queue.length > 0) {
-    const curr = queue.shift()!;
+  let head = 0;
+  while (head < queue.length) {
+    const curr = queue[head++];
     if (visited.has(curr)) continue;
     visited.add(curr);
 
     if (curr !== activeId) ids.add(curr);
     const children = childrenMap.get(curr);
     if (children) {
-      queue.push(...children.map((n) => n.id));
+      for (const c of children) queue.push(c.id);
     }
   }
   return ids;

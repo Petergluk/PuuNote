@@ -148,24 +148,6 @@ export function useActivePathScroll(
         if (!activeEl) return;
         const activeRect = activeEl.getBoundingClientRect();
 
-        // Horizontal Scroll onto active column
-        const mainScroller = document.getElementById("main-scroller");
-        const activeCol = activeEl.closest(".overflow-y-auto") as HTMLElement;
-        if (mainScroller && activeCol) {
-          const scrollerRect = mainScroller.getBoundingClientRect();
-          const colRect = activeCol.getBoundingClientRect();
-          const hDiff =
-            colRect.left +
-            activeCol.offsetWidth / 2 -
-            (scrollerRect.left + mainScroller.clientWidth / 2);
-          if (Math.abs(hDiff) > 2) {
-            mainScroller.scrollTo({
-              left: mainScroller.scrollLeft + hDiff,
-              behavior: "smooth",
-            });
-          }
-        }
-
         const activeAncestorIds = new Set(activeAncestorPath);
         const isInActiveBranch = (id: string) => {
           return (

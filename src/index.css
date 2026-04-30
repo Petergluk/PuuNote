@@ -39,6 +39,12 @@
   --app-accent: #a3966a;
 }
 
+html,
+body,
+#root {
+  overscroll-behavior-x: none;
+}
+
 .dark {
   --app-bg: #0a0a0a;
   --app-panel: #0f0f0f;

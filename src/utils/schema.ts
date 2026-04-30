@@ -48,25 +48,40 @@ export const validateNodes = (data: unknown) => {
 
     let validNodes = Array.from(nodeMap.values()) as typeof nodes;
 
-    for (const node of validNodes) {
-      const path = new Set<string>();
-      let curr = node.id;
-      let depth = 0;
-      while (curr) {
-        if (path.has(curr)) {
-          console.error("Cycle detected at node", curr);
-          return []; // Invalid tree shape
-        }
-        path.add(curr);
-        depth++;
-        if (depth > 200) {
-          console.error("Max tree depth exceeded");
-          return [];
-        }
+    const depthCache = new Map<string, number>();
+    const getDepth = (nodeId: string, visiting = new Set<string>()): number => {
+      const cached = depthCache.get(nodeId);
+      if (cached !== undefined) return cached;
 
-        const nextNode = nodeMap.get(curr);
-        curr = nextNode?.parentId || null;
+      if (visiting.has(nodeId)) {
+        throw new Error(`Cycle detected at node ${nodeId}`);
       }
+
+      const node = nodeMap.get(nodeId);
+      if (!node?.parentId || !nodeMap.has(node.parentId)) {
+        depthCache.set(nodeId, 1);
+        return 1;
+      }
+
+      visiting.add(nodeId);
+      const depth = getDepth(node.parentId, visiting) + 1;
+      visiting.delete(nodeId);
+
+      if (depth > 200) {
+        throw new Error("Max tree depth exceeded");
+      }
+
+      depthCache.set(nodeId, depth);
+      return depth;
+    };
+
+    try {
+      for (const node of validNodes) {
+        getDepth(node.id);
+      }
+    } catch (err) {
+      console.error(err);
+      return [];
     }
 
     // Optional: Normalize missing parent to null to prevent orphans disappearing completely

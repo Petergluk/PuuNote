@@ -55,6 +55,10 @@ export function usePreferencesInit() {
       safeLocalStorage.getItem("puu_editorMode") === "visual"
         ? "visual"
         : "markdown";
+    const savedEditorEnterMode =
+      safeLocalStorage.getItem("puu_editorEnterMode") === "enterCard"
+        ? "enterCard"
+        : "enterNewline";
     const savedPasteSplitMode =
       safeLocalStorage.getItem("puu_pasteSplitMode") === "paragraph"
         ? "paragraph"
@@ -73,6 +77,7 @@ export function usePreferencesInit() {
       inactiveBranchesMode: savedInactiveBranchesMode,
       focusModeScope,
       editorMode: savedEditorMode,
+      editorEnterMode: savedEditorEnterMode,
       pasteSplitMode: savedPasteSplitMode,
       theme: savedTheme,
     });
@@ -101,6 +106,9 @@ export function usePreferencesInit() {
       }
       if (state.editorMode !== prevState.editorMode) {
         safeLocalStorage.setItem("puu_editorMode", state.editorMode);
+      }
+      if (state.editorEnterMode !== prevState.editorEnterMode) {
+        safeLocalStorage.setItem("puu_editorEnterMode", state.editorEnterMode);
       }
       if (state.pasteSplitMode !== prevState.pasteSplitMode) {
         safeLocalStorage.setItem("puu_pasteSplitMode", state.pasteSplitMode);

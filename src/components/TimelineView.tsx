@@ -7,6 +7,7 @@ import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { COPY_SUCCESS_TIMEOUT_MS } from "../constants";
 import { useTranslation } from "react-i18next";
+import { PROSE_TIMELINE } from "../utils/proseClasses";
 import { getDepthFirstNodes } from "../utils/tree";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 
@@ -204,7 +205,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
                   >
                     {showLevelSeparator && (
                       <div className="my-5 flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-app-text-muted">
-                        <span className="shrink-0">Уровень {n.depth + 1}</span>
+                        <span className="shrink-0">Level {n.depth + 1}</span>
                         <span className="h-px flex-1 bg-app-border/70" />
                       </div>
                     )}
@@ -238,7 +239,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
                           className="w-full h-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed"
                         />
                       ) : (
-                        <div className="prose dark:prose-invert max-w-none prose-base prose-headings:font-serif prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-headings:font-normal prose-headings:tracking-wide prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary prose-p:leading-relaxed prose-p:my-2 prose-a:text-app-accent prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary prose-li:text-app-text-secondary dark:prose-li:text-app-text-secondary prose-h1:text-[2em] prose-h2:text-[1.55em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-80 prose-h5:font-sans prose-h5:text-[1em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.9em] prose-h6:opacity-60 prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-transparent dark:prose-code:bg-transparent prose-code:px-1 prose-code:rounded">
+                        <div className={PROSE_TIMELINE}>
                           <SafeMarkdown
                             onToggleCheckbox={(idx, val) =>
                               toggleCheckbox(n.id, n.content || "", idx, val)

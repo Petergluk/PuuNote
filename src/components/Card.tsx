@@ -5,6 +5,12 @@ import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
 import { useAppStore } from "../store/useAppStore";
+import { useShallow } from "zustand/shallow";
+import {
+  PROSE_CARD,
+  PROSE_CARD_BRIGHT,
+  PROSE_CARD_DIM,
+} from "../utils/proseClasses";
 export const Card = React.memo(
   ({
     node,
@@ -15,29 +21,47 @@ export const Card = React.memo(
     isInPath: boolean;
     isDescendantFromActive: boolean;
   }) => {
-    const hasActiveNode = useAppStore((s) => s.activeId !== null);
-    const isActive = useAppStore((s) => s.activeId === node.id);
-    const isSelected = useAppStore((s) => s.selectedIds.includes(node.id));
-    const isEditing = useAppStore((s) => s.editingId === node.id);
-    const isDragged = useAppStore((s) => s.draggedId === node.id);
-    const setDraggedId = useAppStore((s) => s.setDraggedId);
-    const cardsCollapsed = useAppStore((s) => s.cardsCollapsed);
-    const setActiveId = useAppStore((s) => s.setActiveId);
-    const setEditingId = useAppStore((s) => s.setEditingId);
-    const setFullScreenId = useAppStore((s) => s.setFullScreenId);
+    const {
+      hasActiveNode,
+      isActive,
+      isSelected,
+      isEditing,
+      isDragged,
+      cardsCollapsed,
+      setDraggedId,
+      setActiveId,
+      setEditingId,
+      setFullScreenId,
+      updateContent,
+      splitNode,
+      moveNodes,
+      toggleSelection,
+    } = useAppStore(
+      useShallow((s) => ({
+        hasActiveNode: s.activeId !== null,
+        isActive: s.activeId === node.id,
+        isSelected: s.selectedIds.includes(node.id),
+        isEditing: s.editingId === node.id,
+        isDragged: s.draggedId === node.id,
+        cardsCollapsed: s.cardsCollapsed,
+        setDraggedId: s.setDraggedId,
+        setActiveId: s.setActiveId,
+        setEditingId: s.setEditingId,
+        setFullScreenId: s.setFullScreenId,
+        updateContent: s.updateContent,
+        splitNode: s.splitNode,
+        moveNodes: s.moveNodes,
+        toggleSelection: s.toggleSelection,
+      })),
+    );
 
-    const updateContent = useAppStore((s) => s.updateContent);
-    const splitNode = useAppStore((s) => s.splitNode);
-    const moveNodes = useAppStore((s) => s.moveNodes);
-
-    const toggleSelection = useAppStore((s) => s.toggleSelection);
+    const toggleCheckbox = useToggleCheckbox();
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [dropTarget, setDropTarget] = useState<
       "none" | "top" | "bottom" | "right"
     >("none");
-    const toggleCheckbox = useToggleCheckbox();
 
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -146,8 +170,7 @@ export const Card = React.memo(
         >
           {" "}
           {isEditing ? (
-            <div className="relative group/edit w-full">
-              {" "}
+            <div className="relative group/edit w-full pt-4">
               <AutoSizeTextarea
                 ref={textareaRef}
                 value={node.content}
@@ -155,30 +178,27 @@ export const Card = React.memo(
                 onBlur={() => setEditingId(null)}
                 autoFocus
                 className="w-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
-              />{" "}
-              <div className="absolute -top-3 -right-0 flex items-center gap-1 opacity-0 group-hover/edit:opacity-100 transition-opacity z-10 shadow-lg bg-app-card-hover border border-app-border rounded p-1">
-                {" "}
+              />
+              <div className="absolute -top-3 -right-3 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
                 <button
                   onMouseDown={handleSplitNode}
-                  className="p-1 rounded text-app-text-secondary hover:text-app-accent dark:hover:text-app-accent"
+                  className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
                   title="Split node at cursor"
                 >
-                  {" "}
-                  <Scissors size={12} />{" "}
-                </button>{" "}
+                  <Scissors size={14} />
+                </button>
                 <button
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setFullScreenId(node.id);
                   }}
-                  className="p-1 rounded text-app-text-secondary hover:text-app-accent dark:hover:text-app-accent"
+                  className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
                   title="Expand to full screen"
                 >
-                  {" "}
-                  <Maximize2 size={12} />{" "}
-                </button>{" "}
-              </div>{" "}
+                  <Maximize2 size={14} />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="relative">
@@ -186,7 +206,7 @@ export const Card = React.memo(
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-app-accent/10 to-transparent transform -skew-x-12 animate-[shimmer_2s_infinite] overflow-hidden rounded pointer-events-none" />
               )}
               <div
-                className={`prose prose-sm max-w-none break-words prose-headings:font-serif prose-headings:font-normal prose-headings:tracking-wide ${isBright ? "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary prose-p:text-app-text-primary dark:prose-p:text-app-text-primary prose-li:text-app-text-primary dark:prose-li:text-app-text-primary prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary" : "prose-headings:text-app-text-muted dark:prose-headings:text-app-text-muted prose-p:text-app-text-muted dark:prose-p:text-app-text-muted prose-li:text-app-text-muted dark:prose-li:text-app-text-muted prose-strong:text-app-text-secondary dark:prose-strong:text-app-text-secondary"} prose-p:leading-relaxed prose-p:my-1.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-li:my-0.5 prose-h1:text-[1.8em] prose-h2:text-[1.5em] prose-h3:text-[1.25em] prose-h4:text-[1.05em] prose-h4:opacity-85 prose-h5:font-sans prose-h5:text-[0.9em] prose-h5:uppercase prose-h5:tracking-wider prose-h5:opacity-75 prose-h6:font-mono prose-h6:text-[0.8em] prose-h6:opacity-60 prose-a:text-app-accent prose-hr:border-t-2 prose-hr:border-app-border prose-hr:my-4 prose-code:text-app-text-primary dark:prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card prose-code:px-1 prose-code:rounded ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""} ${node.metadata?.isGenerating ? "opacity-70 motion-safe:animate-pulse" : ""}`}
+                className={`${PROSE_CARD} ${isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM} ${shouldCollapse ? "max-h-[14em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]" : ""} ${node.metadata?.isGenerating ? "opacity-70 motion-safe:animate-pulse" : ""}`}
               >
                 {" "}
                 <SafeMarkdown

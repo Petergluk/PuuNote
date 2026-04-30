@@ -44,6 +44,9 @@ export function Header({ handleImport }: HeaderProps) {
   const clearSelection = useAppStore((s) => s.clearSelection);
   const cardsCollapsed = useAppStore((s) => s.cardsCollapsed);
   const exportToMarkdown = useAppStore((s) => s.exportToMarkdown);
+  const exportToStructuredMarkdown = useAppStore(
+    (s) => s.exportToStructuredMarkdown,
+  );
   const exportToJson = useAppStore((s) => s.exportToJson);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
@@ -214,7 +217,7 @@ export function Header({ handleImport }: HeaderProps) {
             <Upload size={16} />
           </button>
           {exportMenuOpen && (
-            <div className="absolute right-0 top-full z-[90] mt-2 w-44 overflow-hidden rounded border border-app-border bg-app-panel shadow-xl">
+            <div className="absolute right-0 top-full z-[90] mt-2 w-56 overflow-hidden rounded border border-app-border bg-app-panel shadow-xl">
               <button
                 onClick={() => {
                   exportToMarkdown();
@@ -223,7 +226,17 @@ export function Header({ handleImport }: HeaderProps) {
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               >
                 <Upload size={14} />
-                Markdown
+                Flat Markdown
+              </button>
+              <button
+                onClick={() => {
+                  exportToStructuredMarkdown();
+                  setExportMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
+              >
+                <Network size={14} />
+                Structured Markdown
               </button>
               <button
                 onClick={() => {

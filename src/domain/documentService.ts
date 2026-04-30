@@ -70,7 +70,15 @@ export const DocumentService = {
   async migrateLegacyLocalStorage() {
     if (localStorage.getItem("puu_documents") === null) return;
 
-    const lsDocs = JSON.parse(localStorage.getItem("puu_documents") || "[]");
+    let lsDocs: unknown;
+    try {
+      lsDocs = JSON.parse(localStorage.getItem("puu_documents") || "[]");
+    } catch {
+      console.warn(
+        "Failed to parse legacy puu_documents from localStorage — skipping migration.",
+      );
+      return;
+    }
     if (!Array.isArray(lsDocs)) return;
 
     const documents: PuuDocument[] = [];
@@ -82,10 +90,22 @@ export const DocumentService = {
       let nodesData: unknown = null;
       const lsStr = localStorage.getItem(`puu_file_${doc.id}`);
       if (lsStr) {
-        nodesData = JSON.parse(lsStr);
+        try {
+          nodesData = JSON.parse(lsStr);
+        } catch {
+          console.warn(
+            `Failed to parse legacy nodes for document ${doc.id} — skipping.`,
+          );
+        }
       } else if (doc.id === "default") {
         const scribeStr = localStorage.getItem("scribe_nodes");
-        if (scribeStr) nodesData = JSON.parse(scribeStr);
+        if (scribeStr) {
+          try {
+            nodesData = JSON.parse(scribeStr);
+          } catch {
+            console.warn("Failed to parse legacy scribe_nodes — skipping.");
+          }
+        }
       }
 
       documents.push({
@@ -135,6 +155,7 @@ export const DocumentService = {
   async saveNodes(fileId: string, nodes: PuuNode[]) {
     const normalized = normalizeNodes(nodes);
     await db.files.put({ id: fileId, nodes: normalized });
+    this.clearDirtySave(fileId);
   },
 
   async createDocument(draft: DocumentDraft): Promise<PuuDocument> {
@@ -183,6 +204,23 @@ export const DocumentService = {
       "puu_dirty_save",
       JSON.stringify({ fileId, nodes: normalizeNodes(nodes) }),
     );
+  },
+
+  clearDirtySave(fileId?: string) {
+    if (!fileId) {
+      localStorage.removeItem("puu_dirty_save");
+      return;
+    }
+    try {
+      const dirtySave = JSON.parse(
+        localStorage.getItem("puu_dirty_save") || "",
+      );
+      if (dirtySave?.fileId === fileId) {
+        localStorage.removeItem("puu_dirty_save");
+      }
+    } catch {
+      localStorage.removeItem("puu_dirty_save");
+    }
   },
 
   async restoreDirtySave() {

@@ -12,6 +12,57 @@ const pendingSave: {
   nodes: typeof INITIAL_NODES;
 } = { timer: null, fileId: "", nodes: [] };
 
+let isHydratingFile = false;
+
+const cleanTitle = (value: string) => {
+  const stripped = value
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^[-*+]\s+/, "")
+    .replace(/^>\s*/, "")
+    .replace(/^[*_`~]+|[*_`~]+$/g, "")
+    .trim();
+  const bracketMatch = stripped.match(/^\[(.+)\]$/);
+  return (bracketMatch?.[1] || stripped).trim();
+};
+
+export const deriveDocumentTitle = (
+  nodes: typeof INITIAL_NODES,
+  fallback = "Untitled",
+) => {
+  const roots = nodes
+    .filter((node) => node.parentId === null)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const firstNode = roots[0] || nodes[0];
+  if (!firstNode) return fallback;
+
+  const firstMeaningfulLine =
+    firstNode.content
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) || "";
+  const title = cleanTitle(firstMeaningfulLine);
+  if (!title) return fallback;
+
+  return title.length > 80 ? `${title.slice(0, 77)}...` : title;
+};
+
+const updateDocumentTitleInStore = (
+  fileId: string,
+  nodes: typeof INITIAL_NODES,
+  fallback?: string,
+) => {
+  const newTitle = deriveDocumentTitle(nodes, fallback);
+  useAppStore.setState((state) => ({
+    documents: state.documents.some(
+      (document) => document.id === fileId && document.title !== newTitle,
+    )
+      ? state.documents.map((document) =>
+          document.id === fileId ? { ...document, title: newTitle } : document,
+        )
+      : state.documents,
+  }));
+};
+
 export const flushPendingSave = async () => {
   if (pendingSave.timer) {
     clearTimeout(pendingSave.timer);
@@ -98,8 +149,13 @@ export function useFileSystemInit() {
         console.error("Failed to load active file nodes", err);
       }
 
+      isHydratingFile = true;
       setNodesRaw(newNodes);
-      useAppStore.setState({ activeId: newNodes[0]?.id || null });
+      useAppStore.setState({
+        activeId: newNodes[0]?.id || null,
+      });
+      isHydratingFile = false;
+      if (active) updateDocumentTitleInStore(active, newNodes);
     }
     init();
   }, [setNodesRaw]);
@@ -111,6 +167,8 @@ export function useFileSystemInit() {
         state.nodes !== prevState.nodes ||
         state.activeFileId !== prevState.activeFileId
       ) {
+        if (isHydratingFile) return;
+
         const { activeFileId, nodes } = state;
         if (!activeFileId || nodes.length === 0) return;
 
@@ -133,24 +191,7 @@ export function useFileSystemInit() {
         }, 1000);
 
         // Update document title if needed
-        const firstNode =
-          nodes.find(
-            (n) =>
-              n.parentId === null && (n.order === 0 || n.order === undefined),
-          ) || nodes[0];
-        let newTitle = "Untitled";
-        if (firstNode) {
-          const lines = firstNode.content.split("\n");
-          const firstHeading = lines.find((l) => l.startsWith("# "));
-          if (firstHeading) {
-            newTitle = firstHeading.replace(/^#\s+/, "").trim();
-          } else {
-            newTitle =
-              firstNode.content.substring(0, 30).trim() +
-              (firstNode.content.length > 30 ? "..." : "");
-          }
-        }
-        if (!newTitle) newTitle = "Untitled";
+        const newTitle = deriveDocumentTitle(nodes);
 
         const docs = state.documents;
         const existing = docs.find((d) => d.id === activeFileId);
@@ -179,22 +220,40 @@ export function useFileSystemInit() {
       }
     });
 
-    const handleBeforeUnload = () => {
+    const saveCurrentStateToDirtyBackup = () => {
+      const { activeFileId, nodes } = useAppStore.getState();
+      const fileId = activeFileId || pendingSave.fileId;
+      const nodesToSave = nodes.length > 0 ? nodes : pendingSave.nodes;
+      if (!fileId || nodesToSave.length === 0) return;
+
       if (pendingSave.timer) {
         clearTimeout(pendingSave.timer);
-        try {
-          DocumentService.saveDirtyNodes(pendingSave.fileId, pendingSave.nodes);
-        } catch (e) {
-          console.error("Failed to stringify dirty save", e);
-        }
+        pendingSave.timer = null;
+      }
+
+      try {
+        DocumentService.saveDirtyNodes(fileId, nodesToSave);
+      } catch (e) {
+        console.error("Failed to stringify dirty save", e);
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        saveCurrentStateToDirtyBackup();
+      }
+    };
+
+    window.addEventListener("beforeunload", saveCurrentStateToDirtyBackup);
+    window.addEventListener("pagehide", saveCurrentStateToDirtyBackup);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       unsubscribe();
       flushPendingSave();
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("beforeunload", saveCurrentStateToDirtyBackup);
+      window.removeEventListener("pagehide", saveCurrentStateToDirtyBackup);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 }
@@ -232,12 +291,22 @@ export function useFileSystemActions() {
       return;
     }
 
+    isHydratingFile = true;
+    useAppStore.getState().setNodesRaw(newNodes);
     useAppStore.setState({
       activeFileId: fileId,
       fileMenuOpen: false,
       activeId: newNodes[0]?.id || null,
+      selectedIds: newNodes[0] ? [newNodes[0].id] : [],
+      editingId: null,
     });
-    useAppStore.getState().setNodesRaw(newNodes);
+    isHydratingFile = false;
+    try {
+      DocumentService.storeActiveFileId(fileId);
+    } catch (err) {
+      console.error("Failed to store active file", err);
+    }
+    updateDocumentTitleInStore(fileId, newNodes);
   };
 
   const createNewFile = async (
@@ -255,12 +324,13 @@ export function useFileSystemActions() {
         order: 0,
       },
     ];
+    const normalizedNodes = normalizeNodes(nodesToUse);
     let newDoc: PuuDocument | null = null;
 
     try {
       newDoc = await DocumentService.createDocument({
-        title: title || "New Document",
-        nodes: nodesToUse,
+        title: deriveDocumentTitle(normalizedNodes, title || "New Document"),
+        nodes: normalizedNodes,
         metadata,
       });
     } catch (err) {
@@ -278,13 +348,22 @@ export function useFileSystemActions() {
 
     if (!newDoc) return;
 
+    isHydratingFile = true;
+    useAppStore.getState().setNodesRaw(normalizedNodes);
     useAppStore.setState((s) => ({
       documents: [newDoc, ...s.documents],
       activeFileId: newDoc.id,
       fileMenuOpen: false,
-      activeId: nodesToUse[0]?.id || null,
+      activeId: normalizedNodes[0]?.id || null,
+      selectedIds: normalizedNodes[0] ? [normalizedNodes[0].id] : [],
+      editingId: null,
     }));
-    useAppStore.getState().setNodesRaw(normalizeNodes(nodesToUse));
+    isHydratingFile = false;
+    try {
+      DocumentService.storeActiveFileId(newDoc.id);
+    } catch (err) {
+      console.error("Failed to store active file", err);
+    }
   };
 
   const deleteFile = async (fileId: string) => {

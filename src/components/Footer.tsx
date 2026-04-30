@@ -20,6 +20,7 @@ export function Footer() {
   const colWidth = useAppStore((s) => s.colWidth);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
+  const selectedIds = useAppStore((s) => s.selectedIds);
 
   const { createNewFile, switchFile } = useFileSystemActions();
 
@@ -66,13 +67,23 @@ export function Footer() {
         {" "}
         <div className="flex gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase hidden lg:flex">
           {" "}
-          <span>
-            {activeId ? "BRANCH CARDS:" : "CARDS:"} {branchStats.cardsCount}
-          </span>{" "}
-          <span>
-            {activeId ? "BRANCH WORDS:" : "WORDS:"} {branchStats.wordCount}
-          </span>{" "}
-          {activeId && <span>DEPTH: {branchStats.activePathLength}</span>}{" "}
+          {selectedIds.length > 1 ? (
+            <span className="text-app-accent font-semibold">
+              SELECTED: {selectedIds.length}
+            </span>
+          ) : (
+            <>
+              <span>
+                {activeId ? "BRANCH CARDS:" : "CARDS:"} {branchStats.cardsCount}
+              </span>{" "}
+              <span>
+                {activeId ? "BRANCH WORDS:" : "WORDS:"} {branchStats.wordCount}
+              </span>{" "}
+              {activeId && (
+                <span>DEPTH: {branchStats.activePathLength}</span>
+              )}{" "}
+            </>
+          )}
         </div>{" "}
         <div className="flex items-center gap-4 sm:gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase ml-auto">
           {" "}

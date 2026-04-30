@@ -57,7 +57,10 @@ export const useJobStore = create<JobStore>((set) => ({
   clearCompleted: () => {
     set((state) => ({
       jobs: state.jobs.filter(
-        (job) => job.status !== "completed" && job.status !== "failed",
+        (job) =>
+          job.status !== "completed" &&
+          job.status !== "failed" &&
+          job.status !== "cancelled",
       ),
     }));
   },

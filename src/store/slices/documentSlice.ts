@@ -1,6 +1,7 @@
 import {
   buildJsonExport,
   buildMarkdownExport,
+  buildStructuredMarkdownExport,
   createDocumentFilename,
 } from "../../domain/documentExport";
 import { canMergeNodes, documentApi } from "../../domain/documentTree";
@@ -24,6 +25,20 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
       );
     } catch (err) {
       console.error("Failed to export markdown", err);
+    }
+  },
+
+  exportToStructuredMarkdown: () => {
+    const { activeFileId, documents, nodes } = get();
+    const document = documents.find((doc) => doc.id === activeFileId);
+    try {
+      downloadTextFile(
+        buildStructuredMarkdownExport(nodes),
+        `${createDocumentFilename(document, nodes)}-structured.md`,
+        "text/markdown",
+      );
+    } catch (err) {
+      console.error("Failed to export structured markdown", err);
     }
   },
 

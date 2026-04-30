@@ -12,13 +12,17 @@ export interface MergeValidationResult {
   reason?: string;
 }
 
-const normalizeSiblingOrder = (nodes: PuuNode[], parentId: string | null) => {
+const normalizeSiblingOrder = (
+  nodes: PuuNode[],
+  parentId: string | null,
+): PuuNode[] => {
   const siblings = nodes
     .filter((n) => n.parentId === parentId)
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  siblings.forEach((sibling, index) => {
-    sibling.order = index;
-  });
+  const idToOrder = new Map(siblings.map((s, i) => [s.id, i]));
+  return nodes.map((n) =>
+    idToOrder.has(n.id) ? { ...n, order: idToOrder.get(n.id)! } : n,
+  );
 };
 
 const sortByOrder = (nodes: PuuNode[]) =>
@@ -132,15 +136,17 @@ export const documentApi = {
     nodes: PuuNode[],
     id: string,
   ): { nextNodes: PuuNode[]; parentFallback: string | null } => {
+    const index = buildTreeIndex(nodes);
     const idsToRemove = new Set<string>();
     const queue = [id];
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const curr = queue[head++];
       idsToRemove.add(curr);
-      const children = nodes.filter((n) => n.parentId === curr);
+      const children = index.childrenMap.get(curr) || [];
       for (const c of children) queue.push(c.id);
     }
-    const parentFallback = nodes.find((n) => n.id === id)?.parentId || null;
+    const parentFallback = index.nodeMap.get(id)?.parentId ?? null;
     const nextNodes = nodes.filter((n) => !idsToRemove.has(n.id));
     return { nextNodes, parentFallback };
   },
@@ -198,20 +204,8 @@ export const documentApi = {
       return nodes;
     }
 
-    const isDescendant = (childId: string, parentId: string) => {
-      let curr = nodes.find((n) => n.id === childId);
-      while (curr) {
-        if (curr.parentId === parentId) return true;
-        curr = nodes.find((n) => n.id === curr?.parentId);
-      }
-      return false;
-    };
-
-    if (idsToMove.some((sourceId) => isDescendant(targetId, sourceId))) {
-      return nodes;
-    }
-
     const copy = nodes.map((n) => ({ ...n }));
+    const treeIdx = buildTreeIndex(nodes);
     const targetNode = copy.find((n) => n.id === targetId);
     const movingNodes = sortByOrder(
       idsToMove
@@ -220,6 +214,20 @@ export const documentApi = {
     );
 
     if (!targetNode || movingNodes.length !== idsToMove.length) {
+      return nodes;
+    }
+
+    // Guard: target is a descendant of one of the moved nodes (O(d) per check using nodeMap)
+    const isDescendant = (childId: string, ancestorId: string): boolean => {
+      let curr = treeIdx.nodeMap.get(childId);
+      while (curr) {
+        if (curr.parentId === ancestorId) return true;
+        curr = curr.parentId ? treeIdx.nodeMap.get(curr.parentId) : undefined;
+      }
+      return false;
+    };
+
+    if (idsToMove.some((sourceId) => isDescendant(targetId, sourceId))) {
       return nodes;
     }
 
@@ -256,7 +264,11 @@ export const documentApi = {
       movingNodes.forEach((source) => {
         source.parentId = newParentId;
       });
-      destSiblings.splice(position === "before" ? targetIdx : targetIdx + 1, 0, ...movingNodes);
+      destSiblings.splice(
+        position === "before" ? targetIdx : targetIdx + 1,
+        0,
+        ...movingNodes,
+      );
       destSiblings.forEach((n, i) => {
         n.order = i;
         const objInCopy = withoutMoving.find((x) => x.id === n.id);
@@ -264,8 +276,8 @@ export const documentApi = {
       });
       withoutMoving = [...withoutMoving, ...movingNodes];
     }
-    normalizeSiblingOrder(withoutMoving, originalParentId);
-    normalizeSiblingOrder(withoutMoving, newParentId);
+    withoutMoving = normalizeSiblingOrder(withoutMoving, originalParentId);
+    withoutMoving = normalizeSiblingOrder(withoutMoving, newParentId);
     return withoutMoving;
   },
 
@@ -317,8 +329,8 @@ export const documentApi = {
 
     const idsToRemove = new Set(idsToMerge);
     nextNodes = nextNodes.filter((n) => !idsToRemove.has(n.id));
-    normalizeSiblingOrder(nextNodes, masterNode.parentId);
-    normalizeSiblingOrder(nextNodes, masterId);
+    nextNodes = normalizeSiblingOrder(nextNodes, masterNode.parentId);
+    nextNodes = normalizeSiblingOrder(nextNodes, masterId);
 
     return nextNodes;
   },
