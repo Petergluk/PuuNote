@@ -4,9 +4,13 @@ import React, {
   useState,
   forwardRef,
   useImperativeHandle,
+  useCallback,
 } from "react";
 import ReactTextareaAutosize from "react-textarea-autosize";
 import { AUTOSIZE_DEBOUNCE_MS } from "../constants";
+import { registerPendingTextareaFlush } from "./textareaFlushRegistry";
+
+type AutosizeStyle = React.ComponentProps<typeof ReactTextareaAutosize>["style"];
 
 export const AutoSizeTextarea = forwardRef<
   HTMLTextAreaElement,
@@ -18,7 +22,7 @@ export const AutoSizeTextarea = forwardRef<
     dataAutoFocus?: boolean;
     className?: string;
     placeholder?: string;
-    style?: React.CSSProperties;
+    style?: AutosizeStyle;
   }
 >(
   (
@@ -49,6 +53,18 @@ export const AutoSizeTextarea = forwardRef<
       onChangeRef.current = onChange;
     }, [onChange]);
 
+    const flushPendingChange = useCallback(() => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (pendingChangeRef.current !== null) {
+        const val = pendingChangeRef.current;
+        pendingChangeRef.current = null;
+        onChangeRef.current(val);
+      }
+    }, []);
+
     // Sync external value initially, or when it changes outside
     useEffect(() => {
       if (timeoutRef.current) {
@@ -60,17 +76,12 @@ export const AutoSizeTextarea = forwardRef<
     }, [value]);
 
     useEffect(() => {
+      const unregister = registerPendingTextareaFlush(flushPendingChange);
       return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        if (pendingChangeRef.current !== null) {
-          onChangeRef.current(pendingChangeRef.current);
-          pendingChangeRef.current = null;
-        }
+        unregister();
+        flushPendingChange();
       };
-    }, []);
+    }, [flushPendingChange]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const val = e.target.value;
@@ -87,16 +98,14 @@ export const AutoSizeTextarea = forwardRef<
     };
 
     const handleBlur = () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (pendingChangeRef.current !== null) {
-        const val = pendingChangeRef.current;
-        pendingChangeRef.current = null;
-        onChange(val);
-      }
+      flushPendingChange();
       if (onBlur) onBlur();
+    };
+
+    const textareaStyle: AutosizeStyle = {
+      outline: "none",
+      boxShadow: "none",
+      ...style,
     };
 
     return (
@@ -112,7 +121,7 @@ export const AutoSizeTextarea = forwardRef<
           className ||
           "w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
         }
-        style={{ outline: "none", boxShadow: "none", ...style } as React.CSSProperties}
+        style={textareaStyle}
         onFocus={(e) => {
           // move cursor to end
           const length = e.target.value.length;

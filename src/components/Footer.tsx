@@ -1,7 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
 import { Keyboard, Columns, History } from "lucide-react";
-import { INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE } from "../constants";
+import {
+  INITIAL_NODES,
+  TUTORIAL_DOCUMENT_TITLE,
+  isTutorialDocument,
+  withTutorialMetadata,
+} from "../constants";
 import { useAppStore } from "../store/useAppStore";
 import {
   buildTreeIndex,
@@ -68,6 +73,32 @@ export function Footer() {
       : saveStatus === "saved"
         ? "text-green-600 dark:text-green-400"
         : "text-app-accent";
+
+  const markTutorialDocument = (documentId: string | null) => {
+    if (!documentId) return;
+    useAppStore.setState((state) => ({
+      documents: state.documents.map((document) =>
+        document.id === documentId
+          ? {
+              ...document,
+              metadata: withTutorialMetadata(document.metadata),
+            }
+          : document,
+      ),
+    }));
+  };
+
+  const resetTutorialNodes = (documentId: string | null) => {
+    const tutorialNodes = INITIAL_NODES.map((n, i) => ({
+      ...n,
+      order: n.order ?? i,
+      id: n.id,
+    }));
+    const state = useAppStore.getState();
+    state.setNodesRaw(tutorialNodes);
+    state.setActiveId(tutorialNodes[0]?.id || null);
+    markTutorialDocument(documentId);
+  };
 
   return (
     <>
@@ -187,26 +218,15 @@ export function Footer() {
           </button>{" "}
           <button
             onClick={() => {
-              const existingDoc = documents.find(
-                (d) => d.title === TUTORIAL_DOCUMENT_TITLE,
-              );
+              const existingDoc = documents.find(isTutorialDocument);
+              const activeDoc = documents.find((d) => d.id === activeFileId);
 
-              if (
-                documents.find((d) => d.id === activeFileId)?.title ===
-                TUTORIAL_DOCUMENT_TITLE
-              ) {
+              if (isTutorialDocument(activeDoc)) {
                 // If currently open document is named tutorial, prompt to overwrite
                 useAppStore
                   .getState()
                   .openConfirm(t("Restore Tutorial Confirm"), () => {
-                    const tutorialNodes = INITIAL_NODES.map((n, i) => ({
-                      ...n,
-                      order: n.order ?? i,
-                      id: n.id,
-                    }));
-                    const state = useAppStore.getState();
-                    state.setNodesRaw(tutorialNodes);
-                    state.setActiveId(tutorialNodes[0]?.id || null);
+                    resetTutorialNodes(activeFileId);
                   });
               } else if (existingDoc) {
                 // Not active, but exists
@@ -214,7 +234,11 @@ export function Footer() {
                 setTutorialModalState("exists");
               } else {
                 // Does not exist, create silently
-                createNewFile(INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE);
+                createNewFile(
+                  INITIAL_NODES,
+                  TUTORIAL_DOCUMENT_TITLE,
+                  withTutorialMetadata(),
+                );
               }
             }}
             className="w-6 h-6 flex items-center justify-center rounded-full bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-secondary hover:text-app-text-primary font-bold text-xs transition-colors shadow-inner cursor-pointer"
@@ -239,6 +263,7 @@ export function Footer() {
         onClose={() => setTutorialModalState("closed")}
         existingTutorialId={existingTutorialId}
         createNewFile={createNewFile}
+        markTutorialDocument={markTutorialDocument}
         switchFile={switchFile}
       />
     </>

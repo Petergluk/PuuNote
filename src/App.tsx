@@ -144,11 +144,11 @@ export default function App() {
               console.warn("Fullscreen exit error", err);
             }
           }}
-          className="fixed top-4 right-4 p-3 bg-black/20 hover:bg-black/50 border border-white/20 text-white/50 hover:text-white rounded-full backdrop-blur-md transition-all cursor-pointer shadow-lg"
+          className="fixed top-3 right-3 p-2 sm:top-4 sm:right-4 sm:p-3 bg-black/20 hover:bg-black/50 border border-white/20 text-white/50 hover:text-white rounded-full backdrop-blur-md transition-all cursor-pointer shadow-lg"
           title="Exit Zen Mode"
           aria-label="Exit Zen Mode"
         >
-          <Minimize size={16} />
+          <Minimize size={14} />
         </button>
       )}
       <Suspense fallback={null}>

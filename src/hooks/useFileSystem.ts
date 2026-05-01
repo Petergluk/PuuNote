@@ -5,6 +5,7 @@ import { INITIAL_NODES } from "../constants";
 import { toast } from "sonner";
 import { DocumentService, normalizeNodes } from "../domain/documentService";
 import type { PuuDocument, PuuNode, PuuDocumentMetadata } from "../types";
+import { flushPendingTextareas } from "../components/textareaFlushRegistry";
 
 class FileSystemManager {
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -71,32 +72,47 @@ export const deriveDocumentTitle = (
   return title.length > 80 ? `${title.slice(0, 77)}...` : title;
 };
 
-const updateDocumentTitleInStore = (
+const updateDocumentMetadataInStore = (
   fileId: string,
   nodes: typeof INITIAL_NODES,
-  fallback?: string,
+  options: { fallback?: string; touchUpdatedAt?: boolean } = {},
 ) => {
-  const newTitle = deriveDocumentTitle(nodes, fallback);
-  useAppStore.setState((state) => ({
-    documents: state.documents.some(
-      (document) => document.id === fileId && document.title !== newTitle,
-    )
-      ? state.documents.map((document) =>
-          document.id === fileId ? { ...document, title: newTitle } : document,
-        )
-      : state.documents,
-  }));
+  const now = Date.now();
+  useAppStore.setState((state) => {
+    let didChange = false;
+    const documents = state.documents.map((document) => {
+      if (document.id !== fileId) return document;
+
+      const newTitle = deriveDocumentTitle(
+        nodes,
+        options.fallback || document.title || "Untitled",
+      );
+      const shouldUpdateTitle = document.title !== newTitle;
+      if (!shouldUpdateTitle && !options.touchUpdatedAt) return document;
+
+      didChange = true;
+      return {
+        ...document,
+        title: shouldUpdateTitle ? newTitle : document.title,
+        updatedAt: options.touchUpdatedAt ? now : document.updatedAt,
+      };
+    });
+
+    return didChange ? { documents } : state;
+  });
 };
 
 export const flushPendingSave = async () => {
+  flushPendingTextareas();
   if (fsManager.hasTimer()) {
     fsManager.clearTimer();
     const { fileId, nodes } = fsManager;
-    if (fileId && nodes.length > 0) {
+    if (fileId) {
       useAppStore.setState({ saveStatus: "saving" });
       try {
         DocumentService.storeActiveFileId(fileId);
         await DocumentService.saveNodes(fileId, nodes);
+        updateDocumentMetadataInStore(fileId, nodes, { touchUpdatedAt: true });
         useAppStore.setState({ saveStatus: "saved" });
       } catch (err) {
         console.error("Failed to save data into dexie", err);
@@ -171,7 +187,7 @@ export function useFileSystemInit() {
         if (cancelled) return;
 
         const savedNodes = await DocumentService.loadNodes(active);
-        if (savedNodes && savedNodes.length > 0) newNodes = savedNodes;
+        if (savedNodes !== null) newNodes = savedNodes;
       } catch (err) {
         console.error("Failed to load active file nodes", err);
       }
@@ -184,7 +200,7 @@ export function useFileSystemInit() {
         saveStatus: "saved",
       });
       fsManager.isHydratingFile = false;
-      if (active) updateDocumentTitleInStore(active, newNodes);
+      if (active) updateDocumentMetadataInStore(active, newNodes);
     }
     init();
 
@@ -203,7 +219,7 @@ export function useFileSystemInit() {
         if (fsManager.isHydratingFile) return;
 
         const { activeFileId, nodes } = state;
-        if (!activeFileId || nodes.length === 0) return;
+        if (!activeFileId) return;
         useAppStore.setState({ saveStatus: "unsaved" });
 
         // Save active file changes tracking
@@ -216,6 +232,9 @@ export function useFileSystemInit() {
           }
           DocumentService.saveNodes(activeFileId, nodes)
             .then(() => {
+              updateDocumentMetadataInStore(activeFileId, nodes, {
+                touchUpdatedAt: true,
+              });
               useAppStore.setState({ saveStatus: "saved" });
             })
             .catch((err) => {
@@ -231,24 +250,6 @@ export function useFileSystemInit() {
             });
       });
 
-        // Update document title if needed
-        const newTitle = deriveDocumentTitle(nodes);
-
-        const docs = state.documents;
-        const existing = docs.find((d) => d.id === activeFileId);
-        if (!existing || existing.title !== newTitle) {
-          setTimeout(() => {
-            useAppStore.setState({
-              documents: useAppStore
-                .getState()
-                .documents.map((d) =>
-                  d.id === activeFileId
-                    ? { ...d, title: newTitle, updatedAt: Date.now() }
-                    : d,
-                ),
-            });
-          }, 0);
-        }
       }
 
       // Handle documents metadata changing
@@ -264,12 +265,11 @@ export function useFileSystemInit() {
     });
 
     const saveCurrentStateToDirtyBackup = () => {
+      flushPendingTextareas();
       const { activeFileId, nodes } = useAppStore.getState();
       const fileId = activeFileId || fsManager.fileId;
-      const nodesToSave = nodes.length > 0 ? nodes : fsManager.nodes;
-      if (!fileId || nodesToSave.length === 0) return;
-
-      fsManager.clearTimer();
+      const nodesToSave = activeFileId ? nodes : fsManager.nodes;
+      if (!fileId) return;
 
       try {
         DocumentService.saveDirtyNodes(fileId, nodesToSave);
@@ -282,18 +282,24 @@ export function useFileSystemInit() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         saveCurrentStateToDirtyBackup();
+        void flushPendingSave();
       }
     };
 
+    const handlePageHide = () => {
+      saveCurrentStateToDirtyBackup();
+      void flushPendingSave();
+    };
+
     window.addEventListener("beforeunload", saveCurrentStateToDirtyBackup);
-    window.addEventListener("pagehide", saveCurrentStateToDirtyBackup);
+    window.addEventListener("pagehide", handlePageHide);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       unsubscribe();
       flushPendingSave();
       window.removeEventListener("beforeunload", saveCurrentStateToDirtyBackup);
-      window.removeEventListener("pagehide", saveCurrentStateToDirtyBackup);
+      window.removeEventListener("pagehide", handlePageHide);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
@@ -318,7 +324,7 @@ export function useFileSystemActions() {
     let didFail = false;
     try {
       const saved = await DocumentService.loadNodes(fileId);
-      if (saved && saved.length > 0) {
+      if (saved !== null) {
         newNodes = saved;
       } else {
         didFail = true;
@@ -355,7 +361,7 @@ export function useFileSystemActions() {
     } catch (err) {
       console.error("Failed to store active file", err);
     }
-    updateDocumentTitleInStore(fileId, newNodes);
+    updateDocumentMetadataInStore(fileId, newNodes);
   };
 
   const createNewFile = async (

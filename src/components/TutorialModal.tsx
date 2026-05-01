@@ -1,13 +1,23 @@
 import { useTranslation } from "react-i18next";
-import { INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE } from "../constants";
+import {
+  INITIAL_NODES,
+  TUTORIAL_DOCUMENT_TITLE,
+  withTutorialMetadata,
+} from "../constants";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import type { PuuDocumentMetadata } from "../types";
 
 interface TutorialModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingTutorialId: string | null;
-  createNewFile: (nodes: typeof INITIAL_NODES, title: string) => void;
+  createNewFile: (
+    nodes: typeof INITIAL_NODES,
+    title: string,
+    metadata?: PuuDocumentMetadata,
+  ) => void;
+  markTutorialDocument: (documentId: string | null) => void;
   switchFile: (fileId: string) => Promise<void>;
 }
 
@@ -16,6 +26,7 @@ export function TutorialModal({
   onClose,
   existingTutorialId,
   createNewFile,
+  markTutorialDocument,
   switchFile,
 }: TutorialModalProps) {
   const { t } = useTranslation();
@@ -57,7 +68,11 @@ export function TutorialModal({
 
           <button
             onClick={() => {
-              createNewFile(INITIAL_NODES, `${TUTORIAL_DOCUMENT_TITLE} (New)`);
+              createNewFile(
+                INITIAL_NODES,
+                `${TUTORIAL_DOCUMENT_TITLE} (New)`,
+                withTutorialMetadata(),
+              );
               onClose();
             }}
             className="w-full text-left px-4 py-3 bg-app-card hover:bg-app-card-hover border border-app-border rounded-lg transition-colors flex items-center justify-between"
@@ -82,6 +97,9 @@ export function TutorialModal({
                   const state = useAppStore.getState();
                   state.setNodesRaw(tutorialNodes);
                   state.setActiveId(tutorialNodes[0]?.id || null);
+                  markTutorialDocument(
+                    existingTutorialId || useAppStore.getState().activeFileId,
+                  );
                 });
               onClose();
             }}

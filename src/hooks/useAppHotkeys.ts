@@ -368,11 +368,21 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         addChild,
         addSibling,
         setActiveId,
+        clearSelection,
         editorEnterMode,
         nodes,
       } = state;
 
-      if (fullScreenId || timelineOpen) return;
+      if (
+        fullScreenId ||
+        timelineOpen ||
+        state.commandPaletteOpen ||
+        state.confirmDialog.isOpen ||
+        state.fileMenuOpen ||
+        state.settingsOpen
+      ) {
+        return;
+      }
 
       const target = e.target as HTMLElement;
       const isTyping =
@@ -409,6 +419,14 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
             }
           }
         }
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearSelection();
+        setActiveId(null);
+        state.setFloatingActionsVisible(false);
         return;
       }
 

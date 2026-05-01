@@ -110,6 +110,12 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
             </div>
             <div className="flex justify-between items-center py-1.5">
               <span className="text-app-text-secondary">
+                {t("Card actions")}
+              </span>
+              <span className="font-mono text-app-text-primary">.</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-app-text-secondary">
                 {t("Undo shortcut")}
               </span>
               <span className="font-mono text-app-text-primary">
