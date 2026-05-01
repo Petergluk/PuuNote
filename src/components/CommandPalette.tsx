@@ -18,7 +18,6 @@ import {
   type SearchDocumentNode,
 } from "../domain/documentService";
 import { runMockExpandSelectedCard } from "../domain/aiOperations";
-import { runMockExpandSelectedCard } from "../domain/aiOperations";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useClickOutside } from "../hooks/useClickOutside";
 
@@ -48,7 +47,7 @@ export function CommandPalette() {
   const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
 
   const { createNewFile, deleteFile, switchFile } = useFileSystemActions();
-  const paletteRef = useRef<HTMLDivElement>(null);
+
   const closePalette = useCallback(() => {
     setIsOpen(false);
     setQuery("");

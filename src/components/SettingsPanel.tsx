@@ -2,6 +2,8 @@ import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import type {
+  EditorEnterMode,
   InactiveBranchesMode,
   PasteSplitMode,
 } from "../store/appStoreTypes";

@@ -8,7 +8,7 @@ import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PROSE_FULL } from "../utils/proseClasses";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
-import { getDepthFirstNodes } from "../utils/tree";
+
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export const FullScreenModal = ({
@@ -20,7 +20,6 @@ export const FullScreenModal = ({
 }) => {
   const nodes = useAppStore((s) => s.nodes);
   const updateContent = useAppStore((s) => s.updateContent);
-  const focusModeScope = useAppStore((s) => s.focusModeScope);
   const [localActiveId, setLocalActiveId] = useState(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
@@ -45,11 +44,10 @@ export const FullScreenModal = ({
   const targetNode = nodes.find((n: PuuNode) => n.id === nodeId);
   const visibleNodes = useMemo(() => {
     if (!targetNode) return [];
-    if (focusModeScope === "single") return [targetNode];
 
     const nodeMap = new Map(nodes.map((node) => [node.id, node]));
 
-    // Basic cycle check to prevent infinite loops or broken UI if data provides a cycle
+    // Basic cycle check
     const isDescendant = (
       childId: string,
       ancestorId: string | null,
@@ -65,22 +63,14 @@ export const FullScreenModal = ({
 
     let targetParentId = targetNode.parentId;
     if (isDescendant(nodeId, targetParentId)) {
-      console.warn("Cycle detected in node hierarchy, falling back to root");
       targetParentId = null;
     }
 
-    if (focusModeScope === "branchLevel") {
-      const columnNodes = nodes.filter(
-        (n: PuuNode) => n.parentId === targetParentId,
-      );
-      return columnNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-
-    const depthFirstNodes = getDepthFirstNodes(nodes);
-    const targetDepth =
-      depthFirstNodes.find((node) => node.id === nodeId)?.depth ?? 0;
-    return depthFirstNodes.filter((node) => node.depth === targetDepth);
-  }, [focusModeScope, nodes, nodeId, targetNode]);
+    const columnNodes = nodes.filter(
+      (n: PuuNode) => n.parentId === targetParentId,
+    );
+    return columnNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [nodes, nodeId, targetNode]);
 
   const toggleCheckbox = useToggleCheckbox();
 
