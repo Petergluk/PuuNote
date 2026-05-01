@@ -44,18 +44,16 @@ export function usePreferencesInit() {
       safeLocalStorage.getItem("puu_inactiveBranchesMode") === "hide"
         ? "hide"
         : "dim";
-    const savedFocusModeScope = safeLocalStorage.getItem("puu_focusModeScope");
-    const focusModeScope =
-      savedFocusModeScope === "single" ||
-      savedFocusModeScope === "column" ||
-      savedFocusModeScope === "branchLevel"
-        ? savedFocusModeScope
+    const savedFocusModeScopeStr = safeLocalStorage.getItem("puu_focusModeScope");
+    const savedFocusModeScope =
+      savedFocusModeScopeStr === "single" ||
+      savedFocusModeScopeStr === "column" ||
+      savedFocusModeScopeStr === "branchLevel"
+        ? savedFocusModeScopeStr
         : "branchLevel";
+    const savedEditorModeStr = safeLocalStorage.getItem("puu_editorMode");
     const savedEditorMode =
-      safeLocalStorage.getItem("puu_editorMode") === "visual"
-        ? "visual"
-        : "markdown";
-
+      savedEditorModeStr === "visual" ? "visual" : "markdown";
     const savedEditorEnterMode =
       safeLocalStorage.getItem("puu_editorEnterMode") === "enterCard"
         ? "enterCard"
@@ -76,7 +74,7 @@ export function usePreferencesInit() {
       cardsCollapsed: savedCollapsed,
       colWidth: savedWidth,
       inactiveBranchesMode: savedInactiveBranchesMode,
-      focusModeScope,
+      focusModeScope: savedFocusModeScope,
       editorMode: savedEditorMode,
       editorEnterMode: savedEditorEnterMode,
       pasteSplitMode: savedPasteSplitMode,
@@ -103,12 +101,17 @@ export function usePreferencesInit() {
         );
       }
       if (state.focusModeScope !== prevState.focusModeScope) {
-        safeLocalStorage.setItem("puu_focusModeScope", state.focusModeScope);
+        safeLocalStorage.setItem(
+          "puu_focusModeScope",
+          state.focusModeScope,
+        );
       }
       if (state.editorMode !== prevState.editorMode) {
-        safeLocalStorage.setItem("puu_editorMode", state.editorMode);
+        safeLocalStorage.setItem(
+          "puu_editorMode",
+          state.editorMode,
+        );
       }
-
       if (state.editorEnterMode !== prevState.editorEnterMode) {
         safeLocalStorage.setItem("puu_editorEnterMode", state.editorEnterMode);
       }

@@ -4,10 +4,10 @@ import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import type {
   EditorEnterMode,
-  InactiveBranchesMode,
-  PasteSplitMode,
   FocusModeScope,
   EditorMode,
+  InactiveBranchesMode,
+  PasteSplitMode,
 } from "../store/appStoreTypes";
 
 const branchModes: Array<{
@@ -35,8 +35,6 @@ const editorModes: Array<{
   { value: "visual", labelKey: "settings.visual" },
 ];
 
-
-
 const editorEnterModes: Array<{
   value: EditorEnterMode;
   labelKey: string;
@@ -63,14 +61,15 @@ export function SettingsPanel() {
   const setInactiveBranchesMode = useAppStore(
     (state) => state.setInactiveBranchesMode,
   );
-  const editorEnterMode = useAppStore((state) => state.editorEnterMode);
-  const setEditorEnterMode = useAppStore((state) => state.setEditorEnterMode);
-  const pasteSplitMode = useAppStore((state) => state.pasteSplitMode);
-  const setPasteSplitMode = useAppStore((state) => state.setPasteSplitMode);
   const focusModeScope = useAppStore((state) => state.focusModeScope);
   const setFocusModeScope = useAppStore((state) => state.setFocusModeScope);
   const editorMode = useAppStore((state) => state.editorMode);
   const setEditorMode = useAppStore((state) => state.setEditorMode);
+  const editorEnterMode = useAppStore((state) => state.editorEnterMode);
+  const setEditorEnterMode = useAppStore((state) => state.setEditorEnterMode);
+  const pasteSplitMode = useAppStore((state) => state.pasteSplitMode);
+  const setPasteSplitMode = useAppStore((state) => state.setPasteSplitMode);
+
   const language = i18n.resolvedLanguage?.startsWith("ru") ? "ru" : "en";
   const panelRef = useFocusTrap<HTMLElement>(settingsOpen, () =>
     setSettingsOpen(false),
@@ -164,7 +163,7 @@ export function SettingsPanel() {
                   key={mode.value}
                   onClick={() => setFocusModeScope(mode.value)}
                   aria-pressed={focusModeScope === mode.value}
-                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
+                  className={`rounded px-2 py-1.5 text-xs transition-colors ${
                     focusModeScope === mode.value
                       ? "bg-app-accent text-white"
                       : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
@@ -186,7 +185,7 @@ export function SettingsPanel() {
                   key={mode.value}
                   onClick={() => setEditorMode(mode.value)}
                   aria-pressed={editorMode === mode.value}
-                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
+                  className={`rounded px-3 py-1.5 text-xs transition-colors ${
                     editorMode === mode.value
                       ? "bg-app-accent text-white"
                       : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
@@ -197,6 +196,7 @@ export function SettingsPanel() {
               ))}
             </div>
           </div>
+
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm text-app-text-secondary">
               {t("settings.editorEnter")}

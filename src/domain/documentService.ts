@@ -1,6 +1,7 @@
 import { db, type DocumentData, type DocumentMeta } from "../db/db";
 import type { PuuDocument, PuuNode } from "../types";
 import { generateId } from "../utils/id";
+import { MAX_FILE_SIZE_BYTES } from "../constants";
 import {
   validateNodesWithReport,
   type NodeValidationReport,
@@ -195,6 +196,12 @@ export const DocumentService = {
           "Refusing to overwrite document with invalid empty data.",
       );
     }
+    const size = new Blob([JSON.stringify(normalized)]).size;
+    if (size > MAX_FILE_SIZE_BYTES) {
+      const error = new Error("Storage quota exceeded (5MB limit).");
+      error.name = "QuotaExceededError";
+      throw error;
+    }
     await db.files.put({ id: fileId, nodes: normalized });
     clearSearchIndexCache();
     this.clearDirtySave(fileId);
@@ -244,7 +251,7 @@ export const DocumentService = {
   },
 
   saveDirtyNodes(fileId: string, nodes: PuuNode[]) {
-    localStorage.setItem(
+    sessionStorage.setItem(
       "puu_dirty_save",
       JSON.stringify({ fileId, nodes: normalizeNodes(nodes) }),
     );
@@ -252,23 +259,23 @@ export const DocumentService = {
 
   clearDirtySave(fileId?: string) {
     if (!fileId) {
-      localStorage.removeItem("puu_dirty_save");
+      sessionStorage.removeItem("puu_dirty_save");
       return;
     }
     try {
       const dirtySave = JSON.parse(
-        localStorage.getItem("puu_dirty_save") || "",
+        sessionStorage.getItem("puu_dirty_save") || "",
       );
       if (dirtySave?.fileId === fileId) {
-        localStorage.removeItem("puu_dirty_save");
+        sessionStorage.removeItem("puu_dirty_save");
       }
     } catch {
-      localStorage.removeItem("puu_dirty_save");
+      sessionStorage.removeItem("puu_dirty_save");
     }
   },
 
   async restoreDirtySave() {
-    const dirtySaveStr = localStorage.getItem("puu_dirty_save");
+    const dirtySaveStr = sessionStorage.getItem("puu_dirty_save");
     if (!dirtySaveStr) return;
 
     try {
@@ -280,7 +287,7 @@ export const DocumentService = {
         });
       }
     } finally {
-      localStorage.removeItem("puu_dirty_save");
+      sessionStorage.removeItem("puu_dirty_save");
     }
   },
 

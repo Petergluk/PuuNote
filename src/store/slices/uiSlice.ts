@@ -7,6 +7,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   inactiveBranchesMode: "dim",
   focusModeScope: "branchLevel",
   editorMode: "markdown",
+
   editorEnterMode: "enterNewline",
   pasteSplitMode: "separator",
   settingsOpen: false,
@@ -15,6 +16,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   commandPaletteOpen: false,
   uiMode: "normal",
   saveStatus: "saved",
+  layoutAlignTrigger: 0,
   confirmDialog: { isOpen: false, message: "" },
   floatingActionsVisible: false,
 
@@ -27,6 +29,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
       confirmDialog: { isOpen: false, message: "", onConfirm: undefined },
     }),
 
+  triggerLayoutAlign: () => set((state) => ({ layoutAlignTrigger: state.layoutAlignTrigger + 1 })),
   setCommandPaletteOpen: (commandPaletteOpen) =>
     set((s) => (s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen })),
   setTheme: (theme) => set((s) => (s.theme === theme ? s : { theme })),
@@ -52,6 +55,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.focusModeScope === focusModeScope ? s : { focusModeScope })),
   setEditorMode: (editorMode) =>
     set((s) => (s.editorMode === editorMode ? s : { editorMode })),
+
   setEditorEnterMode: (editorEnterMode) =>
     set((s) => (s.editorEnterMode === editorEnterMode ? s : { editorEnterMode })),
   setPasteSplitMode: (pasteSplitMode) =>

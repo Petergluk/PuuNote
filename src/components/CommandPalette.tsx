@@ -38,6 +38,7 @@ export function CommandPalette() {
 
   const [searchDocs, setSearchDocs] = useState<SearchDocumentNode[]>([]);
   const [searchResults, setSearchResults] = useState<SearchDocumentNode[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
@@ -69,11 +70,6 @@ export function CommandPalette() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle
-      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        setIsOpen(!isOpen);
-      }
       if (e.key === "Escape" && isOpen) {
         setIsOpen(false);
       }
@@ -104,21 +100,27 @@ export function CommandPalette() {
   }, [isOpen, documents]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!query.trim() || !fuse) {
-        setSearchResults([]);
-        return;
-      }
+    let timer: ReturnType<typeof setTimeout>;
+    if (query.trim() && fuse) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsSearching(true);
+      timer = setTimeout(() => {
+        setSearchResults(
+          fuse
+            .search(query)
+            .slice(0, 15)
+            .map((res) => res.item),
+        );
+        setIsSearching(false);
+      }, 300);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
 
-      setSearchResults(
-        fuse
-          .search(query)
-          .slice(0, 15)
-          .map((res) => res.item),
-      );
-    }, 300);
-
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [query, fuse]);
 
   const commandItems = useMemo<CommandItem[]>(
@@ -197,6 +199,14 @@ export function CommandPalette() {
     : commandItems.length;
   const safeActiveIndex =
     activeListLength === 0 ? 0 : Math.min(activeIndex, activeListLength - 1);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const item = document.getElementById(`command-palette-item-${safeActiveIndex}`);
+    if (item) {
+      item.scrollIntoView({ block: "nearest" });
+    }
+  }, [safeActiveIndex, isOpen]);
 
   const handleSelectNode = async (fileId: string, nodeId: string) => {
     if (fileId !== activeFileId) {
@@ -300,8 +310,11 @@ export function CommandPalette() {
                     {t("Search Results")}
                   </div>
                   {searchResults.length === 0 ? (
-                    <div className="px-4 py-3 text-app-text-secondary text-sm">
-                      {t("No results")}
+                    <div className="px-4 py-3 text-app-text-secondary text-sm flex items-center gap-2">
+                       {isSearching && (
+                         <div className="w-4 h-4 rounded-full border-2 border-app-accent border-r-transparent animate-spin" />
+                       )}
+                       {isSearching ? t("Searching...") : t("No results")}
                     </div>
                   ) : (
                     searchResults.map((result, index) => (

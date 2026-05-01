@@ -12,6 +12,7 @@ import { Card } from "./Card";
 export function BoardView() {
   const activeFileId = useAppStore((s) => s.activeFileId);
   const activeId = useAppStore((s) => s.activeId);
+  const editingId = useAppStore((s) => s.editingId);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
   const nodes = useAppStore((s) => s.nodes);
   const addChild = useAppStore((s) => s.addChild);
@@ -35,6 +36,7 @@ export function BoardView() {
   );
 
   const useActiveCorridor = inactiveBranchesMode === "hide";
+  const layoutAlignTrigger = useAppStore((s) => s.layoutAlignTrigger);
 
   const columns = useColumns(
     nodes,
@@ -47,10 +49,12 @@ export function BoardView() {
   const { setColRef } = useActivePathScroll(
     activeFileId,
     activeId,
+    editingId,
     activeAncestorPath,
     activeDescendantIds,
     timelineOpen,
     columns.length,
+    layoutAlignTrigger,
   );
 
   if (timelineOpen) return null;
@@ -63,9 +67,9 @@ export function BoardView() {
             key={colIndex}
             style={{ zIndex: Math.max(1, 30 - colIndex) }}
             ref={(el) => setColRef(colIndex, el)}
-            className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 sm:px-4 transition-all duration-200 col-spacer relative"
+            className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar px-2 sm:px-4 transition-all duration-200 col-spacer relative"
           >
-            <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[95vh] mx-auto transition-all duration-200 col-spacer">
+            <div className="column-inner relative flex flex-col gap-3 pt-[95vh] pb-[95vh] mx-auto transition-all duration-200 col-spacer">
               {colNodes.map((node) => (
                 <ErrorBoundary key={node.id}>
                   <Card

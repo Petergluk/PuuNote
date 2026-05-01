@@ -36,7 +36,7 @@ export async function takeDocumentSnapshot(
       documentId,
       nodes: [...nodes], // clone
       createdAt: new Date().toISOString(),
-      description,
+      description: `${description} (${nodes.length} cards)`,
     });
     await pruneDocumentSnapshots(documentId);
   } catch (err) {

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Upload,
   Download,
@@ -58,6 +58,16 @@ export function Header({ handleImport }: HeaderProps) {
   useClickOutside(exportMenuRef, () => {
     if (exportMenuOpen) setExportMenuOpen(false);
   });
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && exportMenuOpen) {
+        setExportMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [exportMenuOpen]);
 
   const toggleFullscreen = () => {
     if (!isFullscreen(document)) {
@@ -136,9 +146,11 @@ export function Header({ handleImport }: HeaderProps) {
         <div className="flex items-center gap-0 sm:gap-1 border-r border-app-border pr-2 sm:pr-4">
           <button
             onClick={() => {
+              const prevActive = useAppStore.getState().activeId;
               undo();
+              const newNodes = useAppStore.getState().nodes;
               clearSelection();
-              setActiveId(null);
+              setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
             }}
             disabled={!canUndo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -149,9 +161,11 @@ export function Header({ handleImport }: HeaderProps) {
           </button>
           <button
             onClick={() => {
+              const prevActive = useAppStore.getState().activeId;
               redo();
+              const newNodes = useAppStore.getState().nodes;
               clearSelection();
-              setActiveId(null);
+              setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
             }}
             disabled={!canRedo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"

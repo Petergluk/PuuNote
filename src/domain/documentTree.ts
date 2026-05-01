@@ -149,6 +149,28 @@ export const documentApi = {
     return { nextNodes, parentFallback };
   },
 
+  deleteNodes: (
+    nodes: PuuNode[],
+    ids: string[],
+  ): { nextNodes: PuuNode[]; parentFallback: string | null } => {
+    const index = buildTreeIndex(nodes);
+    const idsToRemove = new Set<string>();
+    const queue = [...ids];
+    let head = 0;
+    while (head < queue.length) {
+      const curr = queue[head++];
+      if (!idsToRemove.has(curr)) {
+        idsToRemove.add(curr);
+        const children = index.childrenMap.get(curr) || [];
+        for (const c of children) queue.push(c.id);
+      }
+    }
+    const firstRemovedNode = index.nodeMap.get(ids[0]);
+    const parentFallback = firstRemovedNode?.parentId ?? null;
+    const nextNodes = nodes.filter((n) => !idsToRemove.has(n.id));
+    return { nextNodes, parentFallback };
+  },
+
   deleteNodesPromoteChildren: (
     nodes: PuuNode[],
     ids: string[],

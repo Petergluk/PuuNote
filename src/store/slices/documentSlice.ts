@@ -113,6 +113,18 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
     if (activeId === id) set({ activeId: parentFallback });
   },
 
+  deleteNodes: (ids) => {
+    if (ids.length === 0) return;
+    const parentFallback = applyAndCapture((prev) => {
+      const { nextNodes, parentFallback } = documentApi.deleteNodes(prev, ids);
+      return { nextNodes, capture: parentFallback };
+    });
+    const activeId = get().activeId;
+    if (activeId && ids.includes(activeId)) {
+      set({ activeId: parentFallback });
+    }
+  },
+
   deleteNodesPromoteChildren: (ids) => {
     const uniqueIds = Array.from(new Set(ids));
     if (uniqueIds.length === 0) return;

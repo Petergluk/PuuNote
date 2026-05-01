@@ -1,6 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
 interface SafeMarkdownProps {
@@ -12,10 +13,14 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
   children,
   onToggleCheckbox,
 }) => {
+  // Prevent accidental Setext headings when users type horizontal rules (e.g. `---`) directly below text.
+  // This turns `Text\n---` into `Text\n\n---` which is parsed as a paragraph and a horizontal rule.
+  const safeContent = children.replace(/([^\n])\n(-{3,}|={3,})\s*$/gm, '$1\n\n$2');
+
   return (
     <div className="markdown-container">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[
           [
             rehypeSanitize,
@@ -38,6 +43,21 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
           ],
         ]}
         components={{
+          a: ({ node: _node, href, ...props }) => {
+            const isExternal = href?.startsWith("http");
+            return (
+              <a
+                href={href}
+                {...props}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (props.onClick) props.onClick(e);
+                }}
+              />
+            );
+          },
           input: ({
             node: _node,
             disabled: _disabled,
@@ -77,7 +97,7 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
           },
         }}
       >
-        {children}
+        {safeContent}
       </ReactMarkdown>
     </div>
   );

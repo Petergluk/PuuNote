@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-app-bg: var(--app-bg);
+  --color-app-panel: var(--app-panel);
+  --color-app-card: var(--app-card);
+  --color-app-card-hover: var(--app-card-hover);
+  --color-app-card-active: var(--app-card-active);
+  --color-app-border: var(--app-border);
+  --color-app-border-hover: var(--app-border-hover);
+  --color-app-text-primary: var(--app-text-primary);
+  --color-app-text-secondary: var(--app-text-secondary);
+  --color-app-text-muted: var(--app-text-muted);
+  --color-app-accent: var(--app-accent);
+  --animate-shimmer: shimmer 2s infinite linear;
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+:root {
+  --app-bg: #fafafa;
+  --app-panel: #ffffff;
+  --app-card: #ffffff;
+  --app-card-hover: #f4f4f5;
+  --app-card-active: #fafafa;
+  --app-border: #e4e4e7;
+  --app-border-hover: #d4d4d8;
+  --app-text-primary: #18181b;
+  --app-text-secondary: #52525b;
+  --app-text-muted: #71717a;
+  --app-accent: #a3966a;
+}
+
+html,
+body,
+#root {
+  overscroll-behavior-x: none;
+}
+
+.dark {
+  --app-bg: #0a0a0a;
+  --app-panel: #0f0f0f;
+  --app-card: #111111;
+  --app-card-hover: #1e1e1e;
+  --app-card-active: #1a1a1a;
+  --app-border: #222222;
+  --app-border-hover: #333333;
+  --app-text-primary: #e4e4e7;
+  --app-text-secondary: #a1a1aa;
+  --app-text-muted: #71717a;
+  --app-accent: #a3966a;
+}
+
+.theme-blue {
+  --app-bg: #0b1120;
+  --app-panel: #0f172a; /* slate-900 */
+  --app-card: #1e293b; /* slate-800 */
+  --app-card-hover: #334155; /* slate-700 */
+  --app-card-active: #1e293b;
+  --app-border: #334155; /* slate-700 */
+  --app-border-hover: #475569; /* slate-600 */
+  --app-text-primary: #f8fafc; /* slate-50 */
+  --app-text-secondary: #94a3b8; /* slate-400 */
+  --app-text-muted: #64748b; /* slate-500 */
+  --app-accent: #38bdf8; /* sky-400 */
+}
+
+.theme-brown {
+  --app-bg: #1c1917; /* stone-900 */
+  --app-panel: #292524; /* stone-800 */
+  --app-card: #44403c; /* stone-700 */
+  --app-card-hover: #57534e; /* stone-600 */
+  --app-card-active: #44403c;
+  --app-border: #57534e; /* stone-600 */
+  --app-border-hover: #78716c; /* stone-500 */
+  --app-text-primary: #fafaf9; /* stone-50 */
+  --app-text-secondary: #a8a29e; /* stone-400 */
+  --app-text-muted: #78716c; /* stone-500 */
+  --app-accent: #fbbf24; /* amber-400 */
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* Избавляемся от автоматических кавычек в tailwind-typography для blockquote */
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after {
+  content: none !important;
+}
+
+/* Красивые чекбоксы для списков задач [ ] и [x] */
+.prose input[type="checkbox"] {
+  @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
+  @apply border-app-text-muted bg-app-card;
+  /* Убираем бледность у disabled инпутов, сгенерированных markdown */
+}
+.prose input[type="checkbox"]:disabled {
+  opacity: 1; /* override browser default */
+}
+
+.prose input[type="checkbox"]:checked {
+  @apply bg-app-accent border-app-accent;
+}
+
+.prose input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
+/* Выравниваем текст рядом с чекбоксом */
+.prose li.task-list-item > input {
+  margin-right: 0.5rem;
+}
+
+/* Красивые горизонтальные линии */
+.prose hr {
+  @apply border-app-border my-4;
+}
+
+/* Responsive Column Widths */
+.column-container {
+  width: 100vw;
+  scroll-snap-align: start;
+}
+.column-inner {
+  width: calc(100vw - 16px);
+}
+@media (min-width: 640px) {
+  .column-container {
+    width: calc(var(--col-width) + 16px);
+    scroll-snap-align: none;
+  }
+  .column-inner {
+    width: var(--col-width);
+  }
+}

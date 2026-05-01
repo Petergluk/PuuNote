@@ -156,3 +156,12 @@ body,
     width: var(--col-width);
   }
 }
+
+@layer base {
+  button,
+  a,
+  input,
+  textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg;
+  }
+}

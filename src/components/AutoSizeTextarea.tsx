@@ -5,6 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import ReactTextareaAutosize from "react-textarea-autosize";
 import { AUTOSIZE_DEBOUNCE_MS } from "../constants";
 
 export const AutoSizeTextarea = forwardRef<
@@ -17,6 +18,7 @@ export const AutoSizeTextarea = forwardRef<
     dataAutoFocus?: boolean;
     className?: string;
     placeholder?: string;
+    style?: React.CSSProperties;
   }
 >(
   (
@@ -28,6 +30,7 @@ export const AutoSizeTextarea = forwardRef<
       dataAutoFocus,
       className,
       placeholder,
+      style,
     },
     forwardedRef,
   ) => {
@@ -55,14 +58,6 @@ export const AutoSizeTextarea = forwardRef<
       pendingChangeRef.current = null;
       setLocalValue(value);
     }, [value]);
-
-    useEffect(() => {
-      if (internalRef.current) {
-        internalRef.current.style.height = "auto";
-        internalRef.current.style.height =
-          internalRef.current.scrollHeight + "px";
-      }
-    }, [localValue]);
 
     useEffect(() => {
       return () => {
@@ -105,7 +100,7 @@ export const AutoSizeTextarea = forwardRef<
     };
 
     return (
-      <textarea
+      <ReactTextareaAutosize
         ref={internalRef}
         value={localValue}
         onChange={handleChange}
@@ -115,9 +110,9 @@ export const AutoSizeTextarea = forwardRef<
         placeholder={placeholder || "Type something... (Markdown supported)"}
         className={
           className ||
-          "w-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
+          "w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
         }
-        rows={1}
+        style={{ outline: "none", boxShadow: "none", ...style } as any}
         onFocus={(e) => {
           // move cursor to end
           const length = e.target.value.length;

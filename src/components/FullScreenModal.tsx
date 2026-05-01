@@ -125,7 +125,8 @@ export const FullScreenModal = ({
                   autoFocus
                   dataAutoFocus
                   placeholder="Type here..."
-                  className="block w-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
+                  className="block w-full resize-none overflow-hidden bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
+                  style={{ outline: "none", boxShadow: "none" }}
                 />
               ) : (
                 <div className={PROSE_FULL}>

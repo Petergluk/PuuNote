@@ -196,12 +196,12 @@ export const Card = React.memo(
             if (e.metaKey || e.ctrlKey || e.shiftKey) {
               toggleSelection(node.id, e.shiftKey);
             } else {
-              if (!isActive) setActiveId(node.id);
+              setActiveId(node.id);
             }
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
-            if (!isActive) setActiveId(node.id);
+            setActiveId(node.id);
             if (!isEditing) setEditingId(node.id);
           }}
         >
@@ -213,9 +213,9 @@ export const Card = React.memo(
                 onChange={(val: string) => updateContent(node.id, val)}
                 onBlur={() => setEditingId(null)}
                 autoFocus
-                className="w-full resize-none outline-none bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
+                className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
               />
-              <div className="absolute -top-3 -right-3 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
+              <div className="absolute -top-3 -right-3 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
                 <button
                   onMouseDown={handleSplitNode}
                   className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"

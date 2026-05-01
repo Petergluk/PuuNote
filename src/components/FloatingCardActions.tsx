@@ -295,17 +295,28 @@ export function FloatingCardActions() {
             onClick={(event) => {
               event.stopPropagation();
               const state = useAppStore.getState();
-              const descendantCount = computeDescendantIds(
-                state.nodes,
-                activeId,
-              ).size;
-              if (descendantCount > 0) {
+              
+              if (selectedIds.length > 1) {
                 state.openConfirm(
-                  `This will delete the card and its ${descendantCount} descendant branches. Are you sure?`,
-                  () => deleteNode(activeId),
+                  `Delete ${selectedIds.length} selected cards and their descendants?`,
+                  () => {
+                    useAppStore.getState().deleteNodes(selectedIds);
+                    useAppStore.getState().clearSelection();
+                  }
                 );
               } else {
-                deleteNode(activeId);
+                const descendantCount = computeDescendantIds(
+                  state.nodes,
+                  activeId,
+                ).size;
+                if (descendantCount > 0) {
+                  state.openConfirm(
+                    `This will delete the card and its ${descendantCount} descendant branches. Are you sure?`,
+                    () => deleteNode(activeId),
+                  );
+                } else {
+                  deleteNode(activeId);
+                }
               }
             }}
             {...keepVisibleHandlers}

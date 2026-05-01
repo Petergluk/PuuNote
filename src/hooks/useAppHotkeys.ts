@@ -18,6 +18,7 @@ import {
   computeDescendantIds,
   computeDescendantIdsFromIndex,
   getDepthFirstNodesFromIndex,
+  orderedChildrenFromIndex,
 } from "../utils/tree";
 
 const CLIPBOARD_CACHE_MAX_AGE_MS = 2 * 60 * 1000;
@@ -314,6 +315,12 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         }
       }
 
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "p" || e.key === "K" || e.key === "P")) {
+        e.preventDefault();
+        state.setCommandPaletteOpen(!state.commandPaletteOpen);
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey) {
         const target = e.target as HTMLElement;
         if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") {
@@ -328,14 +335,18 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
           if (isUndoAction && state.past.length > 0) {
             e.preventDefault();
+            const prevActive = state.activeId;
             state.undo();
+            const newNodes = useAppStore.getState().nodes;
             state.clearSelection();
-            state.setActiveId(null);
+            state.setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
           } else if (isRedoAction && state.future.length > 0) {
             e.preventDefault();
+            const prevActive = state.activeId;
             state.redo();
+            const newNodes = useAppStore.getState().nodes;
             state.clearSelection();
-            state.setActiveId(null);
+            state.setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
           }
         }
       }
@@ -413,8 +424,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         return;
       }
 
-      // M9: Space toggles FloatingCardActions (keyboard-accessible action panel)
-      if (e.key === " ") {
+      // M9: . toggles FloatingCardActions (keyboard-accessible action panel)
+      if (e.key === ".") {
         e.preventDefault();
         const cur = useAppStore.getState().floatingActionsVisible;
         useAppStore.getState().setFloatingActionsVisible(!cur);
@@ -429,9 +440,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        const children = nodes
-          .filter((n) => n.parentId === activeId)
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const treeIndex = buildTreeIndex(nodes);
+        const children = orderedChildrenFromIndex(treeIndex, activeId);
         if (children.length > 0) setActiveId(children[0].id);
         return;
       }
@@ -447,9 +457,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         e.preventDefault();
         const node = nodes.find((n) => n.id === activeId);
         if (node) {
-          const siblings = nodes
-            .filter((n) => n.parentId === node.parentId)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const treeIndex = buildTreeIndex(nodes);
+          const siblings = orderedChildrenFromIndex(treeIndex, node.parentId);
           const idx = siblings.findIndex((n) => n.id === activeId);
           if (idx >= 0 && idx < siblings.length - 1)
             setActiveId(siblings[idx + 1].id);
@@ -461,9 +470,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         e.preventDefault();
         const node = nodes.find((n) => n.id === activeId);
         if (node) {
-          const siblings = nodes
-            .filter((n) => n.parentId === node.parentId)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const treeIndex = buildTreeIndex(nodes);
+          const siblings = orderedChildrenFromIndex(treeIndex, node.parentId);
           const idx = siblings.findIndex((n) => n.id === activeId);
           if (idx > 0) setActiveId(siblings[idx - 1].id);
         }
@@ -473,14 +481,25 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
       // UX-8: Delete / Backspace deletes the active node (only when not editing)
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        const descendantCount = computeDescendantIds(nodes, activeId).size;
-        if (descendantCount > 0) {
+        
+        if (state.selectedIds.length > 1) {
           state.openConfirm(
-            `Delete this card and its ${descendantCount} descendants?`,
-            () => state.deleteNode(activeId),
+            `Delete ${state.selectedIds.length} selected cards and their descendants?`,
+            () => {
+              state.deleteNodes(state.selectedIds);
+              state.clearSelection();
+            }
           );
         } else {
-          state.deleteNode(activeId);
+          const descendantCount = computeDescendantIds(nodes, activeId).size;
+          if (descendantCount > 0) {
+            state.openConfirm(
+              `Delete this card and its ${descendantCount} descendants?`,
+              () => state.deleteNode(activeId),
+            );
+          } else {
+            state.deleteNode(activeId);
+          }
         }
         return;
       }

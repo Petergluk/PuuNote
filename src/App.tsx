@@ -60,17 +60,22 @@ export default function App() {
     const onBlur = () => {
       useAppStore.getState().setDraggedId(null);
     };
+    const onDragEnd = () => {
+      useAppStore.getState().setDraggedId(null);
+    };
 
     document.addEventListener("fullscreenchange", onFullscreenChange);
     window.addEventListener("blur", onBlur);
     document.addEventListener("blur", onBlur);
     document.addEventListener("mouseleave", onBlur);
+    window.addEventListener("dragend", onDragEnd);
 
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       window.removeEventListener("blur", onBlur);
       document.removeEventListener("blur", onBlur);
       document.removeEventListener("mouseleave", onBlur);
+      window.removeEventListener("dragend", onDragEnd);
     };
   }, []);
 
