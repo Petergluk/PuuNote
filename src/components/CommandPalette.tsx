@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import Fuse from "fuse.js";
@@ -11,12 +11,24 @@ import {
   Plus,
   Trash2,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import {
   DocumentService,
   type SearchDocumentNode,
 } from "../domain/documentService";
 import { runMockExpandSelectedCard } from "../domain/aiOperations";
+import { runMockExpandSelectedCard } from "../domain/aiOperations";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useClickOutside } from "../hooks/useClickOutside";
+
+interface CommandItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  run: () => void | Promise<void>;
+  destructive?: boolean;
+}
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -27,6 +39,7 @@ export function CommandPalette() {
 
   const [searchDocs, setSearchDocs] = useState<SearchDocumentNode[]>([]);
   const [searchResults, setSearchResults] = useState<SearchDocumentNode[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const setActiveId = useAppStore((s) => s.setActiveId);
@@ -35,6 +48,17 @@ export function CommandPalette() {
   const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
 
   const { createNewFile, deleteFile, switchFile } = useFileSystemActions();
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const closePalette = useCallback(() => {
+    setIsOpen(false);
+    setQuery("");
+    setSearchResults([]);
+    setActiveIndex(0);
+  }, [setIsOpen]);
+
+  const paletteRef = useFocusTrap<HTMLDivElement>(isOpen, closePalette);
+  useClickOutside(paletteRef, closePalette);
+
   const fuse = useMemo(() => {
     if (searchDocs.length === 0) return null;
     return new Fuse(searchDocs, {
@@ -98,11 +122,82 @@ export function CommandPalette() {
     return () => clearTimeout(timer);
   }, [query, fuse]);
 
-  const closePalette = () => {
-    setIsOpen(false);
-    setQuery("");
-    setSearchResults([]);
-  };
+  const commandItems = useMemo<CommandItem[]>(
+    () => [
+      {
+        id: "toggle-theme",
+        label: t("Toggle Theme"),
+        icon: Palette,
+        run: toggleTheme,
+      },
+      {
+        id: "toggle-expand",
+        label: t("Toggle Expand"),
+        icon: FileText,
+        run: toggleCardsCollapsed,
+      },
+      {
+        id: "open-timeline",
+        label: t("Open Timeline View"),
+        icon: Search,
+        run: () => setTimelineOpen(true),
+      },
+      {
+        id: "new-document",
+        label: t("New Document"),
+        icon: Plus,
+        run: createNewFile,
+      },
+      {
+        id: "ai-draft-child-cards",
+        label: t("AI Draft Child Cards"),
+        icon: Sparkles,
+        run: () => {
+          const store = useAppStore.getState();
+          runMockExpandSelectedCard({
+            targetNodeId: store.activeId,
+            getNodes: () => useAppStore.getState().nodes,
+            setNodes: store.setNodes,
+            setActiveIds: (activeId, selectedIds) => {
+              useAppStore.setState({ activeId, selectedIds });
+            },
+          });
+        },
+      },
+      {
+        id: "delete-file",
+        label: t("Delete file"),
+        icon: Trash2,
+        destructive: true,
+        run: () => {
+          if (!activeFileId) return;
+          useAppStore
+            .getState()
+            .openConfirm(
+              t("Are you sure you want to delete this document?"),
+              () => {
+                deleteFile(activeFileId);
+              },
+            );
+        },
+      },
+    ],
+    [
+      activeFileId,
+      createNewFile,
+      deleteFile,
+      setTimelineOpen,
+      t,
+      toggleCardsCollapsed,
+      toggleTheme,
+    ],
+  );
+
+  const activeListLength = query.trim()
+    ? searchResults.length
+    : commandItems.length;
+  const safeActiveIndex =
+    activeListLength === 0 ? 0 : Math.min(activeIndex, activeListLength - 1);
 
   const handleSelectNode = async (fileId: string, nodeId: string) => {
     if (fileId !== activeFileId) {
@@ -117,9 +212,38 @@ export function CommandPalette() {
     closePalette();
   };
 
-  const handleExecuteCommand = (cmd: () => void) => {
-    cmd();
+  const handleExecuteCommand = (cmd: () => void | Promise<void>) => {
+    void cmd();
     closePalette();
+  };
+
+  const handlePaletteKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      closePalette();
+      return;
+    }
+
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (activeListLength === 0) return;
+      e.preventDefault();
+      setActiveIndex((index) => {
+        const delta = e.key === "ArrowDown" ? 1 : -1;
+        return (index + delta + activeListLength) % activeListLength;
+      });
+      return;
+    }
+
+    if (e.key === "Enter") {
+      if (activeListLength === 0) return;
+      e.preventDefault();
+      if (query.trim()) {
+        const result = searchResults[safeActiveIndex];
+        if (result) void handleSelectNode(result.fileId, result.id);
+      } else {
+        const command = commandItems[safeActiveIndex];
+        if (command) handleExecuteCommand(command.run);
+      }
+    }
   };
 
   return (
@@ -130,48 +254,71 @@ export function CommandPalette() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm flex items-start justify-center pt-[15vh] px-4"
-          onClick={() => closePalette()}
         >
           <motion.div
+            ref={paletteRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("Command Palette")}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.95, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             className="w-full max-w-xl bg-app-panel border border-app-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center px-4 py-3 border-b border-app-border">
               <Search className="text-app-text-muted mr-3" size={20} />
               <input
                 ref={inputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveIndex(0);
+                }}
                 placeholder={t("Search")}
                 className="flex-1 bg-transparent border-none outline-none text-app-text-primary text-lg"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") closePalette();
-                }}
+                aria-activedescendant={
+                  activeListLength > 0
+                    ? `command-palette-item-${safeActiveIndex}`
+                    : undefined
+                }
+                data-autofocus
+                onKeyDown={handlePaletteKeyDown}
               />
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div
+              className="max-h-[60vh] overflow-y-auto"
+              role="listbox"
+              aria-label={
+                query.length > 0 ? t("Search Results") : t("Commands")
+              }
+            >
               {query.length > 0 && (
                 <div className="py-2">
                   <div className="px-4 py-1 text-xs font-semibold text-app-text-muted uppercase tracking-wider">
-                    Search Results
+                    {t("Search Results")}
                   </div>
                   {searchResults.length === 0 ? (
                     <div className="px-4 py-3 text-app-text-secondary text-sm">
                       {t("No results")}
                     </div>
                   ) : (
-                    searchResults.map((result) => (
+                    searchResults.map((result, index) => (
                       <button
                         key={`${result.fileId}-${result.id}`}
+                        id={`command-palette-item-${index}`}
+                        role="option"
+                        aria-selected={safeActiveIndex === index}
                         onClick={() =>
                           handleSelectNode(result.fileId, result.id)
                         }
-                        className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex flex-col gap-1 border-b border-app-border/50 last:border-0"
+                        className={`w-full text-left px-4 py-3 flex flex-col gap-1 border-b border-app-border/50 last:border-0 ${
+                          safeActiveIndex === index
+                            ? "bg-app-card-hover"
+                            : "hover:bg-app-card-hover"
+                        }`}
                       >
                         <span className="text-app-text-primary truncate">
                           {result.fileTitle} &rsaquo;{" "}
@@ -189,69 +336,34 @@ export function CommandPalette() {
               {query.length === 0 && (
                 <div className="py-2">
                   <div className="px-4 py-1 text-xs font-semibold text-app-text-muted uppercase tracking-wider">
-                    Commands
+                    {t("Commands")}
                   </div>
-                  <button
-                    onClick={() => handleExecuteCommand(toggleTheme)}
-                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
-                  >
-                    <Palette size={16} className="text-app-accent" />
-                    {t("Toggle Theme")}
-                  </button>
-                  <button
-                    onClick={() => handleExecuteCommand(toggleCardsCollapsed)}
-                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
-                  >
-                    <FileText size={16} className="text-app-accent" />
-                    {t("Toggle Expand")}
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleExecuteCommand(() => setTimelineOpen(true))
-                    }
-                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
-                  >
-                    <Search size={16} className="text-app-accent" />
-                    {t("Open Timeline View")}
-                  </button>
-                  <button
-                    onClick={() => handleExecuteCommand(createNewFile)}
-                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
-                  >
-                    <Plus size={16} className="text-app-accent" />
-                    {t("New Document")}
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleExecuteCommand(runMockExpandSelectedCard)
-                    }
-                    className="w-full text-left px-4 py-3 hover:bg-app-card-hover flex items-center gap-3 text-app-text-primary"
-                  >
-                    <Sparkles size={16} className="text-app-accent" />
-                    AI: Draft child cards
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleExecuteCommand(() => {
-                        if (activeFileId) {
-                          useAppStore
-                            .getState()
-                            .openConfirm(
-                              t(
-                                "Are you sure you want to delete this document?",
-                              ),
-                              () => {
-                                deleteFile(activeFileId);
-                              },
-                            );
-                        }
-                      })
-                    }
-                    className="w-full text-left px-4 py-3 hover:bg-red-500/10 flex items-center gap-3 text-red-500"
-                  >
-                    <Trash2 size={16} />
-                    {t("Delete file")}
-                  </button>
+                  {commandItems.map((command, index) => {
+                    const Icon = command.icon;
+                    const isActive = safeActiveIndex === index;
+                    return (
+                      <button
+                        key={command.id}
+                        id={`command-palette-item-${index}`}
+                        role="option"
+                        aria-selected={isActive}
+                        onClick={() => handleExecuteCommand(command.run)}
+                        className={`w-full text-left px-4 py-3 flex items-center gap-3 ${
+                          command.destructive
+                            ? "text-red-500 hover:bg-red-500/10"
+                            : "text-app-text-primary"
+                        } ${isActive ? "bg-app-card-hover" : "hover:bg-app-card-hover"}`}
+                      >
+                        <Icon
+                          size={16}
+                          className={
+                            command.destructive ? "" : "text-app-accent"
+                          }
+                        />
+                        {command.label}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

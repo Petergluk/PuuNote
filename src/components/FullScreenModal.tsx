@@ -9,6 +9,7 @@ import { SafeMarkdown } from "./SafeMarkdown";
 import { PROSE_FULL } from "../utils/proseClasses";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { getDepthFirstNodes } from "../utils/tree";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export const FullScreenModal = ({
   nodeId,
@@ -22,6 +23,7 @@ export const FullScreenModal = ({
   const focusModeScope = useAppStore((s) => s.focusModeScope);
   const [localActiveId, setLocalActiveId] = useState(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   useEffect(() => {
     if (activeElRef.current) {
@@ -86,6 +88,11 @@ export const FullScreenModal = ({
 
   return (
     <motion.div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Focus mode"
+      tabIndex={-1}
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
@@ -96,6 +103,7 @@ export const FullScreenModal = ({
         onClick={onClose}
         className="absolute top-6 right-6 z-10 p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
         title="Close Focus Mode (Esc)"
+        aria-label="Close Focus Mode"
       >
         <Minimize2 size={20} />
       </button>
@@ -119,6 +127,7 @@ export const FullScreenModal = ({
                   value={n.content}
                   onChange={(val: string) => updateContent(n.id, val)}
                   autoFocus
+                  dataAutoFocus
                   placeholder="Type here..."
                   className="block w-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg"
                 />

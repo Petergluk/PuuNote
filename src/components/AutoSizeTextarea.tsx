@@ -27,12 +27,21 @@ export const AutoSizeTextarea = forwardRef<
     onChange: (value: string) => void;
     onBlur?: () => void;
     autoFocus?: boolean;
+    dataAutoFocus?: boolean;
     className?: string;
     placeholder?: string;
   }
 >(
   (
-    { value, onChange, onBlur, autoFocus, className, placeholder },
+    {
+      value,
+      onChange,
+      onBlur,
+      autoFocus,
+      dataAutoFocus,
+      className,
+      placeholder,
+    },
     forwardedRef,
   ) => {
     const internalRef = useRef<HTMLTextAreaElement>(null);
@@ -49,6 +58,11 @@ export const AutoSizeTextarea = forwardRef<
     }>({ visible: false, top: 0, left: 0 });
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingChangeRef = useRef<string | null>(null);
+    const onChangeRef = useRef(onChange);
+
+    useEffect(() => {
+      onChangeRef.current = onChange;
+    }, [onChange]);
 
     // Sync external value initially, or when it changes outside
     useEffect(() => {
@@ -72,6 +86,11 @@ export const AutoSizeTextarea = forwardRef<
       return () => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        if (pendingChangeRef.current !== null) {
+          onChangeRef.current(pendingChangeRef.current);
+          pendingChangeRef.current = null;
         }
       };
     }, []);
@@ -235,6 +254,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => wrapSelection("**")}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Bold"
+              aria-label="Bold"
             >
               <Bold size={14} />
             </button>
@@ -243,6 +263,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => wrapSelection("*")}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Italic"
+              aria-label="Italic"
             >
               <Italic size={14} />
             </button>
@@ -251,6 +272,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => wrapSelection("~~")}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Strikethrough"
+              aria-label="Strikethrough"
             >
               <Strikethrough size={14} />
             </button>
@@ -259,6 +281,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={addLink}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Link"
+              aria-label="Link"
             >
               <Link size={14} />
             </button>
@@ -268,6 +291,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => setHeading(1)}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Heading 1"
+              aria-label="Heading 1"
             >
               <Heading1 size={14} />
             </button>
@@ -276,6 +300,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => setHeading(2)}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Heading 2"
+              aria-label="Heading 2"
             >
               <Heading2 size={14} />
             </button>
@@ -284,6 +309,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => setHeading(3)}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Heading 3"
+              aria-label="Heading 3"
             >
               <Heading3 size={14} />
             </button>
@@ -292,6 +318,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={() => setHeading(4)}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="Heading 4"
+              aria-label="Heading 4"
             >
               <Heading4 size={14} />
             </button>
@@ -300,6 +327,7 @@ export const AutoSizeTextarea = forwardRef<
               onClick={toggleList}
               className="rounded p-1.5 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               title="List"
+              aria-label="List"
             >
               <List size={14} />
             </button>
@@ -314,6 +342,7 @@ export const AutoSizeTextarea = forwardRef<
           onKeyUp={updateToolbarPosition}
           onSelect={updateToolbarPosition}
           autoFocus={autoFocus}
+          data-autofocus={dataAutoFocus || undefined}
           placeholder={placeholder || "Type something... (Markdown supported)"}
           className={
             className ||

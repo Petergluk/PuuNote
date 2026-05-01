@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { INITIAL_NODES, TUTORIAL_DOCUMENT_TITLE } from "../constants";
 import { useAppStore } from "../store/useAppStore";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface TutorialModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function TutorialModal({
   switchFile,
 }: TutorialModalProps) {
   const { t } = useTranslation();
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -27,10 +29,17 @@ export function TutorialModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tutorial-modal-title"
+        tabIndex={-1}
         className="bg-app-panel border border-app-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 gap-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-serif">{t("Tutorial Exists Title")}</h3>
+        <h3 id="tutorial-modal-title" className="text-lg font-serif">
+          {t("Tutorial Exists Title")}
+        </h3>
         <p className="text-sm text-app-text-muted">
           {t("Tutorial Exists Msg")}
         </p>

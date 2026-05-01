@@ -1,16 +1,7 @@
 import { useMemo, useEffect, useRef } from "react";
 import { PuuNode } from "../types";
 
-import { buildTreeIndex, TreeIndex } from "../utils/tree";
-
-const orderedChildren = (
-  treeIndex: TreeIndex,
-  parentId: string | null,
-): PuuNode[] => {
-  return [...(treeIndex.childrenMap.get(parentId) || [])].sort(
-    (a, b) => (a.order || 0) - (b.order || 0),
-  );
-};
+import { buildTreeIndex, TreeIndex, orderedChildrenFromIndex } from "../utils/tree";
 
 export function buildBoardColumns(
   treeIndex: TreeIndex,
@@ -21,7 +12,7 @@ export function buildBoardColumns(
   const cols: PuuNode[][] = [];
 
   if (useActiveCorridor) {
-    const roots = orderedChildren(treeIndex, null);
+    const roots = orderedChildrenFromIndex(treeIndex, null);
     cols.push(roots);
     if (roots.length === 0) {
       return cols;
@@ -32,7 +23,7 @@ export function buildBoardColumns(
       while (currentLevel.length > 0) {
         const nextLevel: PuuNode[] = [];
         for (const parent of currentLevel) {
-          nextLevel.push(...orderedChildren(treeIndex, parent.id));
+          nextLevel.push(...orderedChildrenFromIndex(treeIndex, parent.id));
         }
         if (nextLevel.length > 0) cols.push(nextLevel);
         currentLevel = nextLevel;
@@ -41,15 +32,15 @@ export function buildBoardColumns(
     }
 
     for (const pathId of activePath) {
-      const children = orderedChildren(treeIndex, pathId);
+      const children = orderedChildrenFromIndex(treeIndex, pathId);
       if (children.length > 0) cols.push(children);
     }
 
-    let currentLevel = orderedChildren(treeIndex, activeId);
+    let currentLevel = orderedChildrenFromIndex(treeIndex, activeId);
     while (currentLevel.length > 0) {
       const nextLevel: PuuNode[] = [];
       for (const parent of currentLevel) {
-        nextLevel.push(...orderedChildren(treeIndex, parent.id));
+        nextLevel.push(...orderedChildrenFromIndex(treeIndex, parent.id));
       }
       if (nextLevel.length > 0) cols.push(nextLevel);
       currentLevel = nextLevel;
@@ -58,7 +49,7 @@ export function buildBoardColumns(
     return cols;
   }
 
-  let currentLevel = orderedChildren(treeIndex, null);
+  let currentLevel = orderedChildrenFromIndex(treeIndex, null);
   if (currentLevel.length === 0) {
     cols.push([]);
     return cols;
@@ -68,7 +59,7 @@ export function buildBoardColumns(
     cols.push(currentLevel);
     const nextLevel: PuuNode[] = [];
     for (const parent of currentLevel) {
-      nextLevel.push(...orderedChildren(treeIndex, parent.id));
+      nextLevel.push(...orderedChildrenFromIndex(treeIndex, parent.id));
     }
     currentLevel = nextLevel;
   }
@@ -85,8 +76,19 @@ export function useColumns(
 ) {
   const columns = useMemo(() => {
     const index = treeIndex || buildTreeIndex(nodes);
-    return buildBoardColumns(index, activePath, activeId, useActiveCorridor);
-  }, [activeId, activePath, nodes, treeIndex, useActiveCorridor]);
+    return buildBoardColumns(
+      index,
+      activePath,
+      activeId,
+      useActiveCorridor,
+    );
+  }, [
+    activeId,
+    activePath,
+    nodes,
+    treeIndex,
+    useActiveCorridor,
+  ]);
 
   return columns;
 }
@@ -95,7 +97,7 @@ export function useActivePathScroll(
   activeFileId: string | null,
   activeId: string | null,
   activeAncestorPath: string[],
-  activeDescendantIds: Set<string>,
+
   timelineOpen: boolean,
   columnsLength: number,
 ) {
@@ -139,78 +141,99 @@ export function useActivePathScroll(
 
   // Align active path by top edge.
   useEffect(() => {
-    let r2: number;
-    const r1 = requestAnimationFrame(() => {
-      r2 = requestAnimationFrame(() => {
-        if (!activeId) return;
-        if (timelineOpen) return;
-        const activeEl = document.getElementById(`card-${activeId}`);
-        if (!activeEl) return;
-        const activeRect = activeEl.getBoundingClientRect();
+    if (timelineOpen || !activeId) return;
 
-        const activeAncestorIds = new Set(activeAncestorPath);
-        const isInActiveBranch = (id: string) => {
-          return (
-            id === activeId ||
-            activeAncestorIds.has(id) ||
-            activeDescendantIds.has(id)
-          );
-        };
+    let rafId: number;
+    const updateScroll = () => {
+      // Find the deepest column that has an active card
+      let targetColIndex = -1;
+      let targetCardId: string | null = null;
 
-        colRefs.current.forEach((col) => {
-          if (!col) return;
-
-          let activeNodeInCol: HTMLElement | null = null;
-          const cards = Array.from(
-            col.querySelectorAll<HTMLElement>('[id^="card-"]'),
-          );
-          for (const card of cards) {
-            const id = card.id.replace(/^card-/, "");
-            if (isInActiveBranch(id)) {
-              activeNodeInCol = card;
-              break;
-            }
-          }
-
-          if (activeNodeInCol) {
-            const elRect = activeNodeInCol.getBoundingClientRect();
-            const colRect = col.getBoundingClientRect();
-
-            let desiredTop = activeRect.top;
-            const minTop = colRect.top + 64;
-            const maxTop = Math.max(
-              minTop,
-              colRect.bottom - 16 - elRect.height,
+      // 1. Try to find activeId in the visible DOM
+      const activeCard = document.getElementById(`card-${activeId}`);
+      if (activeCard) {
+        // Find which column this card belongs to by checking its parent
+        const colContainer = activeCard.closest(".column-container");
+        if (colContainer) {
+          const indexStr = colContainer.getAttribute("data-col-index");
+          if (indexStr) {
+            targetColIndex = parseInt(indexStr, 10);
+            targetCardId = activeId;
+          } else {
+            // Fallback: search through colRefs
+            targetColIndex = colRefs.current.findIndex((col) =>
+              col?.contains(activeCard),
             );
-            if (desiredTop < minTop) {
-              desiredTop = minTop;
-            } else if (desiredTop > maxTop) {
-              desiredTop = maxTop;
-            }
-
-            const targetDiff = elRect.top - desiredTop;
-
-            let maxScrollTop = col.scrollHeight - col.clientHeight;
-            if (maxScrollTop < 0) maxScrollTop = 0;
-
-            const targetScrollTop = col.scrollTop + targetDiff;
-            const clampedScrollTop = Math.max(
-              0,
-              Math.min(maxScrollTop, targetScrollTop),
-            );
-
-            if (Math.abs(clampedScrollTop - col.scrollTop) > 2) {
-              col.scrollTop = clampedScrollTop;
-            }
+            if (targetColIndex !== -1) targetCardId = activeId;
           }
-        });
-      });
-    });
-    return () => {
-      cancelAnimationFrame(r1);
-      cancelAnimationFrame(r2);
+        }
+      }
+
+      // 2. If activeId not found, look for deepest ancestor
+      if (targetColIndex === -1 && activeAncestorPath.length > 0) {
+        // Iterate backwards from the deepest ancestor
+        for (let i = activeAncestorPath.length - 1; i >= 0; i--) {
+          const ancestorId = activeAncestorPath[i];
+          const ancestorCard = document.getElementById(`card-${ancestorId}`);
+          if (ancestorCard) {
+            const colContainer = ancestorCard.closest(".column-container");
+            if (colContainer) {
+              const indexStr = colContainer.getAttribute("data-col-index");
+              if (indexStr) {
+                targetColIndex = parseInt(indexStr, 10);
+                targetCardId = ancestorId;
+              } else {
+                targetColIndex = colRefs.current.findIndex((col) =>
+                  col?.contains(ancestorCard),
+                );
+                if (targetColIndex !== -1) targetCardId = ancestorId;
+              }
+            }
+            if (targetColIndex !== -1) break;
+          }
+        }
+      }
+
+      // 3. Scroll the target column to the target card
+      if (targetColIndex !== -1 && targetCardId) {
+        const colEl = colRefs.current[targetColIndex];
+        const cardEl = document.getElementById(`card-${targetCardId}`);
+
+        if (colEl && cardEl) {
+          const cardTop = cardEl.offsetTop;
+          const cardHeight = cardEl.offsetHeight;
+          const colHeight = colEl.offsetHeight;
+
+          // Ideal scroll position: card is vertically centered
+          let targetScrollTop = cardTop - colHeight / 2 + cardHeight / 2;
+
+          // Prevent scrolling past the top or bottom
+          targetScrollTop = Math.max(0, targetScrollTop);
+          targetScrollTop = Math.min(
+            targetScrollTop,
+            colEl.scrollHeight - colHeight,
+          );
+
+          // Smoothly scroll the column
+          colEl.scrollTo({
+            top: targetScrollTop,
+            behavior: "smooth",
+          });
+        }
+      }
     };
-  }, [activeAncestorPath, activeDescendantIds, activeId, timelineOpen]);
 
-  return { colRefs, initializedCols };
+    // Double requestAnimationFrame ensures layout is calculated
+    rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(updateScroll);
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [activeId, activeAncestorPath, timelineOpen]);
+
+  const setColRef = (index: number, el: HTMLDivElement | null) => {
+    colRefs.current[index] = el;
+  };
+
+  return { setColRef, initializedCols };
 }

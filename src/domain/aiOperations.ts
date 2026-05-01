@@ -1,14 +1,10 @@
 import { toast } from "sonner";
 import { takeDocumentSnapshot } from "../db/snapshots";
-import { PluginRegistry } from "../plugins/registry";
-import { useAppStore } from "../store/useAppStore";
 import type { PuuNode } from "../types";
 import { generateId } from "../utils/id";
 import { JobRunner } from "./jobRunner";
 import {
   AiProviderRegistry,
-  type AiProvider,
-  type AiRunResult,
   type GeneratedNodeDraft,
 } from "./aiProvider";
 
@@ -56,23 +52,15 @@ export function applyGeneratedNodeDrafts(
   };
 }
 
-async function runExpandCardProvider(
-  provider: AiProvider,
-  targetNodeId: string,
-  signal: AbortSignal,
-): Promise<AiRunResult> {
-  const nodes = useAppStore.getState().nodes;
-  return provider.run({
-    operation: AiProviderRegistry.expandCardOperation,
-    nodes,
-    targetNodeId,
-    signal,
-  });
+export interface AiExpandContext {
+  targetNodeId: string | null;
+  getNodes: () => PuuNode[];
+  setNodes: (updater: (prev: PuuNode[]) => PuuNode[]) => void;
+  setActiveIds: (activeId: string, selectedIds: string[]) => void;
 }
 
-export async function runMockExpandSelectedCard() {
-  const state = useAppStore.getState();
-  const targetNodeId = state.activeId;
+export async function runMockExpandSelectedCard(context: AiExpandContext) {
+  const { targetNodeId, getNodes, setNodes, setActiveIds } = context;
   if (!targetNodeId) {
     toast.error("Select a card before running AI draft.");
     return;
@@ -92,16 +80,17 @@ export async function runMockExpandSelectedCard() {
       updateProgress(15, "Preparing context...");
       checkCancelled();
 
-      const result = await runExpandCardProvider(
-        provider,
+      const result = await provider.run({
+        operation: AiProviderRegistry.expandCardOperation,
+        nodes: getNodes(),
         targetNodeId,
         signal,
-      );
+      });
       checkCancelled();
 
       updateProgress(70, "Applying drafts...");
       let createdNodes: PuuNode[] = [];
-      useAppStore.getState().setNodes((prev) => {
+      setNodes((prev) => {
         const applied = applyGeneratedNodeDrafts(
           prev,
           targetNodeId,
@@ -113,12 +102,8 @@ export async function runMockExpandSelectedCard() {
         return applied.nextNodes;
       });
 
-      createdNodes.forEach((node) => PluginRegistry.emitNodeCreated(node));
       if (createdNodes[0]) {
-        useAppStore.setState({
-          activeId: createdNodes[0].id,
-          selectedIds: [createdNodes[0].id],
-        });
+        setActiveIds(createdNodes[0].id, [createdNodes[0].id]);
       }
 
       updateProgress(

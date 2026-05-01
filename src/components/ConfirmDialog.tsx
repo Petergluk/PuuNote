@@ -2,12 +2,17 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from "../store/useAppStore";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export const ConfirmDialog: React.FC = () => {
   const { t } = useTranslation();
   const confirmDialog = useAppStore((s) => s.confirmDialog);
   const closeConfirm = useAppStore((s) => s.closeConfirm);
   const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useFocusTrap<HTMLDivElement>(
+    confirmDialog.isOpen,
+    closeConfirm,
+  );
 
   if (!confirmDialog.isOpen) return null;
 
@@ -15,6 +20,12 @@ export const ConfirmDialog: React.FC = () => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <motion.div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-message"
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -22,10 +33,16 @@ export const ConfirmDialog: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-app-text-primary mb-2">
+            <h3
+              id="confirm-dialog-title"
+              className="text-lg font-medium text-app-text-primary mb-2"
+            >
               {t("Please confirm")}
             </h3>
-            <p className="text-sm text-app-text-secondary">
+            <p
+              id="confirm-dialog-message"
+              className="text-sm text-app-text-secondary"
+            >
               {confirmDialog.message}
             </p>
           </div>

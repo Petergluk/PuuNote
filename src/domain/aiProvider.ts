@@ -113,4 +113,8 @@ export const AiProviderRegistry = {
   register(provider: AiProvider) {
     providers.set(provider.id, provider);
   },
+
+  unregister(providerId: string) {
+    providers.delete(providerId);
+  },
 };

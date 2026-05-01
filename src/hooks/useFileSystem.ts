@@ -4,15 +4,40 @@ import { generateId } from "../utils/id";
 import { INITIAL_NODES } from "../constants";
 import { toast } from "sonner";
 import { DocumentService, normalizeNodes } from "../domain/documentService";
-import type { PuuDocument, PuuDocumentMetadata } from "../types";
+import type { PuuDocument, PuuNode, PuuDocumentMetadata } from "../types";
 
-const pendingSave: {
-  timer: ReturnType<typeof setTimeout> | null;
-  fileId: string;
-  nodes: typeof INITIAL_NODES;
-} = { timer: null, fileId: "", nodes: [] };
+class FileSystemManager {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  public fileId: string = "";
+  public nodes: PuuNode[] = [];
+  public isHydratingFile = false;
+  public switchController: AbortController | null = null;
 
-let isHydratingFile = false;
+  public scheduleSave(fileId: string, nodes: PuuNode[], onSave: () => void) {
+    if (this.timer) clearTimeout(this.timer);
+    this.fileId = fileId;
+    this.nodes = nodes;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      onSave();
+    }, 1000);
+  }
+
+  public clearTimer() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
+  public hasTimer() {
+    return this.timer !== null;
+  }
+}
+
+export const fsManager = new FileSystemManager();
+
+import { isQuotaError } from "../utils/storage";
 
 const cleanTitle = (value: string) => {
   const stripped = value
@@ -64,25 +89,22 @@ const updateDocumentTitleInStore = (
 };
 
 export const flushPendingSave = async () => {
-  if (pendingSave.timer) {
-    clearTimeout(pendingSave.timer);
-    pendingSave.timer = null;
-    const { fileId, nodes } = pendingSave;
+  if (fsManager.hasTimer()) {
+    fsManager.clearTimer();
+    const { fileId, nodes } = fsManager;
     if (fileId && nodes.length > 0) {
+      useAppStore.setState({ saveStatus: "saving" });
       try {
         DocumentService.storeActiveFileId(fileId);
+        await DocumentService.saveNodes(fileId, nodes);
+        useAppStore.setState({ saveStatus: "saved" });
       } catch (err) {
-        console.error("Failed to store active file", err);
-      }
-      await DocumentService.saveNodes(fileId, nodes).catch((err) => {
         console.error("Failed to save data into dexie", err);
-        if (
-          err?.name === "QuotaExceededError" ||
-          err?.message?.includes("Quota")
-        ) {
+        useAppStore.setState({ saveStatus: "error" });
+        if (isQuotaError(err)) {
           toast.error("Storage space is full. Could not save your notes.");
         }
-      });
+      }
     }
   }
 };
@@ -91,14 +113,18 @@ export function useFileSystemInit() {
   const setNodesRaw = useAppStore((s) => s.setNodesRaw);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function init() {
       let savedDocs: PuuDocument[] = [];
       try {
         await DocumentService.migrateLegacyLocalStorage();
+        if (cancelled) return;
         savedDocs = await DocumentService.listDocuments();
       } catch (err) {
         console.error("Failed to init documents from db", err);
       }
+      if (cancelled) return;
 
       if (savedDocs.length === 0) {
         savedDocs = [
@@ -142,22 +168,29 @@ export function useFileSystemInit() {
       let newNodes = INITIAL_NODES;
       try {
         await DocumentService.restoreDirtySave();
+        if (cancelled) return;
 
         const savedNodes = await DocumentService.loadNodes(active);
         if (savedNodes && savedNodes.length > 0) newNodes = savedNodes;
       } catch (err) {
         console.error("Failed to load active file nodes", err);
       }
+      if (cancelled) return;
 
-      isHydratingFile = true;
+      fsManager.isHydratingFile = true;
       setNodesRaw(newNodes);
       useAppStore.setState({
         activeId: newNodes[0]?.id || null,
+        saveStatus: "saved",
       });
-      isHydratingFile = false;
+      fsManager.isHydratingFile = false;
       if (active) updateDocumentTitleInStore(active, newNodes);
     }
     init();
+
+    return () => {
+      cancelled = true;
+    };
   }, [setNodesRaw]);
 
   useEffect(() => {
@@ -167,28 +200,36 @@ export function useFileSystemInit() {
         state.nodes !== prevState.nodes ||
         state.activeFileId !== prevState.activeFileId
       ) {
-        if (isHydratingFile) return;
+        if (fsManager.isHydratingFile) return;
 
         const { activeFileId, nodes } = state;
         if (!activeFileId || nodes.length === 0) return;
+        useAppStore.setState({ saveStatus: "unsaved" });
 
         // Save active file changes tracking
-        if (pendingSave.timer) clearTimeout(pendingSave.timer);
-
-        pendingSave.fileId = activeFileId;
-        pendingSave.nodes = nodes;
-
-        pendingSave.timer = setTimeout(() => {
-          pendingSave.timer = null;
+        fsManager.scheduleSave(activeFileId, nodes, () => {
+          useAppStore.setState({ saveStatus: "saving" });
           try {
             DocumentService.storeActiveFileId(activeFileId);
           } catch (err) {
             console.error("Failed to update active file in ls", err);
           }
-          DocumentService.saveNodes(activeFileId, nodes).catch((err) => {
-            console.error("Failed to save data into dexie", err);
-          });
-        }, 1000);
+          DocumentService.saveNodes(activeFileId, nodes)
+            .then(() => {
+              useAppStore.setState({ saveStatus: "saved" });
+            })
+            .catch((err) => {
+              console.error("Failed to save data into dexie", err);
+              useAppStore.setState({ saveStatus: "error" });
+              if (isQuotaError(err)) {
+                toast.error(
+                  "Storage space is full. Could not save your notes.",
+                );
+              } else {
+                toast.error("Failed to save your notes.");
+              }
+            });
+      });
 
         // Update document title if needed
         const newTitle = deriveDocumentTitle(nodes);
@@ -215,6 +256,8 @@ export function useFileSystemInit() {
         if (state.documents.length > 0) {
           DocumentService.saveDocuments(state.documents).catch((err) => {
             console.error("Failed to save documents metadata", err);
+            useAppStore.setState({ saveStatus: "error" });
+            toast.error("Failed to save document list.");
           });
         }
       }
@@ -222,19 +265,17 @@ export function useFileSystemInit() {
 
     const saveCurrentStateToDirtyBackup = () => {
       const { activeFileId, nodes } = useAppStore.getState();
-      const fileId = activeFileId || pendingSave.fileId;
-      const nodesToSave = nodes.length > 0 ? nodes : pendingSave.nodes;
+      const fileId = activeFileId || fsManager.fileId;
+      const nodesToSave = nodes.length > 0 ? nodes : fsManager.nodes;
       if (!fileId || nodesToSave.length === 0) return;
 
-      if (pendingSave.timer) {
-        clearTimeout(pendingSave.timer);
-        pendingSave.timer = null;
-      }
+      fsManager.clearTimer();
 
       try {
         DocumentService.saveDirtyNodes(fileId, nodesToSave);
       } catch (e) {
         console.error("Failed to stringify dirty save", e);
+        useAppStore.setState({ saveStatus: "error" });
       }
     };
 
@@ -266,7 +307,12 @@ export function useFileSystemActions() {
       return;
     }
 
+    fsManager.switchController?.abort();
+    fsManager.switchController = new AbortController();
+    const signal = fsManager.switchController.signal;
+
     await flushPendingSave();
+    if (signal.aborted) return;
 
     let newNodes = INITIAL_NODES;
     let didFail = false;
@@ -281,6 +327,8 @@ export function useFileSystemActions() {
       didFail = true;
     }
 
+    if (signal.aborted) return;
+
     if (didFail && fileId !== "default") {
       useAppStore
         .getState()
@@ -291,7 +339,7 @@ export function useFileSystemActions() {
       return;
     }
 
-    isHydratingFile = true;
+    fsManager.isHydratingFile = true;
     useAppStore.getState().setNodesRaw(newNodes);
     useAppStore.setState({
       activeFileId: fileId,
@@ -299,8 +347,9 @@ export function useFileSystemActions() {
       activeId: newNodes[0]?.id || null,
       selectedIds: newNodes[0] ? [newNodes[0].id] : [],
       editingId: null,
+      saveStatus: "saved",
     });
-    isHydratingFile = false;
+    fsManager.isHydratingFile = false;
     try {
       DocumentService.storeActiveFileId(fileId);
     } catch (err) {
@@ -348,7 +397,7 @@ export function useFileSystemActions() {
 
     if (!newDoc) return;
 
-    isHydratingFile = true;
+    fsManager.isHydratingFile = true;
     useAppStore.getState().setNodesRaw(normalizedNodes);
     useAppStore.setState((s) => ({
       documents: [newDoc, ...s.documents],
@@ -357,8 +406,9 @@ export function useFileSystemActions() {
       activeId: normalizedNodes[0]?.id || null,
       selectedIds: normalizedNodes[0] ? [normalizedNodes[0].id] : [],
       editingId: null,
+      saveStatus: "saved",
     }));
-    isHydratingFile = false;
+    fsManager.isHydratingFile = false;
     try {
       DocumentService.storeActiveFileId(newDoc.id);
     } catch (err) {
@@ -370,8 +420,7 @@ export function useFileSystemActions() {
     // If the file we are deleting is the currently active file, cancel any pending saves
     const state = useAppStore.getState();
     if (state.activeFileId === fileId) {
-      if (pendingSave.timer) clearTimeout(pendingSave.timer);
-      pendingSave.timer = null;
+      fsManager.clearTimer();
     } else {
       await flushPendingSave();
     }
@@ -388,11 +437,15 @@ export function useFileSystemActions() {
 
     if (newDocs.length === 0) {
       await createNewFile();
+      // createNewFile already functional-updates the state with the new doc.
+      // Now remove the deleted file functionally so we don't overwrite the new doc.
       useAppStore.setState((s) => ({
         documents: s.documents.filter((d) => d.id !== fileId),
       }));
     } else {
-      useAppStore.setState({ documents: newDocs });
+      useAppStore.setState((s) => ({
+        documents: s.documents.filter((d) => d.id !== fileId),
+      }));
       if (state.activeFileId === fileId) {
         await switchFile(newDocs[0].id);
       }

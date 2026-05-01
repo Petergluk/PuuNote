@@ -2,18 +2,15 @@ import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
 
 export type InactiveBranchesMode = "dim" | "hide";
-export type FocusModeScope = "single" | "branchLevel" | "column";
-export type EditorMode = "markdown" | "visual";
 export type PasteSplitMode = "separator" | "paragraph";
 export type EditorEnterMode = "enterNewline" | "enterCard";
+export type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 
 export interface UiSlice {
   fileMenuOpen: boolean;
   theme: string;
   cardsCollapsed: boolean;
   inactiveBranchesMode: InactiveBranchesMode;
-  focusModeScope: FocusModeScope;
-  editorMode: EditorMode;
   editorEnterMode: EditorEnterMode;
   pasteSplitMode: PasteSplitMode;
   settingsOpen: boolean;
@@ -21,6 +18,7 @@ export interface UiSlice {
   colWidth: number;
   commandPaletteOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
+  saveStatus: SaveStatus;
   confirmDialog: {
     isOpen: boolean;
     message: string;
@@ -33,14 +31,13 @@ export interface UiSlice {
   setCardsCollapsed: (collapsed: boolean) => void;
   toggleCardsCollapsed: () => void;
   setInactiveBranchesMode: (mode: InactiveBranchesMode) => void;
-  setFocusModeScope: (scope: FocusModeScope) => void;
-  setEditorMode: (mode: EditorMode) => void;
   setEditorEnterMode: (mode: EditorEnterMode) => void;
   setPasteSplitMode: (mode: PasteSplitMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
   setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
+  setSaveStatus: (status: SaveStatus) => void;
   setFileMenuOpen: (open: boolean) => void;
   setFloatingActionsVisible: (visible: boolean) => void;
   openConfirm: (message: string, onConfirm: () => void | Promise<void>) => void;
@@ -81,6 +78,7 @@ export interface DocumentSlice {
   addChild: (parentId: string | null) => void;
   addSibling: (siblingId: string | null) => void;
   deleteNode: (id: string) => void;
+  deleteNodesPromoteChildren: (ids: string[]) => void;
   splitNode: (id: string, textBefore: string, textAfter: string) => void;
   mergeNodes: (masterId: string, nodeIdsToMerge: string[]) => void;
   moveNode: (

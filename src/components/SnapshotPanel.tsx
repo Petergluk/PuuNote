@@ -8,6 +8,7 @@ import {
 } from "../db/snapshots";
 import { DocumentSnapshot } from "../db/db";
 import { useAppStore } from "../store/useAppStore";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface SnapshotPanelProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [newSnapshotName, setNewSnapshotName] = useState("Manual snapshot");
+  const panelRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   // H1 fix: use a ref so async callbacks always read the latest fileId
   const activeFileIdRef = useRef(activeFileId);
@@ -92,11 +94,19 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
       onClick={onClose}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="snapshots-panel-title"
+        tabIndex={-1}
         className="absolute bottom-12 right-4 w-[min(420px,calc(100vw-2rem))] rounded border border-app-border bg-app-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-app-border px-4 py-3">
-          <span className="text-sm font-semibold text-app-text-primary">
+          <span
+            id="snapshots-panel-title"
+            className="text-sm font-semibold text-app-text-primary"
+          >
             Snapshots
           </span>
           <button
@@ -115,6 +125,7 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
             value={newSnapshotName}
             onChange={(e) => setNewSnapshotName(e.target.value)}
             placeholder="Snapshot name…"
+            data-autofocus
             className="flex-1 rounded border border-app-border bg-app-card px-2 py-1 text-xs text-app-text-primary placeholder:text-app-text-muted focus:outline-none focus:ring-1 focus:ring-app-accent"
             aria-label="Snapshot name"
           />

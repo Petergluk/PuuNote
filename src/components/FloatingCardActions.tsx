@@ -149,7 +149,13 @@ export function FloatingCardActions() {
       updateCardRect();
       showActions();
     };
-    const handleCardLeave = () => hideActionsSoon();
+    // When shown via keyboard (Space), don't auto-hide on mouse leave —
+    // the user pinned it intentionally. Only hide via Space toggle or activeId change.
+    const handleCardLeave = () => {
+      if (!useAppStore.getState().floatingActionsVisible) {
+        hideActionsSoon();
+      }
+    };
 
     activeCard.addEventListener("mouseenter", handleCardEnter);
     activeCard.addEventListener("mouseleave", handleCardLeave);
@@ -249,6 +255,7 @@ export function FloatingCardActions() {
               transform: "translate(-50%, -50%)",
             }}
             title="Add Sibling (Shift+Enter)"
+            aria-label="Add sibling card"
             onClick={(event) => {
               event.stopPropagation();
               addSibling(activeId);
@@ -266,6 +273,7 @@ export function FloatingCardActions() {
               transform: "translate(-50%, -50%)",
             }}
             title="Add Child (Tab)"
+            aria-label="Add child card"
             onClick={(event) => {
               event.stopPropagation();
               addChild(activeId);
@@ -283,6 +291,7 @@ export function FloatingCardActions() {
               transform: "translate(-50%, -50%)",
             }}
             title="Delete"
+            aria-label="Delete card"
             onClick={(event) => {
               event.stopPropagation();
               const state = useAppStore.getState();
@@ -313,6 +322,7 @@ export function FloatingCardActions() {
                 transform: "translate(-50%, -50%)",
               }}
               title="Merge Selected"
+              aria-label="Merge selected cards"
               onClick={(event) => {
                 event.stopPropagation();
                 const count = mergeValidation.orderedIds.length;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Keyboard } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [os, setOs] = useState<"mac" | "win">("mac");
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -35,6 +37,11 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
         onClick={onClose}
       >
         <motion.div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="shortcuts-modal-title"
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -44,13 +51,17 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card p-1.5 rounded-full hover:bg-app-card-hover"
+            aria-label="Close shortcuts"
           >
             <X size={16} />
           </button>
 
           <div className="flex items-center gap-3 mb-4">
             <Keyboard className="text-app-accent" size={20} />
-            <h2 className="text-lg font-medium text-app-text-primary tracking-tight">
+            <h2
+              id="shortcuts-modal-title"
+              className="text-lg font-medium text-app-text-primary tracking-tight"
+            >
               {t("Shortcuts")}
             </h2>
           </div>
@@ -58,12 +69,14 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
           <div className="flex bg-app-card p-1 rounded-lg border border-app-border mb-4">
             <button
               onClick={() => setOs("mac")}
+              aria-pressed={isMac}
               className={`flex-1 py-1 text-sm rounded-md transition-colors ${isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
             >
               Mac
             </button>
             <button
               onClick={() => setOs("win")}
+              aria-pressed={!isMac}
               className={`flex-1 py-1 text-sm rounded-md transition-colors ${!isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
             >
               Windows

@@ -5,7 +5,7 @@ import {
   parseMarkdownToNodes,
 } from "../utils/markdownParser";
 import { PuuNodeSchema } from "../utils/schema";
-import { normalizeNodes } from "./documentService";
+import { normalizeNodes, normalizeNodesWithReport } from "./documentService";
 
 export const PUUNOTE_JSON_FORMAT = "puunote.document";
 export const PUUNOTE_JSON_SCHEMA_VERSION = 1;
@@ -110,9 +110,11 @@ export function parseJsonExport(raw: string): ParsedImport {
     }
   }
 
-  const nodes = normalizeNodes(validNodes);
+  const { nodes, report } = normalizeNodesWithReport(validNodes);
   if (nodes.length === 0) {
-    throw new Error("PuuNote JSON export does not contain valid nodes.");
+    throw new Error(
+      report.errors[0] || "PuuNote JSON export does not contain valid nodes.",
+    );
   }
 
   return {
@@ -127,9 +129,11 @@ export function parseImportFile(filename: string, raw: string): ParsedImport {
     return parseJsonExport(raw);
   }
 
-  const nodes = normalizeNodes(parseMarkdownToNodes(raw));
+  const { nodes, report } = normalizeNodesWithReport(parseMarkdownToNodes(raw));
   if (nodes.length === 0) {
-    throw new Error("Markdown import does not contain valid nodes.");
+    throw new Error(
+      report.errors[0] || "Markdown import does not contain valid nodes.",
+    );
   }
 
   return {

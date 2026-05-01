@@ -5,12 +5,25 @@ import {
   createDocumentFilename,
 } from "../../domain/documentExport";
 import { canMergeNodes, documentApi } from "../../domain/documentTree";
-import { PluginRegistry } from "../../plugins/registry";
 import { downloadTextFile } from "../../services/browserDownload";
-import type { PuuNode } from "../../types";
 import type { AppSlice, DocumentSlice } from "../appStoreTypes";
+import { toast } from "sonner";
+import { PuuNode } from "../../types";
 
-export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
+export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
+  const applyAndCapture = <T>(
+    operation: (prev: PuuNode[]) => { nextNodes: PuuNode[]; capture: T },
+  ): T => {
+    let captured: T | undefined;
+    get().setNodes((prev) => {
+      const { nextNodes, capture } = operation(prev);
+      captured = capture;
+      return nextNodes;
+    });
+    return captured as T;
+  };
+
+  return {
   documents: [],
   activeFileId: null,
 
@@ -25,6 +38,7 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
       );
     } catch (err) {
       console.error("Failed to export markdown", err);
+      toast.error("Failed to export Markdown.");
     }
   },
 
@@ -39,6 +53,7 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
       );
     } catch (err) {
       console.error("Failed to export structured markdown", err);
+      toast.error("Failed to export structured Markdown.");
     }
   },
 
@@ -53,158 +68,116 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => ({
       );
     } catch (err) {
       console.error("Failed to export JSON", err);
+      toast.error("Failed to export JSON.");
     }
   },
 
   updateContent: (id, content) => {
-    let updatedNode: PuuNode | undefined;
-    get().setNodes((prev) => {
-      const next = documentApi.updateContent(prev, id, content);
-      if (next !== prev) updatedNode = next.find((node) => node.id === id);
-      return next;
-    });
-    if (updatedNode) PluginRegistry.emitNodeUpdated(updatedNode);
+    get().setNodes((prev) => documentApi.updateContent(prev, id, content));
   },
 
   addChild: (parentId) => {
-    let newIdValue: string | null = null;
-    get().setNodes((prev) => {
+    const newId = applyAndCapture((prev) => {
       const { nextNodes, newId } = documentApi.addChild(prev, parentId);
-      newIdValue = newId;
-      return nextNodes;
+      return { nextNodes, capture: newId };
     });
-    if (newIdValue) {
+    if (newId) {
       set({
-        activeId: newIdValue,
-        selectedIds: [newIdValue],
-        editingId: newIdValue,
+        activeId: newId,
+        selectedIds: [newId],
+        editingId: newId,
       });
-      const createdNode = get().nodes.find((node) => node.id === newIdValue);
-      if (createdNode) PluginRegistry.emitNodeCreated(createdNode);
     }
   },
 
   addSibling: (targetId) => {
-    let newIdValue: string | null = null;
-    get().setNodes((prev) => {
+    const newId = applyAndCapture((prev) => {
       const { nextNodes, newId } = documentApi.addSibling(prev, targetId);
-      newIdValue = newId;
-      return nextNodes;
+      return { nextNodes, capture: newId };
     });
-    if (newIdValue) {
+    if (newId) {
       set({
-        activeId: newIdValue,
-        selectedIds: [newIdValue],
-        editingId: newIdValue,
+        activeId: newId,
+        selectedIds: [newId],
+        editingId: newId,
       });
-      const createdNode = get().nodes.find((node) => node.id === newIdValue);
-      if (createdNode) PluginRegistry.emitNodeCreated(createdNode);
     }
   },
 
   deleteNode: (id) => {
-    let parentFallbackValue: string | null = null;
-    let removedIds: string[] = [];
-    get().setNodes((prev) => {
+    const parentFallback = applyAndCapture((prev) => {
       const { nextNodes, parentFallback } = documentApi.deleteNode(prev, id);
-      parentFallbackValue = parentFallback;
-      const nextIds = new Set(nextNodes.map((node) => node.id));
-      removedIds = prev
-        .filter((node) => !nextIds.has(node.id))
-        .map((node) => node.id);
-      return nextNodes;
+      return { nextNodes, capture: parentFallback };
     });
     const activeId = get().activeId;
-    if (activeId === id) set({ activeId: parentFallbackValue });
-    removedIds.forEach((removedId) =>
-      PluginRegistry.emitNodeDeleted(removedId),
-    );
+    if (activeId === id) set({ activeId: parentFallback });
+  },
+
+  deleteNodesPromoteChildren: (ids) => {
+    const uniqueIds = Array.from(new Set(ids));
+    if (uniqueIds.length === 0) return;
+
+    const parentFallback = applyAndCapture((prev) => {
+      const { nextNodes, parentFallback } = documentApi.deleteNodesPromoteChildren(prev, uniqueIds);
+      return { nextNodes, capture: parentFallback };
+    });
+
+    set({
+      activeId: parentFallback,
+      selectedIds: parentFallback ? [parentFallback] : [],
+      editingId: null,
+    });
   },
 
   splitNode: (id, textBefore, textAfter) => {
-    let newIdValue: string | null = null;
-    let updatedNode: PuuNode | undefined;
-    get().setNodes((prev) => {
+    const newId = applyAndCapture((prev) => {
       const { nextNodes, newId } = documentApi.splitNode(
         prev,
         id,
         textBefore,
         textAfter,
       );
-      newIdValue = newId;
-      updatedNode = nextNodes.find((node) => node.id === id);
-      return nextNodes;
+      return { nextNodes, capture: newId };
     });
-    if (updatedNode) PluginRegistry.emitNodeUpdated(updatedNode);
-    if (newIdValue) {
+    if (newId) {
       set({
-        activeId: newIdValue,
-        selectedIds: [newIdValue],
-        editingId: newIdValue,
+        activeId: newId,
+        selectedIds: [newId],
+        editingId: newId,
       });
-      const createdNode = get().nodes.find((node) => node.id === newIdValue);
-      if (createdNode) PluginRegistry.emitNodeCreated(createdNode);
     }
   },
 
   mergeNodes: (masterId, nodeIdsToMerge) => {
-    let removedIds: string[] = [];
-    let updatedNode: PuuNode | undefined;
     get().setNodes((prev) => {
       const validation = canMergeNodes(prev, masterId, nodeIdsToMerge);
       if (!validation.ok) {
         console.warn(validation.reason || "Selected cards cannot be merged.");
         return prev;
       }
-      const next = documentApi.mergeNodes(prev, masterId, nodeIdsToMerge);
-      const nextIds = new Set(next.map((node) => node.id));
-      removedIds = prev
-        .filter((node) => !nextIds.has(node.id))
-        .map((node) => node.id);
-      updatedNode = next.find((node) => node.id === masterId);
-      return next;
+      return documentApi.mergeNodes(prev, masterId, nodeIdsToMerge);
     });
     set({ activeId: masterId, selectedIds: [masterId], editingId: null });
-    if (updatedNode) PluginRegistry.emitNodeUpdated(updatedNode);
-    removedIds.forEach((removedId) =>
-      PluginRegistry.emitNodeDeleted(removedId),
-    );
   },
 
   moveNode: (sourceId, targetId, position) => {
-    let updatedNode: PuuNode | undefined;
-    get().setNodes((prev) => {
-      const next = documentApi.moveNode(prev, sourceId, targetId, position);
-      if (next !== prev)
-        updatedNode = next.find((node) => node.id === sourceId);
-      return next;
-    });
+    get().setNodes((prev) =>
+      documentApi.moveNode(prev, sourceId, targetId, position),
+    );
     set({ activeId: sourceId, draggedId: null });
-    if (updatedNode) PluginRegistry.emitNodeUpdated(updatedNode);
   },
 
   moveNodes: (sourceIds, targetId, position) => {
-    let updatedNodes: PuuNode[] = [];
     const uniqueSourceIds = Array.from(new Set(sourceIds));
-    get().setNodes((prev) => {
-      const next = documentApi.moveNodes(
-        prev,
-        uniqueSourceIds,
-        targetId,
-        position,
-      );
-      if (next !== prev) {
-        const movedIds = new Set(uniqueSourceIds);
-        updatedNodes = next.filter((node) => movedIds.has(node.id));
-      }
-      return next;
-    });
+    get().setNodes((prev) =>
+      documentApi.moveNodes(prev, uniqueSourceIds, targetId, position),
+    );
     const activeId = uniqueSourceIds[0] || null;
     set({
       activeId,
       selectedIds: uniqueSourceIds,
       draggedId: null,
     });
-    updatedNodes.forEach((node) => PluginRegistry.emitNodeUpdated(node));
   },
-});
+  };
+};

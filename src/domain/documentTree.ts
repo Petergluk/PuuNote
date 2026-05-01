@@ -4,6 +4,7 @@ import {
   buildTreeIndex,
   computeDescendantIdsFromIndex,
   getDepthFirstNodesFromIndex,
+  orderedChildrenFromIndex,
 } from "../utils/tree";
 
 export interface MergeValidationResult {
@@ -16,17 +17,13 @@ const normalizeSiblingOrder = (
   nodes: PuuNode[],
   parentId: string | null,
 ): PuuNode[] => {
-  const siblings = nodes
-    .filter((n) => n.parentId === parentId)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const index = buildTreeIndex(nodes);
+  const siblings = orderedChildrenFromIndex(index, parentId);
   const idToOrder = new Map(siblings.map((s, i) => [s.id, i]));
   return nodes.map((n) =>
     idToOrder.has(n.id) ? { ...n, order: idToOrder.get(n.id)! } : n,
   );
 };
-
-const sortByOrder = (nodes: PuuNode[]) =>
-  [...nodes].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export const canMergeNodes = (
   nodes: PuuNode[],
@@ -94,7 +91,8 @@ export const documentApi = {
     parentId: string | null,
   ): { nextNodes: PuuNode[]; newId: string } => {
     const newId = generateId();
-    const siblings = nodes.filter((n) => n.parentId === parentId);
+    const index = buildTreeIndex(nodes);
+    const siblings = orderedChildrenFromIndex(index, parentId);
     const maxOrder =
       siblings.length > 0 ? Math.max(...siblings.map((n) => n.order || 0)) : -1;
 
@@ -149,6 +147,87 @@ export const documentApi = {
     const parentFallback = index.nodeMap.get(id)?.parentId ?? null;
     const nextNodes = nodes.filter((n) => !idsToRemove.has(n.id));
     return { nextNodes, parentFallback };
+  },
+
+  deleteNodesPromoteChildren: (
+    nodes: PuuNode[],
+    ids: string[],
+  ): { nextNodes: PuuNode[]; parentFallback: string | null } => {
+    const idsToRemove = new Set(ids);
+    if (idsToRemove.size === 0) {
+      return { nextNodes: nodes, parentFallback: null };
+    }
+
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const firstRemoved = ids.find((id) => nodeMap.has(id)) || null;
+    if (!firstRemoved) {
+      return { nextNodes: nodes, parentFallback: null };
+    }
+
+    const nearestKeptParent = (node: PuuNode) => {
+      let parentId = node.parentId;
+      while (parentId && idsToRemove.has(parentId)) {
+        parentId = nodeMap.get(parentId)?.parentId ?? null;
+      }
+      return parentId ?? null;
+    };
+
+    const orderKeyFor = (node: PuuNode, originalIndex: number): number[] => {
+      const pathOrders = [node.order ?? originalIndex];
+      let parentId = node.parentId;
+      while (parentId && idsToRemove.has(parentId)) {
+        const parent = nodeMap.get(parentId);
+        pathOrders.unshift(parent?.order ?? 0);
+        parentId = parent?.parentId ?? null;
+      }
+      return pathOrders;
+    };
+
+    const kept = nodes
+      .map((node, originalIndex) => ({ node, originalIndex }))
+      .filter(({ node }) => !idsToRemove.has(node.id))
+      .map(({ node, originalIndex }) => ({
+        node: {
+          ...node,
+          parentId: nearestKeptParent(node),
+        },
+        orderKey: orderKeyFor(node, originalIndex),
+        originalIndex,
+      }));
+
+    const orderById = new Map<string, number>();
+    const groups = new Map<string, typeof kept>();
+    kept.forEach((entry) => {
+      const key = entry.node.parentId ?? "__root__";
+      groups.set(key, [...(groups.get(key) || []), entry]);
+    });
+
+    groups.forEach((siblings) => {
+      siblings
+        .sort((a, b) => {
+          const len = Math.max(a.orderKey.length, b.orderKey.length);
+          for (let i = 0; i < len; i++) {
+            const valA = a.orderKey[i] ?? -1;
+            const valB = b.orderKey[i] ?? -1;
+            if (valA !== valB) return valA - valB;
+          }
+          return a.originalIndex - b.originalIndex;
+        })
+        .forEach((entry, index) => orderById.set(entry.node.id, index));
+    });
+
+    const firstRemovedNode = nodeMap.get(firstRemoved);
+    const parentFallback = firstRemovedNode
+      ? nearestKeptParent(firstRemovedNode)
+      : null;
+
+    return {
+      nextNodes: kept.map((entry) => ({
+        ...entry.node,
+        order: orderById.get(entry.node.id) ?? entry.node.order ?? 0,
+      })),
+      parentFallback,
+    };
   },
 
   splitNode: (
@@ -207,11 +286,10 @@ export const documentApi = {
     const copy = nodes.map((n) => ({ ...n }));
     const treeIdx = buildTreeIndex(nodes);
     const targetNode = copy.find((n) => n.id === targetId);
-    const movingNodes = sortByOrder(
-      idsToMove
-        .map((sourceId) => copy.find((n) => n.id === sourceId))
-        .filter((node): node is PuuNode => Boolean(node)),
-    );
+    const movingNodes = idsToMove
+      .map((sourceId) => copy.find((n) => n.id === sourceId))
+      .filter((node): node is PuuNode => Boolean(node))
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     if (!targetNode || movingNodes.length !== idsToMove.length) {
       return nodes;
@@ -241,8 +319,9 @@ export const documentApi = {
     let newParentId = targetNode.parentId;
     if (position === "child") {
       newParentId = targetId;
-      const destSiblings = sortByOrder(
-        withoutMoving.filter((n) => n.parentId === newParentId),
+      const destSiblings = orderedChildrenFromIndex(
+        buildTreeIndex(withoutMoving),
+        newParentId,
       );
       let nextOrder =
         destSiblings.length > 0
@@ -255,8 +334,9 @@ export const documentApi = {
       withoutMoving = [...withoutMoving, ...movingNodes];
     } else {
       newParentId = targetNode.parentId;
-      const destSiblings = sortByOrder(
-        withoutMoving.filter((n) => n.parentId === newParentId),
+      const destSiblings = orderedChildrenFromIndex(
+        buildTreeIndex(withoutMoving),
+        newParentId,
       );
       const targetIdx = destSiblings.findIndex((n) => n.id === targetId);
       if (targetIdx === -1) return nodes;
@@ -264,16 +344,20 @@ export const documentApi = {
       movingNodes.forEach((source) => {
         source.parentId = newParentId;
       });
-      destSiblings.splice(
-        position === "before" ? targetIdx : targetIdx + 1,
-        0,
+
+      const insertIdx = position === "before" ? targetIdx : targetIdx + 1;
+      const newSiblings = [
+        ...destSiblings.slice(0, insertIdx),
         ...movingNodes,
-      );
-      destSiblings.forEach((n, i) => {
+        ...destSiblings.slice(insertIdx)
+      ];
+
+      newSiblings.forEach((n, i) => {
         n.order = i;
         const objInCopy = withoutMoving.find((x) => x.id === n.id);
         if (objInCopy) objInCopy.order = i;
       });
+
       withoutMoving = [...withoutMoving, ...movingNodes];
     }
     withoutMoving = normalizeSiblingOrder(withoutMoving, originalParentId);

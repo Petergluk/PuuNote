@@ -1,4 +1,4 @@
-import { useEffect, useCallback, RefObject } from "react";
+import { useEffect, useCallback, RefObject, useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
 import { PuuNode } from "../types";
@@ -19,6 +19,8 @@ import {
   computeDescendantIdsFromIndex,
   getDepthFirstNodesFromIndex,
 } from "../utils/tree";
+
+const CLIPBOARD_CACHE_MAX_AGE_MS = 2 * 60 * 1000;
 
 const cloneNodesForPaste = (
   nodes: PuuNode[],
@@ -61,18 +63,6 @@ const cloneNodesForPaste = (
   return cloned;
 };
 
-const getCopyRootIds = (nodes: PuuNode[], selectedIds: string[]) => {
-  const selected = new Set(selectedIds);
-  return selectedIds.filter((id) => {
-    let parentId = nodes.find((node) => node.id === id)?.parentId || null;
-    while (parentId) {
-      if (selected.has(parentId)) return false;
-      parentId = nodes.find((node) => node.id === parentId)?.parentId || null;
-    }
-    return true;
-  });
-};
-
 const getClipboardNodes = (nodes: PuuNode[], activeId: string | null) => {
   const selectedIds = useAppStore.getState().selectedIds;
   const treeIndex = buildTreeIndex(nodes);
@@ -106,19 +96,55 @@ const getClipboardNodes = (nodes: PuuNode[], activeId: string | null) => {
 const normalizeClipboardText = (value: string) =>
   value.replace(/\r\n?/g, "\n").trim();
 
-let lastCopiedCards: { markdown: string; json: string; html: string } | null =
-  null;
+const hasPuuNoteFormatMarker = (text: string) =>
+  text.trimStart().startsWith(PUUNOTE_FORMAT_MARKER);
 
-const buildClipboardPayload = (nodes: PuuNode[]) => {
+type ClipboardCache = {
+  markdown: string;
+  json: string;
+  html: string;
+  createdAt: number;
+};
+
+const buildClipboardPayload = (
+  nodes: PuuNode[],
+  lastCopiedCardsRef: React.MutableRefObject<ClipboardCache | null>,
+) => {
   const markdown = exportNodesToMarkdown(nodes);
   const json = exportNodesToClipboardJson(nodes);
   const html = exportNodesToClipboardHtml(nodes);
-  lastCopiedCards = { markdown, json, html };
+  
+  // PERF-7: Prevent memory leak for massive copies
+  if (json.length < 1_000_000) {
+    lastCopiedCardsRef.current = { markdown, json, html, createdAt: Date.now() };
+  } else {
+    lastCopiedCardsRef.current = null;
+  }
 
   return { markdown, json, html };
 };
 
+const getCachedClipboardJson = (
+  text: string,
+  lastCopiedCardsRef: React.MutableRefObject<ClipboardCache | null>,
+) => {
+  const lastCopied = lastCopiedCardsRef.current;
+  if (!lastCopied) return "";
+  const isFresh =
+    Date.now() - lastCopied.createdAt < CLIPBOARD_CACHE_MAX_AGE_MS;
+  if (!isFresh) {
+    lastCopiedCardsRef.current = null;
+    return "";
+  }
+  return normalizeClipboardText(lastCopied.markdown) ===
+    normalizeClipboardText(text)
+    ? lastCopied.json
+    : "";
+};
+
 export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
+  const lastCopiedCardsRef = useRef<ClipboardCache | null>(null);
+
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
       const element = target as HTMLElement | null;
@@ -143,7 +169,10 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
       const copiedNodes = getClipboardNodes(state.nodes, state.activeId);
       if (copiedNodes.length === 0) return;
 
-      const { markdown, json, html } = buildClipboardPayload(copiedNodes);
+      const { markdown, json, html } = buildClipboardPayload(
+        copiedNodes,
+        lastCopiedCardsRef,
+      );
       e.preventDefault();
       e.clipboardData?.setData("text/plain", markdown);
       e.clipboardData?.setData("text/html", html);
@@ -155,14 +184,10 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       if (e.type === "cut") {
         const latest = useAppStore.getState();
-        const deleteIds =
-          latest.selectedIds.length > 1
-            ? getCopyRootIds(latest.nodes, latest.selectedIds)
-            : latest.activeId
-              ? [latest.activeId]
-              : [];
-        for (const id of deleteIds) {
-          useAppStore.getState().deleteNode(id);
+        if (latest.selectedIds.length > 1) {
+          latest.deleteNodesPromoteChildren(latest.selectedIds);
+        } else if (latest.activeId) {
+          latest.deleteNode(latest.activeId);
         }
         useAppStore.getState().clearSelection();
       }
@@ -190,10 +215,7 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         const html = e.clipboardData?.getData("text/html") || "";
         const clipboardJson =
           e.clipboardData?.getData(PUUNOTE_CLIPBOARD_MIME) ||
-          (normalizeClipboardText(lastCopiedCards?.markdown || "") ===
-          normalizeClipboardText(text)
-            ? lastCopiedCards?.json || ""
-            : "");
+          getCachedClipboardJson(text, lastCopiedCardsRef);
         if (!text) return;
 
         const target = e.target as HTMLElement;
@@ -211,14 +233,14 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
             : parseClipboardHtmlNodes(html);
         const markdownOutlineNodes =
           clipboardNodes.length === 0 &&
-          !text.includes(PUUNOTE_FORMAT_MARKER) &&
+          !hasPuuNoteFormatMarker(text) &&
           /^#{1,6}\s+/m.test(text)
             ? parseMarkdownToNodes(text)
             : [];
         const importedNodes =
           clipboardNodes.length > 0
             ? clipboardNodes
-            : text.includes(PUUNOTE_FORMAT_MARKER)
+            : hasPuuNoteFormatMarker(text)
               ? parseMarkdownToNodes(text)
               : markdownOutlineNodes;
         const parts =
@@ -237,6 +259,9 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         if (importedNodes.length === 0 && parts.length === 0) return;
 
         e.preventDefault();
+        lastCopiedCardsRef.current = null;
+
+        let firstPastedId: string | null = null;
 
         setNodes((prev) => {
           const targetParentId = activeId ?? null;
@@ -255,8 +280,13 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
                   parentId: targetParentId,
                   order: baseOrder + i + 1,
                 }));
+          firstPastedId = newNodes[0]?.id ?? null;
           return [...prev, ...newNodes];
         });
+
+        if (firstPastedId) {
+          useAppStore.getState().setActiveId(firstPastedId);
+        }
       }
     };
 

@@ -1,5 +1,8 @@
 import type { AppSlice, HistorySlice } from "../appStoreTypes";
 
+import { PluginRegistry } from "../../plugins/registry";
+import type { PuuNode } from "../../types";
+
 const uniqueById = <T extends { id: string }>(items: T[]) => {
   const seen = new Set<string>();
   return items.filter((item) => {
@@ -7,6 +10,28 @@ const uniqueById = <T extends { id: string }>(items: T[]) => {
     seen.add(item.id);
     return true;
   });
+};
+
+const diffAndEmit = (prevNodes: PuuNode[], nextNodes: PuuNode[]) => {
+  const prevMap = new Map(prevNodes.map((n) => [n.id, n]));
+  const nextMap = new Map(nextNodes.map((n) => [n.id, n]));
+
+  for (const prev of prevNodes) {
+    if (!nextMap.has(prev.id)) PluginRegistry.emitNodeDeleted(prev.id);
+  }
+
+  for (const next of nextNodes) {
+    const prev = prevMap.get(next.id);
+    if (!prev) PluginRegistry.emitNodeCreated(next);
+    else if (
+      prev.content !== next.content ||
+      prev.parentId !== next.parentId ||
+      prev.order !== next.order ||
+      prev.metadata !== next.metadata
+    ) {
+      PluginRegistry.emitNodeUpdated(next);
+    }
+  }
 };
 
 export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
@@ -36,9 +61,10 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
 
     set({
       nodes: nextNodes,
-      past: [...state.past, currentNodes].slice(-50),
+      past: [...state.past.slice(-49), currentNodes],
       future: [],
     });
+    diffAndEmit(currentNodes, nextNodes);
   },
 
   undo: () => {
@@ -48,8 +74,9 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     set({
       past: past.slice(0, -1),
       nodes: previous,
-      future: [nodes, ...future].slice(0, 50),
+      future: [nodes, ...future.slice(0, 49)],
     });
+    diffAndEmit(nodes, previous);
   },
 
   redo: () => {
@@ -57,9 +84,10 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     if (future.length === 0) return;
     const next = future[0];
     set({
-      past: [...past, nodes].slice(-50),
+      past: [...past.slice(-49), nodes],
       nodes: next,
       future: future.slice(1),
     });
+    diffAndEmit(nodes, next);
   },
 });

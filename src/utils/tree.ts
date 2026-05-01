@@ -5,7 +5,14 @@ export interface TreeIndex {
   childrenMap: Map<string | null, PuuNode[]>;
 }
 
+let _cachedNodes: PuuNode[] | null = null;
+let _cachedTreeIndex: TreeIndex | null = null;
+
 export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
+  if (nodes === _cachedNodes && _cachedTreeIndex) {
+    return _cachedTreeIndex;
+  }
+
   const nodeMap = new Map<string, PuuNode>();
   const childrenMap = new Map<string | null, PuuNode[]>();
 
@@ -16,10 +23,13 @@ export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
     childrenMap.set(n.parentId, children);
   }
 
-  return { nodeMap, childrenMap };
+  const result = { nodeMap, childrenMap };
+  _cachedNodes = nodes;
+  _cachedTreeIndex = result;
+  return result;
 };
 
-const orderedChildrenFromIndex = (
+export const orderedChildrenFromIndex = (
   index: TreeIndex,
   parentId: string | null,
 ): PuuNode[] => {
@@ -46,12 +56,7 @@ export const computeAncestorPathFromIndex = (
   return path.reverse();
 };
 
-export const computeAncestorPath = (
-  nodes: PuuNode[],
-  activeId: string | null,
-): string[] => {
-  return computeAncestorPathFromIndex(buildTreeIndex(nodes), activeId);
-};
+
 
 export const computeDescendantIdsFromIndex = (
   index: TreeIndex,
@@ -85,12 +90,7 @@ export const computeDescendantIds = (
   return computeDescendantIdsFromIndex(buildTreeIndex(nodes), activeId);
 };
 
-export const getOrderedChildren = (
-  nodes: PuuNode[],
-  parentId: string | null,
-): PuuNode[] => {
-  return orderedChildrenFromIndex(buildTreeIndex(nodes), parentId);
-};
+
 
 export const getDepthFirstNodesFromIndex = (
   index: TreeIndex,

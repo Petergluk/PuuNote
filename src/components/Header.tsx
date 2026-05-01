@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Upload,
   Download,
@@ -17,6 +17,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
+import { useClickOutside } from "../hooks/useClickOutside";
 import {
   requestFullscreen,
   exitFullscreen,
@@ -54,19 +55,9 @@ export function Header({ handleImport }: HeaderProps) {
   const uiMode = useAppStore((s) => s.uiMode);
   const setUiMode = useAppStore((s) => s.setUiMode);
 
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        exportMenuRef.current &&
-        !exportMenuRef.current.contains(event.target as Node)
-      ) {
-        setExportMenuOpen(false);
-      }
-    };
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [exportMenuOpen]);
+  useClickOutside(exportMenuRef, () => {
+    if (exportMenuOpen) setExportMenuOpen(false);
+  });
 
   const toggleFullscreen = () => {
     if (!isFullscreen(document)) {
@@ -116,6 +107,8 @@ export function Header({ handleImport }: HeaderProps) {
               onClick={() => setFileMenuOpen(!fileMenuOpen)}
               className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${fileMenuOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title="Manage documents"
+              aria-label="Manage documents"
+              aria-pressed={fileMenuOpen}
             >
               <Folder size={18} />
             </button>
@@ -123,6 +116,8 @@ export function Header({ handleImport }: HeaderProps) {
               onClick={() => setTimelineOpen(!timelineOpen)}
               className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${timelineOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title="Toggle View Mode"
+              aria-label="Toggle view mode"
+              aria-pressed={timelineOpen}
             >
               {timelineOpen ? <Network size={18} /> : <ScrollText size={18} />}
             </button>
@@ -130,6 +125,7 @@ export function Header({ handleImport }: HeaderProps) {
               onClick={() => useAppStore.getState().setCommandPaletteOpen(true)}
               className="p-1.5 rounded-lg transition-colors flex items-center justify-center text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"
               title="Command Palette (Cmd/Ctrl+K)"
+              aria-label="Command Palette"
             >
               <Search size={18} />
             </button>
@@ -147,6 +143,7 @@ export function Header({ handleImport }: HeaderProps) {
             disabled={!canUndo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Undo (Ctrl+Z)"
+            aria-label="Undo"
           >
             <Undo2 size={16} />
           </button>
@@ -159,6 +156,7 @@ export function Header({ handleImport }: HeaderProps) {
             disabled={!canRedo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Redo (Ctrl+Shift+Z)"
+            aria-label="Redo"
           >
             <Redo2 size={16} />
           </button>
@@ -167,6 +165,8 @@ export function Header({ handleImport }: HeaderProps) {
           onClick={toggleFullscreen}
           className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center justify-center gap-2"
           title="Toggle Fullscreen"
+          aria-label="Toggle fullscreen"
+          aria-pressed={uiMode !== "normal"}
         >
           {uiMode !== "normal" ? (
             <Minimize size={16} />
@@ -178,6 +178,8 @@ export function Header({ handleImport }: HeaderProps) {
           onClick={toggleCardsCollapsed}
           className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center justify-center gap-2"
           title="Toggle Expand/Collapse"
+          aria-label="Toggle card collapse"
+          aria-pressed={cardsCollapsed}
         >
           {cardsCollapsed ? (
             <UnfoldVertical size={14} />
@@ -189,12 +191,14 @@ export function Header({ handleImport }: HeaderProps) {
           onClick={toggleTheme}
           className="bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center justify-center gap-2"
           title="Toggle theme"
+          aria-label="Toggle theme"
         >
           <Palette size={16} />
         </button>
         <label
           className="cursor-pointer bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium flex items-center gap-2"
           title="Import"
+          aria-label="Import"
         >
           <Download size={16} />
           <input
@@ -213,6 +217,8 @@ export function Header({ handleImport }: HeaderProps) {
                 : "text-app-text-secondary"
             }`}
             title="Export"
+            aria-label="Export"
+            aria-expanded={exportMenuOpen}
           >
             <Upload size={16} />
           </button>
@@ -255,6 +261,8 @@ export function Header({ handleImport }: HeaderProps) {
           onClick={() => setSettingsOpen(!settingsOpen)}
           className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${settingsOpen ? "text-app-text-primary bg-app-card-hover" : "text-app-text-secondary"}`}
           title="Settings"
+          aria-label="Settings"
+          aria-pressed={settingsOpen}
         >
           <Settings size={16} />
         </button>

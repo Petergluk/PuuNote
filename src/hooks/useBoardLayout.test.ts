@@ -53,4 +53,11 @@ describe("buildBoardColumns", () => {
       ["a1a"],
     ]);
   });
+
+  it("can limit unfocused active-corridor mode to root cards", () => {
+    const columns = buildBoardColumns(buildTreeIndex(nodes), [], null, true);
+    expect(columns.map((column) => column.map((node) => node.id))).toEqual([
+      ["a", "b"],
+    ]);
+  });
 });

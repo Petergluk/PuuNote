@@ -1,7 +1,6 @@
-import { useEffect, useRef, useMemo, Suspense, lazy } from "react";
+import { useEffect, useRef, Suspense, lazy } from "react";
 import { AnimatePresence } from "motion/react";
-import { Toaster, toast } from "sonner";
-import { Card } from "./components/Card";
+import { Toaster } from "sonner";
 import { isFullscreen, exitFullscreen } from "./utils/fullscreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
@@ -11,7 +10,7 @@ import { JobPanel } from "./components/JobPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FloatingCardActions } from "./components/FloatingCardActions";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { MAX_FILE_SIZE_BYTES } from "./constants";
+
 import { Minimize } from "lucide-react";
 
 const FullScreenModal = lazy(() =>
@@ -30,17 +29,12 @@ const CommandPalette = lazy(() =>
   })),
 );
 
-import { useFileSystemInit, useFileSystemActions } from "./hooks/useFileSystem";
+import { useFileSystemInit } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
 import { useAppStore } from "./store/useAppStore";
-import { parseImportFile } from "./domain/documentExport";
-import {
-  buildTreeIndex,
-  computeAncestorPathFromIndex,
-  computeDescendantIdsFromIndex,
-} from "./utils/tree";
-import { useColumns, useActivePathScroll } from "./hooks/useBoardLayout";
+import { useFileImport } from "./hooks/useFileImport";
+import { BoardView } from "./components/BoardView";
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,21 +43,13 @@ export default function App() {
   useFileSystemInit();
   usePreferencesInit();
   const { handleKeyDown } = useAppHotkeys(containerRef);
-  const activeFileId = useAppStore((s) => s.activeFileId);
-  const activeId = useAppStore((s) => s.activeId);
-  const setActiveId = useAppStore((s) => s.setActiveId);
-  const setEditingId = useAppStore((s) => s.setEditingId);
-  const clearSelection = useAppStore((s) => s.clearSelection);
-  const fullScreenId = useAppStore((s) => s.fullScreenId);
-  const setFullScreenId = useAppStore((s) => s.setFullScreenId);
+  const uiMode = useAppStore((s) => s.uiMode);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
   const colWidth = useAppStore((s) => s.colWidth);
-  const nodes = useAppStore((s) => s.nodes);
-  const addChild = useAppStore((s) => s.addChild);
-  const uiMode = useAppStore((s) => s.uiMode);
-  const inactiveBranchesMode = useAppStore((s) => s.inactiveBranchesMode);
+  const fullScreenId = useAppStore((s) => s.fullScreenId);
+  const setFullScreenId = useAppStore((s) => s.setFullScreenId);
 
-  const { createNewFile } = useFileSystemActions();
+  const { handleImport } = useFileImport();
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -71,84 +57,24 @@ export default function App() {
         useAppStore.getState().setUiMode("normal");
       }
     };
+    const onBlur = () => {
+      useAppStore.getState().setDraggedId(null);
+    };
+
     document.addEventListener("fullscreenchange", onFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
-    document.addEventListener("mozfullscreenchange", onFullscreenChange);
-    document.addEventListener("MSFullscreenChange", onFullscreenChange);
+    window.addEventListener("blur", onBlur);
+    document.addEventListener("blur", onBlur);
+    document.addEventListener("mouseleave", onBlur);
+
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        onFullscreenChange,
-      );
-      document.removeEventListener("mozfullscreenchange", onFullscreenChange);
-      document.removeEventListener("MSFullscreenChange", onFullscreenChange);
+      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("blur", onBlur);
+      document.removeEventListener("mouseleave", onBlur);
     };
   }, []);
 
-  const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
 
-  const activeAncestorPath = useMemo(
-    () => computeAncestorPathFromIndex(treeIndex, activeId),
-    [treeIndex, activeId],
-  );
-
-  const activeDescendantIds = useMemo(
-    () => computeDescendantIdsFromIndex(treeIndex, activeId),
-    [treeIndex, activeId],
-  );
-
-  /* Build column arrays */
-  const columns = useColumns(
-    nodes,
-    treeIndex,
-    activeAncestorPath,
-    activeId,
-    inactiveBranchesMode === "hide",
-  );
-
-  const { colRefs } = useActivePathScroll(
-    activeFileId,
-    activeId,
-    activeAncestorPath,
-    activeDescendantIds,
-    timelineOpen,
-    columns.length,
-  );
-
-  /* Run when activePath is rebuilt */
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      useAppStore
-        .getState()
-        .openConfirm("File is too large (max 5MB).", () => {});
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const mdText = event.target?.result as string;
-      if (!mdText) return;
-      try {
-        const imported = parseImportFile(file.name, mdText);
-        if (imported.nodes.length > 0) {
-          useAppStore
-            .getState()
-            .openConfirm("Import will create a new document. Proceed?", () => {
-              createNewFile(imported.nodes, imported.title, imported.metadata);
-            });
-        }
-      } catch (err) {
-        console.error("Failed to validate imported nodes", err);
-        toast.error("Import failed", {
-          description: "Imported file is invalid or corrupted.",
-        });
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = ""; /* reset input */
-  };
   return (
     <div
       ref={containerRef}
@@ -163,9 +89,9 @@ export default function App() {
           (e.target as HTMLElement).id === "main-scroller" ||
           (e.target as HTMLElement).classList.contains("col-spacer")
         ) {
-          clearSelection();
-          setActiveId(null);
-          setEditingId(null);
+          useAppStore.getState().clearSelection();
+          useAppStore.getState().setActiveId(null);
+          useAppStore.getState().setEditingId(null);
         }
       }}
     >
@@ -177,56 +103,22 @@ export default function App() {
         className={`flex-1 overflow-x-auto w-full flex items-start relative bg-app-bg transition-colors duration-300 snap-x snap-mandatory sm:snap-none ${!timelineOpen ? "overflow-y-hidden" : "overflow-y-auto"}`}
       >
         {" "}
-        {!timelineOpen ? (
-          <div className="flex flex-row items-start gap-0 px-0 py-0 min-h-full h-full w-max relative col-spacer">
-            {columns.map((colNodes, colIndex) => {
-              return (
-                <div
-                  key={colIndex}
-                  style={{ zIndex: Math.max(1, 30 - colIndex) }}
-                  ref={(el) => {
-                    colRefs.current[colIndex] = el;
-                  }}
-                  className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth px-2 sm:px-4 transition-all duration-200 col-spacer relative"
-                >
-                  <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[95vh] mx-auto transition-all duration-200 col-spacer">
-                    {colNodes.map((node) => (
-                      <ErrorBoundary key={node.id}>
-                        <Card
-                          node={node}
-                          isInPath={activeAncestorPath.includes(node.id)}
-                          isDescendantFromActive={activeDescendantIds.has(
-                            node.id,
-                          )}
-                        />
-                      </ErrorBoundary>
-                    ))}
-                    {colNodes.length === 0 && colIndex === 0 && (
-                      <div
-                        onClick={() => addChild(null)}
-                        className="bg-app-card border border-dashed border-app-border p-6 rounded flex justify-center items-center h-min group cursor-pointer hover:border-app-accent transition-colors shadow-sm"
-                      >
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-app-text-muted group-hover:text-app-accent transition-colors">
-                          + Add Fragment
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
+        <BoardView />
+        {timelineOpen && (
           <Suspense
             fallback={
               <div className="p-8 text-app-text-muted">Loading timeline...</div>
             }
           >
-            <TimelineView nodes={nodes} />
+            <TimelineView nodes={useAppStore.getState().nodes} />
           </Suspense>
         )}{" "}
       </main>{" "}
-      {!timelineOpen && <FloatingCardActions />}{" "}
+      {!timelineOpen && (
+        <ErrorBoundary>
+          <FloatingCardActions />
+        </ErrorBoundary>
+      )}{" "}
       {uiMode !== "zen" && <Footer />}{" "}
       {uiMode === "zen" && (
         <button
@@ -249,6 +141,7 @@ export default function App() {
           }}
           className="fixed top-4 right-4 p-3 bg-black/20 hover:bg-black/50 border border-white/20 text-white/50 hover:text-white rounded-full backdrop-blur-md transition-all cursor-pointer shadow-lg"
           title="Exit Zen Mode"
+          aria-label="Exit Zen Mode"
         >
           <Minimize size={16} />
         </button>
@@ -263,11 +156,21 @@ export default function App() {
             />
           )}
         </AnimatePresence>
-        <FileMenu />
-        <CommandPalette />
-        <JobPanel />
-        <SettingsPanel />
-        <ConfirmDialog />
+        <ErrorBoundary>
+          <FileMenu />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <CommandPalette />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <JobPanel />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <SettingsPanel />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <ConfirmDialog />
+        </ErrorBoundary>
       </Suspense>
     </div>
   );

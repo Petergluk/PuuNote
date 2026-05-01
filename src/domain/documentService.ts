@@ -1,7 +1,10 @@
 import { db, type DocumentData, type DocumentMeta } from "../db/db";
 import type { PuuDocument, PuuNode } from "../types";
 import { generateId } from "../utils/id";
-import { validateNodes } from "../utils/schema";
+import {
+  validateNodesWithReport,
+  type NodeValidationReport,
+} from "../utils/schema";
 
 export interface DocumentDraft {
   id?: string;
@@ -16,6 +19,27 @@ export interface SearchDocumentNode {
   fileId: string;
   fileTitle: string;
 }
+
+let searchIndexCache: {
+  signature: string;
+  nodes: SearchDocumentNode[];
+} | null = null;
+
+const fileSearchCache = new Map<
+  string,
+  { updatedAt: number; nodes: SearchDocumentNode[] }
+>();
+
+const clearSearchIndexCache = () => {
+  searchIndexCache = null;
+  fileSearchCache.clear();
+};
+
+const createSearchIndexSignature = (documents: PuuDocument[]) =>
+  documents
+    .map((document) => `${document.id}:${document.updatedAt}:${document.title}`)
+    .sort()
+    .join("|");
 
 const parseUpdatedAt = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -37,17 +61,21 @@ const toDocumentMeta = (document: PuuDocument): DocumentMeta => ({
   metadata: document.metadata,
 });
 
-export const normalizeNodes = (rawNodes: unknown): PuuNode[] => {
-  const validated = validateNodes(rawNodes);
-  if (validated.length === 0) return [];
+export const normalizeNodesWithReport = (
+  rawNodes: unknown,
+): { nodes: PuuNode[]; report: NodeValidationReport } => {
+  const { nodes: validated, report } = validateNodesWithReport(rawNodes);
+  if (validated.length === 0) return { nodes: [], report };
 
   const seenIds = new Set<string>();
   const siblingCounters = new Map<string | null, number>();
 
-  return validated.map((node) => {
+  const nodes = validated.map((node) => {
     let id = node.id;
     while (seenIds.has(id)) {
       id = generateId();
+      report.repaired = true;
+      report.warnings.push(`Regenerated duplicate node id "${node.id}".`);
     }
     seenIds.add(id);
 
@@ -64,7 +92,13 @@ export const normalizeNodes = (rawNodes: unknown): PuuNode[] => {
           : nextOrder,
     };
   });
+
+  report.outputCount = nodes.length;
+  return { nodes, report };
 };
+
+export const normalizeNodes = (rawNodes: unknown): PuuNode[] =>
+  normalizeNodesWithReport(rawNodes).nodes;
 
 export const DocumentService = {
   async migrateLegacyLocalStorage() {
@@ -144,17 +178,25 @@ export const DocumentService = {
   async saveDocuments(documents: PuuDocument[]) {
     if (documents.length === 0) return;
     await db.documents.bulkPut(documents.map(toDocumentMeta));
+    clearSearchIndexCache();
   },
 
   async loadNodes(fileId: string): Promise<PuuNode[] | null> {
     const fileData = await db.files.get(fileId);
     if (!fileData) return null;
-    return normalizeNodes(fileData.nodes);
+    return normalizeNodesWithReport(fileData.nodes).nodes;
   },
 
   async saveNodes(fileId: string, nodes: PuuNode[]) {
-    const normalized = normalizeNodes(nodes);
+    const { nodes: normalized, report } = normalizeNodesWithReport(nodes);
+    if (nodes.length > 0 && normalized.length === 0) {
+      throw new Error(
+        report.errors[0] ||
+          "Refusing to overwrite document with invalid empty data.",
+      );
+    }
     await db.files.put({ id: fileId, nodes: normalized });
+    clearSearchIndexCache();
     this.clearDirtySave(fileId);
   },
 
@@ -173,6 +215,7 @@ export const DocumentService = {
       await db.files.put({ id, nodes });
     });
 
+    clearSearchIndexCache();
     return document;
   },
 
@@ -189,6 +232,7 @@ export const DocumentService = {
       },
     );
     localStorage.removeItem(`puu_file_${fileId}`);
+    clearSearchIndexCache();
   },
 
   readActiveFileId(): string | null {
@@ -243,23 +287,44 @@ export const DocumentService = {
   async getSearchNodes(
     documents: PuuDocument[],
   ): Promise<SearchDocumentNode[]> {
-    const allFiles = await db.files.toArray();
-    const titleById = new Map(documents.map((doc) => [doc.id, doc.title]));
+    const signature = createSearchIndexSignature(documents);
+    if (searchIndexCache?.signature === signature) {
+      return searchIndexCache.nodes;
+    }
+
     const searchNodes: SearchDocumentNode[] = [];
 
-    for (const file of allFiles) {
-      const title = titleById.get(file.id) || "Unknown Document";
-      const nodes = normalizeNodes(file.nodes);
-      for (const node of nodes) {
-        searchNodes.push({
-          id: node.id,
-          content: node.content,
-          fileId: file.id,
-          fileTitle: title,
-        });
+    for (const doc of documents) {
+      let cached = fileSearchCache.get(doc.id);
+      
+      if (!cached || cached.updatedAt < doc.updatedAt) {
+        const file = await db.files.get(doc.id);
+        const nodes = file ? normalizeNodes(file.nodes) : [];
+        const fileSearchNodes: SearchDocumentNode[] = [];
+        
+        for (const node of nodes) {
+          fileSearchNodes.push({
+            id: node.id,
+            content: node.content,
+            fileId: doc.id,
+            fileTitle: doc.title,
+          });
+        }
+        
+        cached = { updatedAt: doc.updatedAt, nodes: fileSearchNodes };
+        fileSearchCache.set(doc.id, cached);
+      }
+      
+      for (let i = 0; i < cached.nodes.length; i++) {
+        // We re-assign the title in case the document title changed but nodes didn't
+        cached.nodes[i].fileTitle = doc.title;
+        searchNodes.push(cached.nodes[i]);
       }
     }
 
+    searchIndexCache = { signature, nodes: searchNodes };
     return searchNodes;
   },
+
+  clearSearchIndexCache,
 };

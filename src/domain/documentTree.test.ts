@@ -42,6 +42,43 @@ describe("documentTree", () => {
     expect(ids).not.toContain("3");
   });
 
+  it("should delete selected nodes and promote their children for multi-cut", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "Root" },
+      { id: "2", parentId: "1", order: 0, content: "Cut me" },
+      { id: "3", parentId: "2", order: 0, content: "Promoted child" },
+      { id: "4", parentId: "1", order: 1, content: "Sibling" },
+    ];
+
+    const { nextNodes } = documentApi.deleteNodesPromoteChildren(nodes, ["2"]);
+
+    expect(nextNodes.map((node) => node.id)).not.toContain("2");
+    expect(nextNodes.find((node) => node.id === "3")?.parentId).toBe("1");
+    expect(
+      nextNodes
+        .filter((node) => node.parentId === "1")
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map((node) => node.id),
+    ).toEqual(["3", "4"]);
+  });
+
+  it("should promote grandchildren to the nearest kept ancestor when cutting nested selections", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "Root" },
+      { id: "2", parentId: "1", order: 0, content: "Cut parent" },
+      { id: "3", parentId: "2", order: 0, content: "Cut child" },
+      { id: "4", parentId: "3", order: 0, content: "Kept grandchild" },
+    ];
+
+    const { nextNodes } = documentApi.deleteNodesPromoteChildren(nodes, [
+      "2",
+      "3",
+    ]);
+
+    expect(nextNodes.map((node) => node.id)).toEqual(["1", "4"]);
+    expect(nextNodes.find((node) => node.id === "4")?.parentId).toBe("1");
+  });
+
   it("should reparent a node correctly correctly", () => {
     const nodes: PuuNode[] = [
       { id: "1", parentId: null, order: 0, content: "Root" },

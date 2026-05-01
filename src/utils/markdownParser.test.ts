@@ -37,4 +37,14 @@ describe("markdownParser clipboard round-trip", () => {
     expect(parsed[2].content).toBe("### Grandchild");
     expect(parsed[2].parentId).toBe(parsed[1].id);
   });
+
+  it("only treats the PuuNote marker as format metadata at the start", () => {
+    const parsed = parseMarkdownToNodes(`# Normal note
+
+This text mentions <!-- puunote-format: 1 --> inside the content.`);
+
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].content).toContain("Normal note");
+    expect(parsed[0].content).toContain("puunote-format");
+  });
 });

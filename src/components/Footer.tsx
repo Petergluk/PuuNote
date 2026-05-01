@@ -21,6 +21,7 @@ export function Footer() {
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const selectedIds = useAppStore((s) => s.selectedIds);
+  const saveStatus = useAppStore((s) => s.saveStatus);
 
   const { createNewFile, switchFile } = useFileSystemActions();
 
@@ -61,6 +62,13 @@ export function Footer() {
     return { activePathLength, cardsCount, wordCount };
   }, [nodes, activeId]);
 
+  const saveStatusClass =
+    saveStatus === "error"
+      ? "text-red-500"
+      : saveStatus === "saved"
+        ? "text-green-600 dark:text-green-400"
+        : "text-app-accent";
+
   return (
     <>
       <footer className="h-10 shrink-0 border-t border-app-border bg-app-panel px-2 sm:px-6 flex items-center justify-between z-40 transition-colors duration-300">
@@ -87,6 +95,9 @@ export function Footer() {
         </div>{" "}
         <div className="flex items-center gap-4 sm:gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase ml-auto">
           {" "}
+          <span className={`${saveStatusClass} whitespace-nowrap`}>
+            {t(`saveStatus.${saveStatus}`)}
+          </span>
           <div className="flex items-center gap-2 border-r border-app-border pr-4 mr-2 hidden sm:flex">
             {" "}
             <button
@@ -100,6 +111,7 @@ export function Footer() {
               }}
               className="text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer"
               title={t("Fit 3 columns")}
+              aria-label={t("Fit 3 columns")}
             >
               <Columns size={16} />
             </button>{" "}
@@ -107,15 +119,19 @@ export function Footer() {
               onClick={() => {
                 const s = document.getElementById("main-scroller");
                 const aw = s ? s.clientWidth : window.innerWidth;
-                const cC = aw / (useAppStore.getState().colWidth + 32);
-                const tC = Math.floor(cC + 0.1) + 1;
-                const cw = aw / tC - 32;
+                const GAP = 32;
+                const currentCols = aw / (useAppStore.getState().colWidth + GAP);
+                // Round to nearest integer with small tolerance, then add 1 more column
+                const snapped = Math.round(currentCols);
+                const tC = Math.abs(currentCols - snapped) < 0.02 ? snapped + 1 : Math.ceil(currentCols);
+                const cw = aw / tC - GAP;
                 useAppStore.setState({
-                  colWidth: Math.max(220, Math.min(1200, cw)),
+                  colWidth: Math.max(220, Math.min(1200, Math.floor(cw))),
                 });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Decrease width")}
+              aria-label={t("Decrease width")}
             >
               -
             </button>
@@ -129,21 +145,26 @@ export function Footer() {
               }
               className="w-20 lg:w-32 accent-[#a3966a] cursor-pointer"
               title={t("Col Width")}
+              aria-label={t("Col Width")}
             />{" "}
             <button
               onClick={() => {
                 const s = document.getElementById("main-scroller");
                 const aw = s ? s.clientWidth : window.innerWidth;
-                const cC = aw / (useAppStore.getState().colWidth + 32);
-                let tC = Math.ceil(cC - 0.1) - 1;
-                tC = Math.max(1, tC);
-                const cw = aw / tC - 32;
+                const GAP = 32;
+                const currentCols = aw / (useAppStore.getState().colWidth + GAP);
+                // Round to nearest integer with small tolerance, then remove 1 column
+                const snapped = Math.round(currentCols);
+                const baseCols = Math.abs(currentCols - snapped) < 0.02 ? snapped : Math.ceil(currentCols);
+                const tC = Math.max(1, baseCols - 1);
+                const cw = aw / tC - GAP;
                 useAppStore.setState({
-                  colWidth: Math.max(220, Math.min(1200, cw)),
+                  colWidth: Math.max(220, Math.min(1200, Math.floor(cw))),
                 });
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Increase width")}
+              aria-label={t("Increase width")}
             >
               +
             </button>
@@ -152,6 +173,7 @@ export function Footer() {
             onClick={() => setIsSnapshotsOpen(true)}
             className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
             title="Snapshots"
+            aria-label="Snapshots"
           >
             <History size={16} />
           </button>{" "}
@@ -159,6 +181,7 @@ export function Footer() {
             onClick={() => setIsShortcutsOpen(true)}
             className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
             title={t("Keyboard Shortcuts")}
+            aria-label={t("Keyboard Shortcuts")}
           >
             <Keyboard size={16} />
           </button>{" "}
@@ -196,6 +219,7 @@ export function Footer() {
             }}
             className="w-6 h-6 flex items-center justify-center rounded-full bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-secondary hover:text-app-text-primary font-bold text-xs transition-colors shadow-inner cursor-pointer"
             title={t("Reset to Tutorial")}
+            aria-label={t("Reset to Tutorial")}
           >
             ?
           </button>{" "}

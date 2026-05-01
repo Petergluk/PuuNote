@@ -196,7 +196,7 @@ export const parseClipboardHtmlNodes = (html: string): PuuNode[] => {
 };
 
 export const parseMarkdownToNodes = (mdText: string): PuuNode[] => {
-  const isPuuNoteFormat = mdText.includes(PUUNOTE_FORMAT_MARKER);
+  const isPuuNoteFormat = mdText.trimStart().startsWith(PUUNOTE_FORMAT_MARKER);
   if (isPuuNoteFormat) {
     return parsePuuNoteFormat(mdText);
   } else {

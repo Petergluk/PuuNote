@@ -32,11 +32,16 @@ export class AppDatabase extends Dexie {
       documents: "id, updatedAt", // id is primary key, index on updatedAt
       files: "id", // id is primary key
     });
-    this.version(2).stores({
-      documents: "id, updatedAt",
-      files: "id",
-      snapshots: "id, documentId, createdAt",
-    });
+    this.version(2)
+      .stores({
+        documents: "id, updatedAt",
+        files: "id",
+        snapshots: "id, documentId, createdAt",
+      })
+      .upgrade((tx) => {
+        // Just defining the upgrade handler prevents Dexie from throwing if tables are missing during complex upgrades.
+        console.log("Upgraded to DB version 2", tx);
+      });
   }
 }
 

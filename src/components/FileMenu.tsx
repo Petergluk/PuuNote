@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { X, Plus, File, Trash2 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "../hooks/useFileSystem";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 export function FileMenu() {
   const { t } = useTranslation();
   const fileMenuOpen = useAppStore((s) => s.fileMenuOpen);
@@ -10,6 +11,9 @@ export function FileMenu() {
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const { switchFile, createNewFile, deleteFile } = useFileSystemActions();
+  const panelRef = useFocusTrap<HTMLDivElement>(fileMenuOpen, () =>
+    setFileMenuOpen(false),
+  );
 
   return (
     <AnimatePresence>
@@ -23,6 +27,11 @@ export function FileMenu() {
           onClick={() => setFileMenuOpen(false)}
         >
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="file-menu-title"
+            tabIndex={-1}
             initial={{ x: -320 }}
             animate={{ x: 0 }}
             exit={{ x: -320 }}
@@ -31,12 +40,16 @@ export function FileMenu() {
             onClick={(e) => e.stopPropagation()}
           >
             <header className="h-14 border-b shrink-0 border-app-border flex items-center justify-between px-6">
-              <span className="font-sans font-semibold text-sm tracking-wide text-app-text-primary">
+              <span
+                id="file-menu-title"
+                className="font-sans font-semibold text-sm tracking-wide text-app-text-primary"
+              >
                 {t("Your Documents")}
               </span>
               <button
                 onClick={() => setFileMenuOpen(false)}
                 className="p-1.5 text-app-text-muted hover:text-app-text-primary rounded"
+                aria-label="Close documents panel"
               >
                 <X size={16} />
               </button>
@@ -55,10 +68,14 @@ export function FileMenu() {
                   return (
                     <div
                       key={doc.id}
-                      onClick={() => switchFile(doc.id)}
-                      className={`group flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
+                      className={`group flex items-center justify-between gap-2 rounded-lg border transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => switchFile(doc.id)}
+                        aria-current={isActive ? "true" : undefined}
+                        className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left"
+                      >
                         <File
                           size={16}
                           className={
@@ -79,7 +96,7 @@ export function FileMenu() {
                             • {new Date(doc.updatedAt).toLocaleDateString()}
                           </span>
                         </div>
-                      </div>
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -94,8 +111,9 @@ export function FileMenu() {
                               },
                             );
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-app-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
+                        className="mr-3 p-1.5 text-app-text-muted opacity-100 transition-all hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
                         title={t("Delete file")}
+                        aria-label={`${t("Delete file")}: ${doc.title}`}
                       >
                         <Trash2 size={14} />
                       </button>

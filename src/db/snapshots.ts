@@ -3,6 +3,7 @@ import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
 import { normalizeNodes } from "../domain/documentService";
 import { toast } from "sonner";
+import { isQuotaError } from "../utils/storage";
 
 const MAX_SNAPSHOTS_PER_DOCUMENT = 25;
 
@@ -39,10 +40,7 @@ export async function takeDocumentSnapshot(
     });
     await pruneDocumentSnapshots(documentId);
   } catch (err) {
-    if (
-      err instanceof Error &&
-      (err.name === "QuotaExceededError" || err.message.includes("Quota"))
-    ) {
+    if (isQuotaError(err)) {
       toast.error("Storage space is full. Could not save snapshot.");
     } else {
       console.error("Failed to take snapshot", err);
@@ -86,7 +84,10 @@ export async function restoreSnapshot(snapshotId: string) {
     }
 
     useAppStore.getState().setNodesRaw(validatedNodes);
-    useAppStore.getState().setActiveId(null);
+    // Navigate to root node so the board isn't left in a deselected state
+    const rootNode = validatedNodes.find((n) => n.parentId === null) ?? validatedNodes[0] ?? null;
+    useAppStore.getState().setActiveId(rootNode?.id ?? null);
+    useAppStore.getState().setEditingId(null);
     toast.success(`Restored to: ${snapshot.description}`);
   } catch (err) {
     console.error("Failed to restore snapshot", err);
