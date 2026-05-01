@@ -19,6 +19,7 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
   const setActiveId = useAppStore((s) => s.setActiveId);
   const clearSelection = useAppStore((s) => s.clearSelection);
   const updateContent = useAppStore((s) => s.updateContent);
+  const editorMode = useAppStore((s) => s.editorMode);
   const [copied, setCopied] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(true);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -190,19 +191,44 @@ export const TimelineView = ({ nodes }: { nodes: PuuNode[] }) => {
               computeItemKey={(_index, node) => node.id}
               itemContent={(_index, n) => {
                 const isLocalActive = n.id === activeId;
+                const isVisualMode = editorMode === "visual";
+                const previousDepth =
+                  _index > 0 ? orderedNodes[_index - 1]?.depth : undefined;
+                const showLevelSeparator =
+                  isVisualMode && (_index === 0 || previousDepth !== n.depth);
+
                 return (
                   <div
                     key={n.id}
                     id={`tl-node-${n.id}`}
-                    className="mb-4"
+                    className={isVisualMode ? "mb-2" : "mb-4"}
                   >
+                    {showLevelSeparator && (
+                      <div className="my-5 flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-app-text-muted">
+                        <span className="shrink-0">Level {n.depth + 1}</span>
+                        <span className="h-px flex-1 bg-app-border/70" />
+                      </div>
+                    )}
                     <div
                       onClick={() => setActiveId(n.id)}
-                      className={`transition-all duration-200 cursor-text rounded-lg border-2 ${
-                        isLocalActive
-                          ? "p-3 border-app-accent bg-app-card shadow-sm"
-                          : "border-transparent hover:bg-app-card-hover"
-                      }`}
+                      className={
+                        isVisualMode
+                          ? `cursor-text rounded px-0 py-1 transition-opacity duration-200 ${
+                              isLocalActive
+                                ? "opacity-100"
+                                : "opacity-70 hover:opacity-100"
+                            }`
+                          : `transition-all duration-200 cursor-text rounded-lg border-2 ${
+                              isLocalActive
+                                ? "p-3 border-app-accent bg-app-card shadow-sm"
+                                : "border-transparent hover:bg-app-card-hover"
+                            }`
+                      }
+                      style={
+                        isVisualMode
+                          ? { paddingLeft: `${Math.min(n.depth * 18, 72)}px` }
+                          : undefined
+                      }
                     >
                       {isLocalActive ? (
                         <AutoSizeTextarea

@@ -2,6 +2,8 @@ import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
 
 export type InactiveBranchesMode = "dim" | "hide";
+export type FocusModeScope = "single" | "branchLevel" | "column";
+export type EditorMode = "markdown" | "visual";
 export type PasteSplitMode = "separator" | "paragraph";
 export type EditorEnterMode = "enterNewline" | "enterCard";
 export type SaveStatus = "saved" | "saving" | "unsaved" | "error";
@@ -11,6 +13,8 @@ export interface UiSlice {
   theme: string;
   cardsCollapsed: boolean;
   inactiveBranchesMode: InactiveBranchesMode;
+  focusModeScope: FocusModeScope;
+  editorMode: EditorMode;
   editorEnterMode: EditorEnterMode;
   pasteSplitMode: PasteSplitMode;
   settingsOpen: boolean;
@@ -31,6 +35,8 @@ export interface UiSlice {
   setCardsCollapsed: (collapsed: boolean) => void;
   toggleCardsCollapsed: () => void;
   setInactiveBranchesMode: (mode: InactiveBranchesMode) => void;
+  setFocusModeScope: (scope: FocusModeScope) => void;
+  setEditorMode: (mode: EditorMode) => void;
   setEditorEnterMode: (mode: EditorEnterMode) => void;
   setPasteSplitMode: (mode: PasteSplitMode) => void;
   setSettingsOpen: (open: boolean) => void;

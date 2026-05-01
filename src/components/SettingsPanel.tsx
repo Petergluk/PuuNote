@@ -6,6 +6,8 @@ import type {
   EditorEnterMode,
   InactiveBranchesMode,
   PasteSplitMode,
+  FocusModeScope,
+  EditorMode,
 } from "../store/appStoreTypes";
 
 const branchModes: Array<{
@@ -14,6 +16,23 @@ const branchModes: Array<{
 }> = [
   { value: "dim", labelKey: "settings.dim" },
   { value: "hide", labelKey: "settings.hide" },
+];
+
+const focusModes: Array<{
+  value: FocusModeScope;
+  labelKey: string;
+}> = [
+  { value: "single", labelKey: "settings.single" },
+  { value: "branchLevel", labelKey: "settings.branchLevel" },
+  { value: "column", labelKey: "settings.column" },
+];
+
+const editorModes: Array<{
+  value: EditorMode;
+  labelKey: string;
+}> = [
+  { value: "markdown", labelKey: "settings.markdown" },
+  { value: "visual", labelKey: "settings.visual" },
 ];
 
 
@@ -48,6 +67,10 @@ export function SettingsPanel() {
   const setEditorEnterMode = useAppStore((state) => state.setEditorEnterMode);
   const pasteSplitMode = useAppStore((state) => state.pasteSplitMode);
   const setPasteSplitMode = useAppStore((state) => state.setPasteSplitMode);
+  const focusModeScope = useAppStore((state) => state.focusModeScope);
+  const setFocusModeScope = useAppStore((state) => state.setFocusModeScope);
+  const editorMode = useAppStore((state) => state.editorMode);
+  const setEditorMode = useAppStore((state) => state.setEditorMode);
   const language = i18n.resolvedLanguage?.startsWith("ru") ? "ru" : "en";
   const panelRef = useFocusTrap<HTMLElement>(settingsOpen, () =>
     setSettingsOpen(false),
@@ -131,7 +154,49 @@ export function SettingsPanel() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm text-app-text-secondary">
+              {t("settings.focusMode")}
+            </span>
+            <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
+              {focusModes.map((mode) => (
+                <button
+                  key={mode.value}
+                  onClick={() => setFocusModeScope(mode.value)}
+                  aria-pressed={focusModeScope === mode.value}
+                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
+                    focusModeScope === mode.value
+                      ? "bg-app-accent text-white"
+                      : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+                  }`}
+                >
+                  {t(mode.labelKey)}
+                </button>
+              ))}
+            </div>
+          </div>
 
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm text-app-text-secondary">
+              {t("settings.editorMode")}
+            </span>
+            <div className="flex shrink-0 rounded border border-app-border bg-app-card p-0.5">
+              {editorModes.map((mode) => (
+                <button
+                  key={mode.value}
+                  onClick={() => setEditorMode(mode.value)}
+                  aria-pressed={editorMode === mode.value}
+                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
+                    editorMode === mode.value
+                      ? "bg-app-accent text-white"
+                      : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+                  }`}
+                >
+                  {t(mode.labelKey)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm text-app-text-secondary">
               {t("settings.editorEnter")}

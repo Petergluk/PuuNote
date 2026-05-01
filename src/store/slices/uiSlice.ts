@@ -5,6 +5,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   theme: "light",
   cardsCollapsed: false,
   inactiveBranchesMode: "dim",
+  focusModeScope: "branchLevel",
+  editorMode: "markdown",
   editorEnterMode: "enterNewline",
   pasteSplitMode: "separator",
   settingsOpen: false,
@@ -46,6 +48,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) =>
       s.inactiveBranchesMode === inactiveBranchesMode ? s : { inactiveBranchesMode },
     ),
+  setFocusModeScope: (focusModeScope) =>
+    set((s) => (s.focusModeScope === focusModeScope ? s : { focusModeScope })),
+  setEditorMode: (editorMode) =>
+    set((s) => (s.editorMode === editorMode ? s : { editorMode })),
   setEditorEnterMode: (editorEnterMode) =>
     set((s) => (s.editorEnterMode === editorEnterMode ? s : { editorEnterMode })),
   setPasteSplitMode: (pasteSplitMode) =>

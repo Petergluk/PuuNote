@@ -44,6 +44,17 @@ export function usePreferencesInit() {
       safeLocalStorage.getItem("puu_inactiveBranchesMode") === "hide"
         ? "hide"
         : "dim";
+    const savedFocusModeScope = safeLocalStorage.getItem("puu_focusModeScope");
+    const focusModeScope =
+      savedFocusModeScope === "single" ||
+      savedFocusModeScope === "column" ||
+      savedFocusModeScope === "branchLevel"
+        ? savedFocusModeScope
+        : "branchLevel";
+    const savedEditorMode =
+      safeLocalStorage.getItem("puu_editorMode") === "visual"
+        ? "visual"
+        : "markdown";
 
     const savedEditorEnterMode =
       safeLocalStorage.getItem("puu_editorEnterMode") === "enterCard"
@@ -65,6 +76,8 @@ export function usePreferencesInit() {
       cardsCollapsed: savedCollapsed,
       colWidth: savedWidth,
       inactiveBranchesMode: savedInactiveBranchesMode,
+      focusModeScope,
+      editorMode: savedEditorMode,
       editorEnterMode: savedEditorEnterMode,
       pasteSplitMode: savedPasteSplitMode,
       theme: savedTheme,
@@ -88,6 +101,12 @@ export function usePreferencesInit() {
           "puu_inactiveBranchesMode",
           state.inactiveBranchesMode,
         );
+      }
+      if (state.focusModeScope !== prevState.focusModeScope) {
+        safeLocalStorage.setItem("puu_focusModeScope", state.focusModeScope);
+      }
+      if (state.editorMode !== prevState.editorMode) {
+        safeLocalStorage.setItem("puu_editorMode", state.editorMode);
       }
 
       if (state.editorEnterMode !== prevState.editorEnterMode) {

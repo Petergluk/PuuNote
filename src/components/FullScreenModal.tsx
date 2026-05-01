@@ -10,6 +10,7 @@ import { PROSE_FULL } from "../utils/proseClasses";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { getDepthFirstNodes } from "../utils/tree";
 
 export const FullScreenModal = ({
   nodeId,
@@ -20,6 +21,7 @@ export const FullScreenModal = ({
 }) => {
   const nodes = useAppStore((s) => s.nodes);
   const updateContent = useAppStore((s) => s.updateContent);
+  const focusModeScope = useAppStore((s) => s.focusModeScope);
   const [localActiveId, setLocalActiveId] = useState(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
@@ -45,32 +47,36 @@ export const FullScreenModal = ({
   const visibleNodes = useMemo(() => {
     if (!targetNode) return [];
 
-    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    if (focusModeScope === "single") return [targetNode];
 
-    // Basic cycle check
-    const isDescendant = (
-      childId: string,
-      ancestorId: string | null,
-    ): boolean => {
-      let currentId = ancestorId;
-      while (currentId) {
-        if (currentId === childId) return true;
-        const node = nodeMap.get(currentId);
-        currentId = node?.parentId ?? null;
-      }
-      return false;
-    };
-
-    let targetParentId = targetNode.parentId;
-    if (isDescendant(nodeId, targetParentId)) {
-      targetParentId = null;
+    if (focusModeScope === "column") {
+      const parentId = targetNode.parentId;
+      return nodes
+        .filter((n: PuuNode) => n.parentId === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
     }
 
-    const columnNodes = nodes.filter(
-      (n: PuuNode) => n.parentId === targetParentId,
-    );
-    return columnNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
-  }, [nodes, nodeId, targetNode]);
+    // Default: branchLevel
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const pathIds: string[] = [];
+    let curId: string | null = nodeId;
+    while (curId) {
+      pathIds.unshift(curId);
+      curId = nodeMap.get(curId)?.parentId ?? null;
+    }
+
+    const pathSet = new Set(pathIds);
+    const visible: PuuNode[] = [];
+    const ordered = getDepthFirstNodes(nodes);
+
+    ordered.forEach((n) => {
+      // Show node if it's in path or its parent is in path
+      if (pathSet.has(n.id) || (n.parentId && pathSet.has(n.parentId))) {
+        visible.push(n);
+      }
+    });
+    return visible;
+  }, [nodes, nodeId, targetNode, focusModeScope]);
 
   const toggleCheckbox = useToggleCheckbox();
 

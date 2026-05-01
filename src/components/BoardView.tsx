@@ -48,6 +48,7 @@ export function BoardView() {
     activeFileId,
     activeId,
     activeAncestorPath,
+    activeDescendantIds,
     timelineOpen,
     columns.length,
   );
