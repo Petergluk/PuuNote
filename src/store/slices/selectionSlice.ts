@@ -14,6 +14,7 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
         if (activeId) {
           // Trigger a layout re-alignment using a slight trick to break out of zustand set
           // Or just update layoutAlignTrigger right here
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return { layoutAlignTrigger: state.layoutAlignTrigger + 1 } as any;
         }
         return state;

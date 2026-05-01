@@ -112,7 +112,7 @@ export const AutoSizeTextarea = forwardRef<
           className ||
           "w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
         }
-        style={{ outline: "none", boxShadow: "none", ...style } as any}
+        style={{ outline: "none", boxShadow: "none", ...style } as React.CSSProperties}
         onFocus={(e) => {
           // move cursor to end
           const length = e.target.value.length;
