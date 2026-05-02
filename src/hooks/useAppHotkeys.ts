@@ -114,10 +114,15 @@ const buildClipboardPayload = (
   const markdown = exportNodesToMarkdown(nodes);
   const json = exportNodesToClipboardJson(nodes);
   const html = exportNodesToClipboardHtml(nodes);
-  
+
   // PERF-7: Prevent memory leak for massive copies
   if (json.length < 1_000_000) {
-    lastCopiedCardsRef.current = { markdown, json, html, createdAt: Date.now() };
+    lastCopiedCardsRef.current = {
+      markdown,
+      json,
+      html,
+      createdAt: Date.now(),
+    };
   } else {
     lastCopiedCardsRef.current = null;
   }
@@ -207,87 +212,79 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       // Guard against pasting logic when not in tree view
       if (timelineOpen || fullScreenId) return;
+      if (isEditableTarget(e.target)) return;
+      if (editingId) return;
 
-      if (!editingId) {
-        const text =
-          e.clipboardData?.getData("text/plain") ||
-          e.clipboardData?.getData("text") ||
-          "";
-        const html = e.clipboardData?.getData("text/html") || "";
-        const clipboardJson =
-          e.clipboardData?.getData(PUUNOTE_CLIPBOARD_MIME) ||
-          getCachedClipboardJson(text, lastCopiedCardsRef);
-        if (!text) return;
+      const text =
+        e.clipboardData?.getData("text/plain") ||
+        e.clipboardData?.getData("text") ||
+        "";
+      const html = e.clipboardData?.getData("text/html") || "";
+      const clipboardJson =
+        e.clipboardData?.getData(PUUNOTE_CLIPBOARD_MIME) ||
+        getCachedClipboardJson(text, lastCopiedCardsRef);
+      if (!text) return;
 
-        const target = e.target as HTMLElement;
-        if (
-          target &&
-          (target.tagName === "TEXTAREA" || target.tagName === "INPUT")
-        ) {
-          return;
-        }
-
-        const clipboardJsonNodes = parseClipboardNodes(clipboardJson);
-        const clipboardNodes =
-          clipboardJsonNodes.length > 0
-            ? clipboardJsonNodes
-            : parseClipboardHtmlNodes(html);
-        const markdownOutlineNodes =
-          clipboardNodes.length === 0 &&
-          !hasPuuNoteFormatMarker(text) &&
-          /^#{1,6}\s+/m.test(text)
+      const clipboardJsonNodes = parseClipboardNodes(clipboardJson);
+      const clipboardNodes =
+        clipboardJsonNodes.length > 0
+          ? clipboardJsonNodes
+          : parseClipboardHtmlNodes(html);
+      const markdownOutlineNodes =
+        clipboardNodes.length === 0 &&
+        !hasPuuNoteFormatMarker(text) &&
+        /^#{1,6}\s+/m.test(text)
+          ? parseMarkdownToNodes(text)
+          : [];
+      const importedNodes =
+        clipboardNodes.length > 0
+          ? clipboardNodes
+          : hasPuuNoteFormatMarker(text)
             ? parseMarkdownToNodes(text)
-            : [];
-        const importedNodes =
-          clipboardNodes.length > 0
-            ? clipboardNodes
-            : hasPuuNoteFormatMarker(text)
-              ? parseMarkdownToNodes(text)
-              : markdownOutlineNodes;
-        const parts =
+            : markdownOutlineNodes;
+      const parts =
+        importedNodes.length > 0
+          ? []
+          : pasteSplitMode === "paragraph"
+            ? text
+                .split(/\n\s*\n+/)
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0)
+            : text
+                .split(/^\s*---\s*$/m)
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0);
+
+      if (importedNodes.length === 0 && parts.length === 0) return;
+
+      e.preventDefault();
+      lastCopiedCardsRef.current = null;
+
+      let firstPastedId: string | null = null;
+
+      setNodes((prev) => {
+        const targetParentId = activeId ?? null;
+        const siblings = prev.filter((n) => n.parentId === targetParentId);
+        const baseOrder =
+          siblings.length > 0
+            ? Math.max(...siblings.map((n) => n.order || 0))
+            : -1;
+
+        const newNodes: PuuNode[] =
           importedNodes.length > 0
-            ? []
-            : pasteSplitMode === "paragraph"
-              ? text
-                  .split(/\n\s*\n+/)
-                  .map((p) => p.trim())
-                  .filter((p) => p.length > 0)
-              : text
-                  .split(/^\s*---\s*$/m)
-                  .map((p) => p.trim())
-                  .filter((p) => p.length > 0);
+            ? cloneNodesForPaste(importedNodes, targetParentId, baseOrder)
+            : parts.map((part, i) => ({
+                id: generateId(),
+                content: part,
+                parentId: targetParentId,
+                order: baseOrder + i + 1,
+              }));
+        firstPastedId = newNodes[0]?.id ?? null;
+        return [...prev, ...newNodes];
+      });
 
-        if (importedNodes.length === 0 && parts.length === 0) return;
-
-        e.preventDefault();
-        lastCopiedCardsRef.current = null;
-
-        let firstPastedId: string | null = null;
-
-        setNodes((prev) => {
-          const targetParentId = activeId ?? null;
-          const siblings = prev.filter((n) => n.parentId === targetParentId);
-          const baseOrder =
-            siblings.length > 0
-              ? Math.max(...siblings.map((n) => n.order || 0))
-              : -1;
-
-          const newNodes: PuuNode[] =
-            importedNodes.length > 0
-              ? cloneNodesForPaste(importedNodes, targetParentId, baseOrder)
-              : parts.map((part, i) => ({
-                  id: generateId(),
-                  content: part,
-                  parentId: targetParentId,
-                  order: baseOrder + i + 1,
-                }));
-          firstPastedId = newNodes[0]?.id ?? null;
-          return [...prev, ...newNodes];
-        });
-
-        if (firstPastedId) {
-          useAppStore.getState().setActiveId(firstPastedId);
-        }
+      if (firstPastedId) {
+        useAppStore.getState().setActiveId(firstPastedId);
       }
     };
 
@@ -315,7 +312,10 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         }
       }
 
-      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "p" || e.key === "K" || e.key === "P")) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "k" || e.key === "p" || e.key === "K" || e.key === "P")
+      ) {
         e.preventDefault();
         state.setCommandPaletteOpen(!state.commandPaletteOpen);
         return;
@@ -339,14 +339,22 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
             state.undo();
             const newNodes = useAppStore.getState().nodes;
             state.clearSelection();
-            state.setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
+            state.setActiveId(
+              newNodes.find((n) => n.id === prevActive)
+                ? prevActive
+                : newNodes[0]?.id || null,
+            );
           } else if (isRedoAction && state.future.length > 0) {
             e.preventDefault();
             const prevActive = state.activeId;
             state.redo();
             const newNodes = useAppStore.getState().nodes;
             state.clearSelection();
-            state.setActiveId(newNodes.find(n => n.id === prevActive) ? prevActive : (newNodes[0]?.id || null));
+            state.setActiveId(
+              newNodes.find((n) => n.id === prevActive)
+                ? prevActive
+                : newNodes[0]?.id || null,
+            );
           }
         }
       }
@@ -386,8 +394,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       const target = e.target as HTMLElement;
       const isTyping =
-        target.tagName === "TEXTAREA" || 
-        target.tagName === "INPUT" || 
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "INPUT" ||
         target.isContentEditable;
 
       if (editingId || isTyping) {
@@ -503,14 +511,14 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
       // UX-8: Delete / Backspace deletes the active node (only when not editing)
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        
+
         if (state.selectedIds.length > 1) {
           state.openConfirm(
             `Delete ${state.selectedIds.length} selected cards and their descendants?`,
             () => {
               state.deleteNodes(state.selectedIds);
               state.clearSelection();
-            }
+            },
           );
         } else {
           const descendantCount = computeDescendantIds(nodes, activeId).size;

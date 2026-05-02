@@ -14,6 +14,12 @@ import {
   computeDescendantIdsFromIndex,
 } from "../utils/tree";
 import { useFileSystemActions } from "../hooks/useFileSystem";
+import {
+  fitColumnWidthForCount,
+  fitOneFewerColumn,
+  fitOneMoreColumn,
+  getAvailableColumnWidth,
+} from "../utils/columnSizing";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { TutorialModal } from "./TutorialModal";
 import { SnapshotPanel } from "./SnapshotPanel";
@@ -23,6 +29,7 @@ export function Footer() {
   const nodes = useAppStore((s) => s.nodes);
   const activeId = useAppStore((s) => s.activeId);
   const colWidth = useAppStore((s) => s.colWidth);
+  const setColWidth = useAppStore((s) => s.setColWidth);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
   const selectedIds = useAppStore((s) => s.selectedIds);
@@ -133,12 +140,9 @@ export function Footer() {
             {" "}
             <button
               onClick={() => {
-                const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth : window.innerWidth;
-                const cw = Math.floor(aw / 3) - 32;
-                useAppStore.setState({
-                  colWidth: Math.max(220, Math.min(1200, cw)),
-                });
+                setColWidth(
+                  fitColumnWidthForCount(getAvailableColumnWidth(), 3),
+                );
               }}
               className="text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer"
               title={t("Fit 3 columns")}
@@ -148,17 +152,9 @@ export function Footer() {
             </button>{" "}
             <button
               onClick={() => {
-                const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth : window.innerWidth;
-                const GAP = 32;
-                const currentCols = aw / (useAppStore.getState().colWidth + GAP);
-                // Round to nearest integer with small tolerance, then add 1 more column
-                const snapped = Math.round(currentCols);
-                const tC = Math.abs(currentCols - snapped) < 0.02 ? snapped + 1 : Math.ceil(currentCols);
-                const cw = aw / tC - GAP;
-                useAppStore.setState({
-                  colWidth: Math.max(220, Math.min(1200, Math.floor(cw))),
-                });
+                setColWidth(
+                  fitOneMoreColumn(getAvailableColumnWidth(), colWidth),
+                );
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Decrease width")}
@@ -171,27 +167,16 @@ export function Footer() {
               min="220"
               max="1200"
               value={colWidth}
-              onChange={(e) =>
-                useAppStore.setState({ colWidth: Number(e.target.value) })
-              }
+              onChange={(e) => setColWidth(Number(e.target.value))}
               className="w-20 lg:w-32 accent-[#a3966a] cursor-pointer"
               title={t("Col Width")}
               aria-label={t("Col Width")}
             />{" "}
             <button
               onClick={() => {
-                const s = document.getElementById("main-scroller");
-                const aw = s ? s.clientWidth : window.innerWidth;
-                const GAP = 32;
-                const currentCols = aw / (useAppStore.getState().colWidth + GAP);
-                // Round to nearest integer with small tolerance, then remove 1 column
-                const snapped = Math.round(currentCols);
-                const baseCols = Math.abs(currentCols - snapped) < 0.02 ? snapped : Math.ceil(currentCols);
-                const tC = Math.max(1, baseCols - 1);
-                const cw = aw / tC - GAP;
-                useAppStore.setState({
-                  colWidth: Math.max(220, Math.min(1200, Math.floor(cw))),
-                });
+                setColWidth(
+                  fitOneFewerColumn(getAvailableColumnWidth(), colWidth),
+                );
               }}
               className="w-5 h-5 flex items-center justify-center rounded bg-app-card border border-app-border hover:bg-app-card-hover text-app-text-muted hover:text-app-text-primary transition-colors cursor-pointer text-xs font-mono"
               title={t("Increase width")}

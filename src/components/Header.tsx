@@ -181,7 +181,11 @@ export function Header({ handleImport }: HeaderProps) {
                 }}
                 className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
               >
-                {timelineOpen ? <Network size={16} /> : <ScrollText size={16} />}
+                {timelineOpen ? (
+                  <Network size={16} />
+                ) : (
+                  <ScrollText size={16} />
+                )}
                 {viewModeLabel}
               </button>
               <button

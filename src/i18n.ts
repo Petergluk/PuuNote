@@ -214,7 +214,7 @@ i18n
     },
   });
 
-i18n.on('languageChanged', (lng) => {
+i18n.on("languageChanged", (lng) => {
   document.documentElement.lang = lng;
 });
 

@@ -56,8 +56,9 @@ export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
   const visited = new Set<string>();
   const { childrenMap } = buildTreeIndex(nodes);
   const traverse = (parentId: string | null, depth: number) => {
-    const children = childrenMap.get(parentId) || [];
-    children.sort((a, b) => (a.order || 0) - (b.order || 0));
+    const children = [...(childrenMap.get(parentId) || [])].sort(
+      (a, b) => (a.order || 0) - (b.order || 0),
+    );
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
       if (visited.has(child.id)) continue;
@@ -238,6 +239,14 @@ const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
   const blocks = cleanText.split(separatorRegex);
   const imported: PuuNode[] = [];
   const stack: { id: string; spaces: number }[] = [];
+  const nextOrderByParent = new Map<string | null, number>();
+
+  const takeNextOrder = (parentId: string | null) => {
+    const nextOrder = nextOrderByParent.get(parentId) ?? 0;
+    nextOrderByParent.set(parentId, nextOrder + 1);
+    return nextOrder;
+  };
+
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
     if (block.trim().length === 0) continue;
@@ -283,12 +292,11 @@ const parsePuuNoteFormat = (mdText: string): PuuNode[] => {
       stack.pop();
     }
     const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
-    const currentOrder = imported.filter((n) => n.parentId === parentId).length;
     const node: PuuNode = {
       id: generateId(),
       content: contentToSave,
       parentId,
-      order: currentOrder,
+      order: takeNextOrder(parentId),
     };
     imported.push(node);
     stack.push({ id: node.id, spaces: minSpaces });
@@ -322,10 +330,41 @@ const stripIndent = (line: string, spacesToStrip: number) => {
 const isLegacyNodeMarker = (line: string) =>
   line.trim() === "<!-- puunote-node -->";
 
+const parsePlainSeparatorBlocks = (mdText: string): PuuNode[] => {
+  const normalized = normalizeLineEndings(mdText);
+  const lines = normalized.split("\n");
+  const hasStructuralLines = lines.some((line) => {
+    const trimmed = line.trimStart();
+    return /^#{1,6}\s+/.test(trimmed) || /^[-*+]\s+/.test(trimmed);
+  });
+
+  if (hasStructuralLines || !/^[^\S\n]*---[^\S\n]*$/m.test(normalized)) {
+    return [];
+  }
+
+  return normalized
+    .split(/^[^\S\n]*---[^\S\n]*$/m)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((content, order) => ({
+      id: generateId(),
+      content,
+      parentId: null,
+      order,
+    }));
+};
+
 const parseLegacyPuuNoteFormat = (mdText: string): PuuNode[] => {
   const lines = mdText.split("\n");
   const imported: PuuNode[] = [];
+  const nextOrderByParent = new Map<string | null, number>();
   let index = 0;
+
+  const takeNextOrder = (parentId: string | null) => {
+    const nextOrder = nextOrderByParent.get(parentId) ?? 0;
+    nextOrderByParent.set(parentId, nextOrder + 1);
+    return nextOrder;
+  };
 
   const skipNoise = () => {
     while (
@@ -343,14 +382,11 @@ const parseLegacyPuuNoteFormat = (mdText: string): PuuNode[] => {
 
     const id = generateId();
     const contentLines: string[] = [];
-    const siblingOrder = imported.filter(
-      (node) => node.parentId === parentId,
-    ).length;
     const node: PuuNode = {
       id,
       content: "",
       parentId,
-      order: siblingOrder,
+      order: takeNextOrder(parentId),
     };
     imported.push(node);
 
@@ -411,10 +447,22 @@ const parseLegacyPuuNoteFormat = (mdText: string): PuuNode[] => {
   return imported.filter((node) => node.content.trim().length > 0);
 };
 const parseMindMapFormat = (mdText: string): PuuNode[] => {
+  const separatorBlocks = parsePlainSeparatorBlocks(mdText);
+  if (separatorBlocks.length > 0) {
+    return separatorBlocks;
+  }
+
   const lines = normalizeLineEndings(mdText).split("\n");
   const imported: PuuNode[] = [];
   let latestNode: PuuNode | null = null;
   const stack: { id: string; spaces: number; headingLevel?: number }[] = [];
+  const nextOrderByParent = new Map<string | null, number>();
+
+  const takeNextOrder = (parentId: string | null) => {
+    const nextOrder = nextOrderByParent.get(parentId) ?? 0;
+    nextOrderByParent.set(parentId, nextOrder + 1);
+    return nextOrder;
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -465,12 +513,11 @@ const parseMindMapFormat = (mdText: string): PuuNode[] => {
     }
 
     const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
-    const currentOrder = imported.filter((n) => n.parentId === parentId).length;
     const node: PuuNode = {
       id: generateId(),
       content: contentToSave.trimStart(),
       parentId,
-      order: currentOrder,
+      order: takeNextOrder(parentId),
     };
     imported.push(node);
     latestNode = node;

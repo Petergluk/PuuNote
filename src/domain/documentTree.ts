@@ -81,7 +81,7 @@ export const canMergeNodes = (
 
 /**
  * documentApi provides safe functions for manipulating the tree of nodes.
- * It's important that these operations return a new array rather than mutating 
+ * It's important that these operations return a new array rather than mutating
  * in place, as this ensures React correctly detects state changes and triggers re-renders.
  */
 export const documentApi = {
@@ -145,6 +145,9 @@ export const documentApi = {
     let head = 0;
     while (head < queue.length) {
       const curr = queue[head++];
+      if (idsToRemove.has(curr)) {
+        continue;
+      }
       idsToRemove.add(curr);
       const children = index.childrenMap.get(curr) || [];
       for (const c of children) queue.push(c.id);
@@ -376,7 +379,7 @@ export const documentApi = {
       const newSiblings = [
         ...destSiblings.slice(0, insertIdx),
         ...movingNodes,
-        ...destSiblings.slice(insertIdx)
+        ...destSiblings.slice(insertIdx),
       ];
 
       newSiblings.forEach((n, i) => {

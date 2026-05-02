@@ -4,7 +4,7 @@ import {
   exportNodesToStructuredMarkdown,
   parseMarkdownToNodes,
 } from "../utils/markdownParser";
-import { PuuNodeSchema } from "../utils/schema";
+import { PuuNodeSchema, type NodeValidationReport } from "../utils/schema";
 import { normalizeNodes, normalizeNodesWithReport } from "./documentService";
 
 export const PUUNOTE_JSON_FORMAT = "puunote.document";
@@ -22,6 +22,7 @@ export interface ParsedImport {
   title: string;
   nodes: PuuNode[];
   metadata?: PuuDocument["metadata"];
+  report?: NodeValidationReport;
 }
 
 const fallbackFilename = "puunote-export";
@@ -101,17 +102,23 @@ export function parseJsonExport(raw: string): ParsedImport {
     throw new Error("Unsupported PuuNote JSON export.");
   }
 
-  // Validate each node through Zod schema before trusting the data
   const validNodes: PuuNode[] = [];
-  for (const rawNode of parsed.nodes) {
+  const parseWarnings: string[] = [];
+  parsed.nodes.forEach((rawNode, index) => {
     const result = PuuNodeSchema.safeParse(rawNode);
     if (result.success) {
       validNodes.push(result.data);
+    } else {
+      parseWarnings.push(`Invalid node at index ${index} was skipped.`);
     }
-  }
+  });
 
   const { nodes, report } = normalizeNodesWithReport(validNodes);
-  if (nodes.length === 0) {
+  if (parseWarnings.length > 0) {
+    report.repaired = true;
+    report.warnings.push(...parseWarnings);
+  }
+  if (validNodes.length > 0 && nodes.length === 0) {
     throw new Error(
       report.errors[0] || "PuuNote JSON export does not contain valid nodes.",
     );
@@ -121,6 +128,7 @@ export function parseJsonExport(raw: string): ParsedImport {
     title: parsed.document.title || "Imported PuuNote Document",
     nodes,
     metadata: parsed.document.metadata,
+    report,
   };
 }
 
@@ -129,8 +137,9 @@ export function parseImportFile(filename: string, raw: string): ParsedImport {
     return parseJsonExport(raw);
   }
 
-  const { nodes, report } = normalizeNodesWithReport(parseMarkdownToNodes(raw));
-  if (nodes.length === 0) {
+  const parsedNodes = parseMarkdownToNodes(raw);
+  const { nodes, report } = normalizeNodesWithReport(parsedNodes);
+  if (parsedNodes.length > 0 && nodes.length === 0) {
     throw new Error(
       report.errors[0] || "Markdown import does not contain valid nodes.",
     );
@@ -139,5 +148,6 @@ export function parseImportFile(filename: string, raw: string): ParsedImport {
   return {
     title: filename.replace(/\.(md|markdown)$/i, "") || "Imported Markdown",
     nodes,
+    report,
   };
 }

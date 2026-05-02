@@ -32,7 +32,7 @@ export const isTutorialDocument = (
 ) =>
   Boolean(
     document &&
-      (document.metadata?.kind === TUTORIAL_DOCUMENT_KIND ||
-        document.title === TUTORIAL_DOCUMENT_TITLE ||
-        document.title === currentTutorialTitle),
+    (document.metadata?.kind === TUTORIAL_DOCUMENT_KIND ||
+      document.title === TUTORIAL_DOCUMENT_TITLE ||
+      document.title === currentTutorialTitle),
   );

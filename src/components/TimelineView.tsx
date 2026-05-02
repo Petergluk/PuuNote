@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { useAppStore } from "../store/useAppStore";
@@ -109,82 +115,88 @@ export const TimelineView = () => {
     }
   };
 
-  const renderItem = useCallback((_index: number, n: PuuNode & { depth: number }) => {
-    const isLocalActive = n.id === activeId;
-    const hasActiveNode = activeId !== null;
-    const previousDepth =
-      _index > 0 ? orderedNodes[_index - 1]?.depth : undefined;
-    const showLevelSeparator =
-      _index > 0 && previousDepth !== n.depth;
-    const separatorIsRoot = n.depth === 0;
+  const renderItem = useCallback(
+    (_index: number, n: PuuNode & { depth: number }) => {
+      const isLocalActive = n.id === activeId;
+      const hasActiveNode = activeId !== null;
+      const previousDepth =
+        _index > 0 ? orderedNodes[_index - 1]?.depth : undefined;
+      const showLevelSeparator = _index > 0 && previousDepth !== n.depth;
+      const separatorIsRoot = n.depth === 0;
 
-    return (
-      <div
-        key={n.id}
-        id={`tl-node-${n.id}`}
-        className="mb-1.5"
-      >
-        {showLevelSeparator && (
+      return (
+        <div key={n.id} id={`tl-node-${n.id}`} className="mb-1.5">
+          {showLevelSeparator && (
+            <div
+              className={`flex items-center gap-2 text-[10px] font-mono text-app-text-muted/70 ${
+                separatorIsRoot ? "mt-5 mb-2.5" : "mt-2 mb-1"
+              }`}
+            >
+              <span className="h-px flex-1 bg-app-border/60" />
+              <span className="shrink-0 tabular-nums">{n.depth + 1}</span>
+            </div>
+          )}
           <div
-            className={`flex items-center gap-2 text-[10px] font-mono text-app-text-muted/70 ${
-              separatorIsRoot ? "mt-5 mb-2.5" : "mt-2 mb-1"
+            onClick={() => {
+              blockScrollRef.current = true;
+              setActiveId(n.id);
+              setTimeout(() => {
+                blockScrollRef.current = false;
+              }, 50);
+            }}
+            className={`cursor-text rounded px-0 py-0.5 transition-opacity duration-200 ${
+              !hasActiveNode || isLocalActive
+                ? "opacity-100"
+                : "opacity-45 hover:opacity-80"
             }`}
           >
-            <span className="h-px flex-1 bg-app-border/60" />
-            <span className="shrink-0 tabular-nums">
-              {n.depth + 1}
-            </span>
-          </div>
-        )}
-        <div
-          onClick={() => {
-            blockScrollRef.current = true;
-            setActiveId(n.id);
-            setTimeout(() => { blockScrollRef.current = false; }, 50);
-          }}
-          className={`cursor-text rounded px-0 py-0.5 transition-opacity duration-200 ${
-            !hasActiveNode || isLocalActive
-              ? "opacity-100"
-              : "opacity-45 hover:opacity-80"
-          }`}
-        >
-          {isLocalActive ? (
-            /* 
+            {isLocalActive ? (
+              /* 
              We check editorMode here because the user can toggle between 
              a rich text editor (WysiwygEditor) and a plain markdown text area.
              Both modes are core features intended to co-exist.
             */
-            editorMode === "visual" ? (
-              <WysiwygEditor
-                initialValue={n.content}
-                onChange={(val: string) => updateContent(n.id, val)}
-                autoFocus
-                className={`${PROSE_TIMELINE} w-full outline-none focus:outline-none min-h-[24px]`}
-              />
+              editorMode === "visual" ? (
+                <WysiwygEditor
+                  initialValue={n.content}
+                  onChange={(val: string) => updateContent(n.id, val)}
+                  autoFocus
+                  className={`${PROSE_TIMELINE} w-full outline-none focus:outline-none min-h-[24px]`}
+                />
+              ) : (
+                <AutoSizeTextarea
+                  value={n.content}
+                  onChange={(val: string) => updateContent(n.id, val)}
+                  autoFocus
+                  placeholder={t("Empty node")}
+                  className="w-full h-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed"
+                />
+              )
             ) : (
-              <AutoSizeTextarea
-                value={n.content}
-                onChange={(val: string) => updateContent(n.id, val)}
-                autoFocus
-                placeholder={t("Empty node")}
-                className="w-full h-full resize-none overflow-hidden outline-none bg-transparent font-sans text-app-text-primary leading-relaxed"
-              />
-            )
-          ) : (
-            <div className={PROSE_TIMELINE}>
-              <SafeMarkdown
-                onToggleCheckbox={(idx, val) =>
-                  toggleCheckbox(n.id, n.content || "", idx, val)
-                }
-              >
-                {n.content || `*${t("Empty node")}*`}
-              </SafeMarkdown>
-            </div>
-          )}
+              <div className={PROSE_TIMELINE}>
+                <SafeMarkdown
+                  onToggleCheckbox={(idx, val) =>
+                    toggleCheckbox(n.id, n.content || "", idx, val)
+                  }
+                >
+                  {n.content || `*${t("Empty node")}*`}
+                </SafeMarkdown>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    );
-  }, [activeId, orderedNodes, t, toggleCheckbox, updateContent, setActiveId, editorMode]);
+      );
+    },
+    [
+      activeId,
+      orderedNodes,
+      t,
+      toggleCheckbox,
+      updateContent,
+      setActiveId,
+      editorMode,
+    ],
+  );
 
   return (
     <div

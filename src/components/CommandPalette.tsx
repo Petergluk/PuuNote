@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   DocumentService,
+  type ActiveSearchDocument,
   type SearchDocumentNode,
 } from "../domain/documentService";
 import { runMockExpandSelectedCard } from "../domain/aiOperations";
@@ -42,6 +43,7 @@ export function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const documents = useAppStore((s) => s.documents);
   const activeFileId = useAppStore((s) => s.activeFileId);
+  const nodes = useAppStore((s) => s.nodes);
   const setActiveId = useAppStore((s) => s.setActiveId);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
@@ -58,6 +60,19 @@ export function CommandPalette() {
 
   const paletteRef = useFocusTrap<HTMLDivElement>(isOpen, closePalette);
   useClickOutside(paletteRef, closePalette);
+
+  const activeDocument = useMemo<ActiveSearchDocument | null>(() => {
+    if (!activeFileId) return null;
+
+    const document = documents.find((doc) => doc.id === activeFileId);
+    if (!document) return null;
+
+    return {
+      fileId: document.id,
+      fileTitle: document.title,
+      nodes,
+    };
+  }, [activeFileId, documents, nodes]);
 
   const fuse = useMemo(() => {
     if (searchDocs.length === 0) return null;
@@ -88,7 +103,10 @@ export function CommandPalette() {
     if (!isOpen) return;
     let cancelled = false;
     const loadSearchDocs = async () => {
-      const docs = await DocumentService.getSearchNodes(documents);
+      const docs = await DocumentService.getSearchNodes(
+        documents,
+        activeDocument,
+      );
       if (!cancelled) setSearchDocs(docs);
     };
 
@@ -97,7 +115,7 @@ export function CommandPalette() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, documents]);
+  }, [isOpen, documents, activeDocument]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -202,7 +220,9 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const item = document.getElementById(`command-palette-item-${safeActiveIndex}`);
+    const item = document.getElementById(
+      `command-palette-item-${safeActiveIndex}`,
+    );
     if (item) {
       item.scrollIntoView({ block: "nearest" });
     }
@@ -311,10 +331,10 @@ export function CommandPalette() {
                   </div>
                   {searchResults.length === 0 ? (
                     <div className="px-4 py-3 text-app-text-secondary text-sm flex items-center gap-2">
-                       {isSearching && (
-                         <div className="w-4 h-4 rounded-full border-2 border-app-accent border-r-transparent animate-spin" />
-                       )}
-                       {isSearching ? t("Searching...") : t("No results")}
+                      {isSearching && (
+                        <div className="w-4 h-4 rounded-full border-2 border-app-accent border-r-transparent animate-spin" />
+                      )}
+                      {isSearching ? t("Searching...") : t("No results")}
                     </div>
                   ) : (
                     searchResults.map((result, index) => (

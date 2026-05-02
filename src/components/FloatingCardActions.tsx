@@ -295,14 +295,14 @@ export function FloatingCardActions() {
             onClick={(event) => {
               event.stopPropagation();
               const state = useAppStore.getState();
-              
+
               if (selectedIds.length > 1) {
                 state.openConfirm(
                   `Delete ${selectedIds.length} selected cards and their descendants?`,
                   () => {
                     useAppStore.getState().deleteNodes(selectedIds);
                     useAppStore.getState().clearSelection();
-                  }
+                  },
                 );
               } else {
                 const descendantCount = computeDescendantIds(

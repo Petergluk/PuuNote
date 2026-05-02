@@ -24,6 +24,24 @@ describe("validateNodesWithReport", () => {
     expect(report.warnings[0]).toContain("Missing parent");
   });
 
+  it("regenerates duplicate ids without dropping nodes", () => {
+    const { nodes, report } = validateNodesWithReport([
+      { id: "a", parentId: null, order: 0, content: "First" },
+      { id: "a", parentId: null, order: 1, content: "Second" },
+      { id: "child", parentId: "a", order: 0, content: "Child" },
+    ]);
+
+    expect(nodes).toHaveLength(3);
+    expect(new Set(nodes.map((node) => node.id)).size).toBe(3);
+    expect(nodes.map((node) => node.content)).toEqual([
+      "First",
+      "Second",
+      "Child",
+    ]);
+    expect(report.repaired).toBe(true);
+    expect(report.warnings.join("\n")).toContain("Duplicate node id");
+  });
+
   it("repairs cycles instead of dropping the whole document", () => {
     const { nodes, report } = validateNodesWithReport([
       { id: "a", parentId: "b", order: 0, content: "A" },

@@ -42,6 +42,20 @@ describe("documentTree", () => {
     expect(ids).not.toContain("3");
   });
 
+  it("should not loop forever when deleting a cyclic subtree", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: "2", order: 0, content: "Loop A" },
+      { id: "2", parentId: "1", order: 0, content: "Loop B" },
+      { id: "3", parentId: null, order: 1, content: "Safe root" },
+    ];
+
+    const { nextNodes } = documentApi.deleteNode(nodes, "1");
+
+    expect(nextNodes).toEqual([
+      { id: "3", parentId: null, order: 1, content: "Safe root" },
+    ]);
+  });
+
   it("should delete selected nodes and promote their children for multi-cut", () => {
     const nodes: PuuNode[] = [
       { id: "1", parentId: null, order: 0, content: "Root" },

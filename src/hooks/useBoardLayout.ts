@@ -1,7 +1,11 @@
 import { useMemo, useEffect, useRef } from "react";
 import { PuuNode } from "../types";
 
-import { buildTreeIndex, TreeIndex, orderedChildrenFromIndex } from "../utils/tree";
+import {
+  buildTreeIndex,
+  TreeIndex,
+  orderedChildrenFromIndex,
+} from "../utils/tree";
 
 export function buildBoardColumns(
   treeIndex: TreeIndex,
@@ -76,19 +80,8 @@ export function useColumns(
 ) {
   const columns = useMemo(() => {
     const index = treeIndex || buildTreeIndex(nodes);
-    return buildBoardColumns(
-      index,
-      activePath,
-      activeId,
-      useActiveCorridor,
-    );
-  }, [
-    activeId,
-    activePath,
-    nodes,
-    treeIndex,
-    useActiveCorridor,
-  ]);
+    return buildBoardColumns(index, activePath, activeId, useActiveCorridor);
+  }, [activeId, activePath, nodes, treeIndex, useActiveCorridor]);
 
   return columns;
 }
@@ -144,7 +137,9 @@ export function useActivePathScroll(
       });
 
       // 2. Now measure the active element, since initialization may have moved it
-      const activeEl = activeId ? document.getElementById(`card-${activeId}`) : null;
+      const activeEl = activeId
+        ? document.getElementById(`card-${activeId}`)
+        : null;
       const activeRect = activeEl ? activeEl.getBoundingClientRect() : null;
 
       const activeAncestorIds = new Set(activeAncestorPath);
@@ -160,7 +155,9 @@ export function useActivePathScroll(
         if (!col) return;
 
         let activeNodeInCol: HTMLElement | null = null;
-        const cards = Array.from(col.querySelectorAll<HTMLElement>('[id^="card-"]'));
+        const cards = Array.from(
+          col.querySelectorAll<HTMLElement>('[id^="card-"]'),
+        );
 
         for (const card of cards) {
           const id = card.id.replace(/^card-/, "");
@@ -177,7 +174,7 @@ export function useActivePathScroll(
           let desiredTop = activeRect.top;
           const minTop = colRect.top + 64;
           const maxTop = Math.max(minTop, colRect.bottom - 16 - elRect.height);
-          
+
           if (desiredTop < minTop) {
             desiredTop = minTop;
           } else if (desiredTop > maxTop) {
@@ -188,7 +185,10 @@ export function useActivePathScroll(
           const targetScrollTop = col.scrollTop + targetDiff;
 
           const maxScrollTop = col.scrollHeight - col.clientHeight;
-          const clampedScrollTop = Math.max(0, Math.min(maxScrollTop || 0, targetScrollTop));
+          const clampedScrollTop = Math.max(
+            0,
+            Math.min(maxScrollTop || 0, targetScrollTop),
+          );
 
           if (Math.abs(clampedScrollTop - col.scrollTop) > 1) {
             col.scrollTop = clampedScrollTop;

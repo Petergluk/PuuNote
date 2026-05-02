@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { DocumentService, normalizeNodes } from "../domain/documentService";
 import type { PuuDocument, PuuNode, PuuDocumentMetadata } from "../types";
 import { flushPendingTextareas } from "../components/textareaFlushRegistry";
+import { fitColumnWidthToDocumentDepth } from "../utils/columnSizing";
 
 class FileSystemManager {
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -14,13 +15,17 @@ class FileSystemManager {
   public isHydratingFile = false;
   public switchController: AbortController | null = null;
 
-  public scheduleSave(fileId: string, nodes: PuuNode[], onSave: () => void) {
+  public scheduleSave(
+    fileId: string,
+    nodes: PuuNode[],
+    onSave: (fileId: string, nodes: PuuNode[]) => void,
+  ) {
     if (this.timer) clearTimeout(this.timer);
     this.fileId = fileId;
     this.nodes = nodes;
     this.timer = setTimeout(() => {
       this.timer = null;
-      onSave();
+      onSave(this.fileId, this.nodes);
     }, 1000);
   }
 
@@ -171,36 +176,43 @@ export function useFileSystemInit() {
       if (!active || !savedDocs.find((d) => d.id === active)) {
         active = savedDocs[0].id;
       }
-      useAppStore.setState({ activeFileId: active });
+      fsManager.isHydratingFile = true;
+      fsManager.clearTimer();
       try {
-        DocumentService.storeActiveFileId(active);
-      } catch (err) {
-        console.error(
-          "Failed to save active file reference to localStorage",
-          err,
-        );
-      }
+        useAppStore.setState({ activeFileId: active });
+        try {
+          DocumentService.storeActiveFileId(active);
+        } catch (err) {
+          console.error(
+            "Failed to save active file reference to localStorage",
+            err,
+          );
+        }
 
-      let newNodes = INITIAL_NODES;
-      try {
-        await DocumentService.restoreDirtySave();
+        let newNodes = INITIAL_NODES;
+        try {
+          await DocumentService.restoreDirtySave();
+          if (cancelled) return;
+
+          const savedNodes = await DocumentService.loadNodes(active);
+          if (savedNodes !== null) newNodes = savedNodes;
+        } catch (err) {
+          console.error("Failed to load active file nodes", err);
+        }
         if (cancelled) return;
 
-        const savedNodes = await DocumentService.loadNodes(active);
-        if (savedNodes !== null) newNodes = savedNodes;
-      } catch (err) {
-        console.error("Failed to load active file nodes", err);
+        fsManager.fileId = active;
+        fsManager.nodes = newNodes;
+        setNodesRaw(newNodes);
+        useAppStore.setState({
+          activeId: newNodes[0]?.id || null,
+          colWidth: fitColumnWidthToDocumentDepth(newNodes),
+          saveStatus: "saved",
+        });
+        if (active) updateDocumentMetadataInStore(active, newNodes);
+      } finally {
+        fsManager.isHydratingFile = false;
       }
-      if (cancelled) return;
-
-      fsManager.isHydratingFile = true;
-      setNodesRaw(newNodes);
-      useAppStore.setState({
-        activeId: newNodes[0]?.id || null,
-        saveStatus: "saved",
-      });
-      fsManager.isHydratingFile = false;
-      if (active) updateDocumentMetadataInStore(active, newNodes);
     }
     init();
 
@@ -227,16 +239,16 @@ export function useFileSystemInit() {
         useAppStore.setState({ saveStatus: "unsaved" });
 
         // Save active file changes tracking
-        fsManager.scheduleSave(activeFileId, nodes, () => {
+        fsManager.scheduleSave(activeFileId, nodes, (fileId, nodesToSave) => {
           useAppStore.setState({ saveStatus: "saving" });
           try {
-            DocumentService.storeActiveFileId(activeFileId);
+            DocumentService.storeActiveFileId(fileId);
           } catch (err) {
             console.error("Failed to update active file in ls", err);
           }
-          DocumentService.saveNodes(activeFileId, nodes)
+          DocumentService.saveNodes(fileId, nodesToSave)
             .then(() => {
-              updateDocumentMetadataInStore(activeFileId, nodes, {
+              updateDocumentMetadataInStore(fileId, nodesToSave, {
                 touchUpdatedAt: true,
               });
               useAppStore.setState({ saveStatus: "saved" });
@@ -252,8 +264,7 @@ export function useFileSystemInit() {
                 toast.error("Failed to save your notes.");
               }
             });
-      });
-
+        });
       }
 
       // Handle documents metadata changing
@@ -357,6 +368,7 @@ export function useFileSystemActions() {
       activeId: newNodes[0]?.id || null,
       selectedIds: newNodes[0] ? [newNodes[0].id] : [],
       editingId: null,
+      colWidth: fitColumnWidthToDocumentDepth(newNodes),
       saveStatus: "saved",
     });
     fsManager.isHydratingFile = false;
@@ -416,6 +428,7 @@ export function useFileSystemActions() {
       activeId: normalizedNodes[0]?.id || null,
       selectedIds: normalizedNodes[0] ? [normalizedNodes[0].id] : [],
       editingId: null,
+      colWidth: fitColumnWidthToDocumentDepth(normalizedNodes),
       saveStatus: "saved",
     }));
     fsManager.isHydratingFile = false;
@@ -441,6 +454,7 @@ export function useFileSystemActions() {
     } catch (err) {
       console.error("Failed to delete from db", err);
       toast.error("Failed to delete the file.");
+      return;
     }
 
     const newDocs = state.documents.filter((d) => d.id !== fileId);

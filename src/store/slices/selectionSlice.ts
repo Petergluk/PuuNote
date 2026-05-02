@@ -28,15 +28,19 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
       if (isShift && activeId) {
         const activeNode = nodes.find((n) => n.id === activeId);
         const targetNode = nodes.find((n) => n.id === id);
-        
-        if (activeNode && targetNode && activeNode.parentId === targetNode.parentId) {
+
+        if (
+          activeNode &&
+          targetNode &&
+          activeNode.parentId === targetNode.parentId
+        ) {
           const siblings = nodes
             .filter((n) => n.parentId === activeNode.parentId)
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-          const anchorIndex = siblings.findIndex(n => n.id === activeId);
-          const targetIndex = siblings.findIndex(n => n.id === id);
-          
+
+          const anchorIndex = siblings.findIndex((n) => n.id === activeId);
+          const targetIndex = siblings.findIndex((n) => n.id === id);
+
           if (anchorIndex !== -1 && targetIndex !== -1) {
             const [from, to] =
               anchorIndex < targetIndex
@@ -44,7 +48,7 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
                 : [targetIndex, anchorIndex];
             return {
               activeId: id,
-              selectedIds: siblings.slice(from, to + 1).map(n => n.id),
+              selectedIds: siblings.slice(from, to + 1).map((n) => n.id),
             };
           }
         } else {
@@ -62,18 +66,22 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
               anchorIndex < targetIndex
                 ? [anchorIndex, targetIndex]
                 : [targetIndex, anchorIndex];
-            
+
             // Collect range
             const rangeIds = orderedIds.slice(from, to + 1);
-            // Filter out parents: only keep nodes that are leaves within this range, 
+            // Filter out parents: only keep nodes that are leaves within this range,
             // or just exclude ancestors of the target node?
-            // A simple and robust way: exclude any node in the range that has a child ALSO in the range. 
+            // A simple and robust way: exclude any node in the range that has a child ALSO in the range.
             // This prevents selecting a parent when its children are selected.
             const rangeSet = new Set(rangeIds);
-            const filteredRangeIds = rangeIds.filter(rangeId => {
-               const nodeChildren = state.nodes.filter(n => n.parentId === rangeId);
-               const hasChildInRange = nodeChildren.some(child => rangeSet.has(child.id));
-               return !hasChildInRange;
+            const filteredRangeIds = rangeIds.filter((rangeId) => {
+              const nodeChildren = state.nodes.filter(
+                (n) => n.parentId === rangeId,
+              );
+              const hasChildInRange = nodeChildren.some((child) =>
+                rangeSet.has(child.id),
+              );
+              return !hasChildInRange;
             });
 
             return {

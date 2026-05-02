@@ -56,8 +56,6 @@ export const computeAncestorPathFromIndex = (
   return path.reverse();
 };
 
-
-
 export const computeDescendantIdsFromIndex = (
   index: TreeIndex,
   activeId: string | null,
@@ -89,8 +87,6 @@ export const computeDescendantIds = (
 ): Set<string> => {
   return computeDescendantIdsFromIndex(buildTreeIndex(nodes), activeId);
 };
-
-
 
 export const getDepthFirstNodesFromIndex = (
   index: TreeIndex,

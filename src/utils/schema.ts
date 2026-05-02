@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateId } from "./id";
 
 export const PuuNodeMetadataSchema = z
   .object({
@@ -18,7 +19,11 @@ export const PuuNodeMetadataSchema = z
 export const PuuNodeSchema = z.object({
   id: z.string().min(1).max(256),
   content: z.string().max(5_000_000).catch(""), // Limit size to 5MB characters to prevent DoS
-  parentId: z.string().nullable().optional().transform(val => (val === undefined ? null : val)),
+  parentId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val === undefined ? null : val)),
   order: z.number().optional().catch(0),
   metadata: PuuNodeMetadataSchema.optional(),
 });
@@ -73,16 +78,37 @@ export const validateNodesWithReport = (
     }
   });
 
+  const seenIds = new Set<string>();
+  const validNodes = parsedNodes.map((node, index) => {
+    if (!seenIds.has(node.id)) {
+      seenIds.add(node.id);
+      return node;
+    }
+
+    let nextId = generateId();
+    while (seenIds.has(nextId)) {
+      nextId = generateId();
+    }
+    seenIds.add(nextId);
+    report.repaired = true;
+    report.warnings.push(
+      `Duplicate node id "${node.id}" at index ${index} was regenerated as "${nextId}".`,
+    );
+
+    return { ...node, id: nextId };
+  });
+
   const nodeMap = new Map<string, z.infer<typeof PuuNodeSchema>>();
-  for (const node of parsedNodes) {
+  for (const node of validNodes) {
     if (nodeMap.has(node.id)) {
       report.repaired = true;
-      report.warnings.push(`Duplicate node id "${node.id}" was deduplicated.`);
+      report.warnings.push(`Duplicate node id "${node.id}" was skipped.`);
+      continue;
     }
     nodeMap.set(node.id, node);
   }
 
-  let validNodes = Array.from(nodeMap.values());
+  let repairedNodes = Array.from(nodeMap.values());
 
   const repairParent = (nodeId: string, reason: string) => {
     const node = nodeMap.get(nodeId);
@@ -93,7 +119,7 @@ export const validateNodesWithReport = (
     report.warnings.push(`${reason}; node "${nodeId}" was moved to root.`);
   };
 
-  for (const node of validNodes) {
+  for (const node of repairedNodes) {
     if (node.parentId && !nodeMap.has(node.parentId)) {
       repairParent(node.id, `Missing parent "${node.parentId}"`);
     }
@@ -115,18 +141,18 @@ export const validateNodesWithReport = (
     return null;
   };
 
-  validNodes = Array.from(nodeMap.values());
-  for (const node of validNodes) {
+  repairedNodes = Array.from(nodeMap.values());
+  for (const node of repairedNodes) {
     const unsafeReason = hasUnsafeAncestry(node.id);
     if (unsafeReason) {
       repairParent(node.id, unsafeReason);
     }
   }
 
-  validNodes = Array.from(nodeMap.values());
-  report.outputCount = validNodes.length;
+  repairedNodes = Array.from(nodeMap.values());
+  report.outputCount = repairedNodes.length;
 
-  return { nodes: validNodes, report };
+  return { nodes: repairedNodes, report };
 };
 
 export const validateNodes = (data: unknown) =>

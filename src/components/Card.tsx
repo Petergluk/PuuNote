@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react";
+import React, { lazy, Suspense, useRef, useState } from "react";
 import { Maximize2, Scissors } from "lucide-react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
-import { WysiwygEditor } from "./WysiwygEditor";
+import type { WysiwygEditorHandle } from "./WysiwygEditor";
 import { useAppStore } from "../store/useAppStore";
 import { useShallow } from "zustand/shallow";
 import {
@@ -15,6 +15,12 @@ import {
 import { cn } from "../utils/cn";
 
 type DropZone = "none" | "top" | "bottom" | "right";
+
+const WysiwygEditor = lazy(() =>
+  import("./WysiwygEditor").then((module) => ({
+    default: module.WysiwygEditor,
+  })),
+);
 
 /**
  * Compute the Tailwind class string for the card based on its visual state.
@@ -28,16 +34,17 @@ function buildCardClasses(state: {
   isDragged: boolean;
 }): string {
   const { isActive, isSelected, hasActiveNode, isBright, isDragged } = state;
-  const base = "transition-all duration-200 text-app-text-primary";
+  const base =
+    "transition-colors duration-200 text-app-text-primary motion-safe:transition-[background-color,border-color,box-shadow,opacity]";
 
   let variant: string;
 
   if (isActive) {
     variant =
-      "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 transform scale-[1.01] z-50";
+      "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 z-50";
   } else if (isSelected) {
     variant =
-      "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md transform z-40";
+      "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md z-40";
   } else if (!hasActiveNode) {
     variant =
       "bg-app-card border border-app-border opacity-100 hover:bg-app-card-hover hover:border-app-border-hover z-20";
@@ -109,16 +116,28 @@ export const Card = React.memo(
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const wysiwygRef = useRef<WysiwygEditorHandle>(null);
     const [dropTarget, setDropTarget] = useState<DropZone>("none");
 
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!textareaRef.current) return;
-      const cursorPosition = textareaRef.current.selectionStart;
-      const textPosition = textareaRef.current.value;
-      const textBefore = textPosition.substring(0, cursorPosition).trimEnd();
-      const textAfter = textPosition.substring(cursorPosition).trimStart();
+      const split =
+        editorMode === "visual"
+          ? wysiwygRef.current?.getSplitMarkdown()
+          : textareaRef.current
+            ? {
+                textBefore: textareaRef.current.value
+                  .substring(0, textareaRef.current.selectionStart)
+                  .trimEnd(),
+                textAfter: textareaRef.current.value
+                  .substring(textareaRef.current.selectionStart)
+                  .trimStart(),
+              }
+            : null;
+      if (!split) return;
+
+      const { textBefore, textAfter } = split;
       if (textAfter) {
         splitNode(node.id, textBefore, textAfter);
       }
@@ -209,7 +228,7 @@ export const Card = React.memo(
           }}
         >
           {isEditing ? (
-            <div className="relative group/edit w-full">
+            <div className="relative group/edit w-full pt-8">
               {/* 
                  The application deliberately supports both "visual" (WysiwygEditor) 
                  and "markdown" (AutoSizeTextarea) modes. Maintaining both options 
@@ -218,17 +237,32 @@ export const Card = React.memo(
                  provides raw Markdown control.
               */}
               {editorMode === "visual" ? (
-                <WysiwygEditor
-                  initialValue={node.content}
-                  onChange={(val: string) => updateContent(node.id, val)}
-                  onBlur={() => setEditingId(null)}
-                  autoFocus
-                  className={cn(
-                    PROSE_CARD,
-                    isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM,
-                    "w-full outline-none focus:outline-none min-h-[24px]"
-                  )}
-                />
+                <Suspense
+                  fallback={
+                    <div
+                      className={cn(
+                        PROSE_CARD,
+                        isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM,
+                        "min-h-[24px] text-app-text-muted",
+                      )}
+                    >
+                      Loading editor...
+                    </div>
+                  }
+                >
+                  <WysiwygEditor
+                    ref={wysiwygRef}
+                    initialValue={node.content}
+                    onChange={(val: string) => updateContent(node.id, val)}
+                    onBlur={() => setEditingId(null)}
+                    autoFocus
+                    className={cn(
+                      PROSE_CARD,
+                      isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM,
+                      "w-full outline-none focus:outline-none min-h-[24px]",
+                    )}
+                  />
+                </Suspense>
               ) : (
                 <AutoSizeTextarea
                   ref={textareaRef}
@@ -239,7 +273,7 @@ export const Card = React.memo(
                   className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
                 />
               )}
-              <div className="absolute -top-3 -right-3 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
+              <div className="absolute top-0 right-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
                 <button
                   onMouseDown={handleSplitNode}
                   className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"

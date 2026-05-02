@@ -78,14 +78,17 @@ export async function restoreSnapshot(snapshotId: string) {
     }
 
     const validatedNodes = normalizeNodes(snapshot.nodes);
-    if (validatedNodes.length === 0) {
+    if (snapshot.nodes.length > 0 && validatedNodes.length === 0) {
       toast.error("Snapshot is invalid and cannot be restored.");
       return;
     }
 
     useAppStore.getState().setNodesRaw(validatedNodes);
     // Navigate to root node so the board isn't left in a deselected state
-    const rootNode = validatedNodes.find((n) => n.parentId === null) ?? validatedNodes[0] ?? null;
+    const rootNode =
+      validatedNodes.find((n) => n.parentId === null) ??
+      validatedNodes[0] ??
+      null;
     useAppStore.getState().setActiveId(rootNode?.id ?? null);
     useAppStore.getState().setEditingId(null);
     toast.success(`Restored to: ${snapshot.description}`);

@@ -6,6 +6,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config({
   ignores: ["dist", "node_modules", "AUDIT"],
+  linterOptions: {
+    reportUnusedDisableDirectives: "error",
+  },
   extends: [js.configs.recommended, ...tseslint.configs.recommended],
   files: ["**/*.{ts,tsx}"],
   languageOptions: {
@@ -19,10 +22,14 @@ export default tseslint.config({
   rules: {
     ...reactHooks.configs.recommended.rules,
     "react-refresh/only-export-components": [
-      "warn",
+      "error",
       { allowConstantExport: true },
     ],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    eqeqeq: ["error", "always"],
+    "no-implicit-coercion": "error",
+    "no-var": "error",
+    "prefer-const": "error",
   },
 });

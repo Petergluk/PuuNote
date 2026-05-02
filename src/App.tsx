@@ -79,7 +79,6 @@ export default function App() {
     };
   }, []);
 
-
   return (
     <div
       ref={containerRef}

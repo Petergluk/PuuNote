@@ -15,7 +15,10 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
 }) => {
   // Prevent accidental Setext headings when users type horizontal rules (e.g. `---`) directly below text.
   // This turns `Text\n---` into `Text\n\n---` which is parsed as a paragraph and a horizontal rule.
-  const safeContent = children.replace(/([^\n])\n(-{3,}|={3,})\s*$/gm, '$1\n\n$2');
+  const safeContent = children.replace(
+    /([^\n])\n(-{3,}|={3,})\s*$/gm,
+    "$1\n\n$2",
+  );
 
   return (
     <div className="markdown-container">

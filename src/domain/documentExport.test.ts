@@ -36,6 +36,35 @@ describe("documentExport", () => {
     expect(parsed.nodes).toEqual(nodes);
   });
 
+  it("reports repaired nodes while importing JSON payloads", () => {
+    const json = JSON.stringify({
+      format: "puunote.document",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      document,
+      nodes: [
+        { id: "a", parentId: null, order: 0, content: "First" },
+        { id: "a", parentId: null, order: 1, content: "Second" },
+        null,
+      ],
+    });
+
+    const parsed = parseJsonExport(json);
+
+    expect(parsed.nodes).toHaveLength(2);
+    expect(parsed.report?.repaired).toBe(true);
+    expect(parsed.report?.warnings.join("\n")).toContain("Duplicate node id");
+    expect(parsed.report?.warnings.join("\n")).toContain("Invalid node");
+  });
+
+  it("imports empty JSON exports as empty documents", () => {
+    const json = buildJsonExport(document, []);
+    const parsed = parseJsonExport(json);
+
+    expect(parsed.title).toBe(document.title);
+    expect(parsed.nodes).toEqual([]);
+  });
+
   it("creates filesystem-safe filenames", () => {
     expect(createDocumentFilename(document, nodes)).toBe("Roadmap-Draft");
   });
@@ -81,6 +110,13 @@ describe("documentExport", () => {
     expect(imported.nodes[0].content).toBe("# Root\n\nIntro");
     expect(imported.nodes[1].content).toBe("## Child\n\nDetails");
     expect(imported.nodes[1].parentId).toBe(imported.nodes[0].id);
+  });
+
+  it("imports empty markdown as an empty document", () => {
+    const imported = parseImportFile("empty.md", "");
+
+    expect(imported.title).toBe("empty");
+    expect(imported.nodes).toEqual([]);
   });
 
   it("exports structured markdown compatible with mind map indentation", () => {

@@ -21,6 +21,12 @@ export interface SearchDocumentNode {
   fileTitle: string;
 }
 
+export interface ActiveSearchDocument {
+  fileId: string;
+  fileTitle: string;
+  nodes: PuuNode[];
+}
+
 let searchIndexCache: {
   signature: string;
   nodes: SearchDocumentNode[];
@@ -34,6 +40,29 @@ const fileSearchCache = new Map<
 const clearSearchIndexCache = () => {
   searchIndexCache = null;
   fileSearchCache.clear();
+};
+
+export const mergeSearchNodesWithActiveDocument = (
+  searchNodes: SearchDocumentNode[],
+  activeDocument?: ActiveSearchDocument | null,
+): SearchDocumentNode[] => {
+  if (!activeDocument) {
+    return searchNodes;
+  }
+
+  const merged = searchNodes.filter(
+    (node) => node.fileId !== activeDocument.fileId,
+  );
+  const activeNodes = normalizeNodes(activeDocument.nodes);
+  for (const node of activeNodes) {
+    merged.push({
+      id: node.id,
+      content: node.content,
+      fileId: activeDocument.fileId,
+      fileTitle: activeDocument.fileTitle,
+    });
+  }
+  return merged;
 };
 
 const createSearchIndexSignature = (documents: PuuDocument[]) =>
@@ -293,22 +322,26 @@ export const DocumentService = {
 
   async getSearchNodes(
     documents: PuuDocument[],
+    activeDocument?: ActiveSearchDocument | null,
   ): Promise<SearchDocumentNode[]> {
     const signature = createSearchIndexSignature(documents);
     if (searchIndexCache?.signature === signature) {
-      return searchIndexCache.nodes;
+      return mergeSearchNodesWithActiveDocument(
+        searchIndexCache.nodes,
+        activeDocument,
+      );
     }
 
     const searchNodes: SearchDocumentNode[] = [];
 
     for (const doc of documents) {
       let cached = fileSearchCache.get(doc.id);
-      
+
       if (!cached || cached.updatedAt < doc.updatedAt) {
         const file = await db.files.get(doc.id);
         const nodes = file ? normalizeNodes(file.nodes) : [];
         const fileSearchNodes: SearchDocumentNode[] = [];
-        
+
         for (const node of nodes) {
           fileSearchNodes.push({
             id: node.id,
@@ -317,11 +350,11 @@ export const DocumentService = {
             fileTitle: doc.title,
           });
         }
-        
+
         cached = { updatedAt: doc.updatedAt, nodes: fileSearchNodes };
         fileSearchCache.set(doc.id, cached);
       }
-      
+
       for (let i = 0; i < cached.nodes.length; i++) {
         // We re-assign the title in case the document title changed but nodes didn't
         cached.nodes[i].fileTitle = doc.title;
@@ -330,7 +363,7 @@ export const DocumentService = {
     }
 
     searchIndexCache = { signature, nodes: searchNodes };
-    return searchNodes;
+    return mergeSearchNodesWithActiveDocument(searchNodes, activeDocument);
   },
 
   clearSearchIndexCache,

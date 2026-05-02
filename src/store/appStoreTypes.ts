@@ -71,7 +71,13 @@ export interface HistorySlice {
   past: PuuNode[][];
   future: PuuNode[][];
   setNodesRaw: (nodes: PuuNode[]) => void;
-  setNodes: (updater: PuuNode[] | ((prev: PuuNode[]) => PuuNode[])) => void;
+  setNodes: (
+    updater: PuuNode[] | ((prev: PuuNode[]) => PuuNode[]),
+    options?: {
+      historyGroupKey?: string;
+      historyGroupDelayMs?: number;
+    },
+  ) => void;
   undo: () => void;
   redo: () => void;
 }

@@ -3,10 +3,7 @@ import { takeDocumentSnapshot } from "../db/snapshots";
 import type { PuuNode } from "../types";
 import { generateId } from "../utils/id";
 import { JobRunner } from "./jobRunner";
-import {
-  AiProviderRegistry,
-  type GeneratedNodeDraft,
-} from "./aiProvider";
+import { AiProviderRegistry, type GeneratedNodeDraft } from "./aiProvider";
 
 export interface ApplyGeneratedDraftsResult {
   nextNodes: PuuNode[];

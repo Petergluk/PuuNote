@@ -62,13 +62,13 @@ export const FullScreenModal = ({
     if (focusModeScope === "column") {
       // Entire column (all nodes at the exact same depth)
       const ordered = getDepthFirstNodes(nodes);
-      const augmentedTarget = ordered.find(n => n.id === targetNode.id);
+      const augmentedTarget = ordered.find((n) => n.id === targetNode.id);
       const depth = augmentedTarget ? augmentedTarget.depth : 0;
-      return ordered.filter(n => n.depth === depth);
+      return ordered.filter((n) => n.depth === depth);
     }
 
     return [targetNode];
-  }, [nodes, nodeId, targetNode, focusModeScope]);
+  }, [nodes, targetNode, focusModeScope]);
 
   const toggleCheckbox = useToggleCheckbox();
 
@@ -141,7 +141,10 @@ export const FullScreenModal = ({
                       toggleCheckbox(n.id, n.content || "", idx, val)
                     }
                   >
-                    {n.content || (n.metadata?.isGenerating ? "*Generating...*" : "*Empty card...*")}
+                    {n.content ||
+                      (n.metadata?.isGenerating
+                        ? "*Generating...*"
+                        : "*Empty card...*")}
                   </SafeMarkdown>
                 </div>
               )}

@@ -10,7 +10,9 @@ import ReactTextareaAutosize from "react-textarea-autosize";
 import { AUTOSIZE_DEBOUNCE_MS } from "../constants";
 import { registerPendingTextareaFlush } from "./textareaFlushRegistry";
 
-type AutosizeStyle = React.ComponentProps<typeof ReactTextareaAutosize>["style"];
+type AutosizeStyle = React.ComponentProps<
+  typeof ReactTextareaAutosize
+>["style"];
 
 export const AutoSizeTextarea = forwardRef<
   HTMLTextAreaElement,
@@ -122,11 +124,6 @@ export const AutoSizeTextarea = forwardRef<
           "w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
         }
         style={textareaStyle}
-        onFocus={(e) => {
-          // move cursor to end
-          const length = e.target.value.length;
-          e.target.setSelectionRange(length, length);
-        }}
       />
     );
   },

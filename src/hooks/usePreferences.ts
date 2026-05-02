@@ -44,7 +44,8 @@ export function usePreferencesInit() {
       safeLocalStorage.getItem("puu_inactiveBranchesMode") === "hide"
         ? "hide"
         : "dim";
-    const savedFocusModeScopeStr = safeLocalStorage.getItem("puu_focusModeScope");
+    const savedFocusModeScopeStr =
+      safeLocalStorage.getItem("puu_focusModeScope");
     const savedFocusModeScope =
       savedFocusModeScopeStr === "single" ||
       savedFocusModeScopeStr === "column" ||
@@ -101,16 +102,10 @@ export function usePreferencesInit() {
         );
       }
       if (state.focusModeScope !== prevState.focusModeScope) {
-        safeLocalStorage.setItem(
-          "puu_focusModeScope",
-          state.focusModeScope,
-        );
+        safeLocalStorage.setItem("puu_focusModeScope", state.focusModeScope);
       }
       if (state.editorMode !== prevState.editorMode) {
-        safeLocalStorage.setItem(
-          "puu_editorMode",
-          state.editorMode,
-        );
+        safeLocalStorage.setItem("puu_editorMode", state.editorMode);
       }
       if (state.editorEnterMode !== prevState.editorEnterMode) {
         safeLocalStorage.setItem("puu_editorEnterMode", state.editorEnterMode);

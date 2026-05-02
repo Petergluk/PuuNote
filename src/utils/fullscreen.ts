@@ -1,5 +1,5 @@
 export const isFullscreen = (doc: Document) => {
-  return !!doc.fullscreenElement;
+  return Boolean(doc.fullscreenElement);
 };
 
 export const exitFullscreen = (doc: Document) => {

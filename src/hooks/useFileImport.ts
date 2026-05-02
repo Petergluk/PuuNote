@@ -4,6 +4,20 @@ import { parseImportFile } from "../domain/documentExport";
 import { useFileSystemActions } from "./useFileSystem";
 import { MAX_FILE_SIZE_BYTES } from "../constants";
 
+const summarizeImportReport = (
+  report: NonNullable<ReturnType<typeof parseImportFile>["report"]>,
+) => {
+  const details = [
+    ...report.warnings.slice(0, 3),
+    ...report.errors.slice(0, 2),
+  ];
+  const remaining =
+    report.warnings.length + report.errors.length - details.length;
+  return remaining > 0
+    ? `${details.join(" ")} ${remaining} more issue(s).`
+    : details.join(" ");
+};
+
 export function useFileImport() {
   const { createNewFile } = useFileSystemActions();
 
@@ -20,13 +34,18 @@ export function useFileImport() {
       if (!mdText) return;
       try {
         const imported = parseImportFile(file.name, mdText);
-        if (imported.nodes.length > 0) {
-          useAppStore
-            .getState()
-            .openConfirm("Import will create a new document. Proceed?", () => {
-              createNewFile(imported.nodes, imported.title, imported.metadata);
-            });
+        if (imported.report?.repaired) {
+          toast.warning("Import repaired document data.", {
+            description:
+              summarizeImportReport(imported.report) ||
+              "Some imported nodes were normalized before creating the document.",
+          });
         }
+        useAppStore
+          .getState()
+          .openConfirm("Import will create a new document. Proceed?", () => {
+            createNewFile(imported.nodes, imported.title, imported.metadata);
+          });
       } catch (err) {
         console.error("Failed to validate imported nodes", err);
         toast.error("Import failed", {

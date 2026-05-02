@@ -29,9 +29,12 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
       confirmDialog: { isOpen: false, message: "", onConfirm: undefined },
     }),
 
-  triggerLayoutAlign: () => set((state) => ({ layoutAlignTrigger: state.layoutAlignTrigger + 1 })),
+  triggerLayoutAlign: () =>
+    set((state) => ({ layoutAlignTrigger: state.layoutAlignTrigger + 1 })),
   setCommandPaletteOpen: (commandPaletteOpen) =>
-    set((s) => (s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen })),
+    set((s) =>
+      s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen },
+    ),
   setTheme: (theme) => set((s) => (s.theme === theme ? s : { theme })),
   toggleTheme: () =>
     set((state) => {
@@ -49,7 +52,9 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((state) => ({ cardsCollapsed: !state.cardsCollapsed })),
   setInactiveBranchesMode: (inactiveBranchesMode) =>
     set((s) =>
-      s.inactiveBranchesMode === inactiveBranchesMode ? s : { inactiveBranchesMode },
+      s.inactiveBranchesMode === inactiveBranchesMode
+        ? s
+        : { inactiveBranchesMode },
     ),
   setFocusModeScope: (focusModeScope) =>
     set((s) => (s.focusModeScope === focusModeScope ? s : { focusModeScope })),
@@ -57,7 +62,9 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.editorMode === editorMode ? s : { editorMode })),
 
   setEditorEnterMode: (editorEnterMode) =>
-    set((s) => (s.editorEnterMode === editorEnterMode ? s : { editorEnterMode })),
+    set((s) =>
+      s.editorEnterMode === editorEnterMode ? s : { editorEnterMode },
+    ),
   setPasteSplitMode: (pasteSplitMode) =>
     set((s) => (s.pasteSplitMode === pasteSplitMode ? s : { pasteSplitMode })),
   setSettingsOpen: (settingsOpen) =>
