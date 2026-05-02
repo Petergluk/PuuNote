@@ -4,6 +4,7 @@ import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
+import { WysiwygEditor } from "./WysiwygEditor";
 import { useAppStore } from "../store/useAppStore";
 import { useShallow } from "zustand/shallow";
 import {
@@ -69,6 +70,7 @@ export const Card = React.memo(
       isEditing,
       isDragged,
       cardsCollapsed,
+      editorMode,
     } = useAppStore(
       useShallow((s) => ({
         hasActiveNode: s.activeId !== null,
@@ -77,6 +79,7 @@ export const Card = React.memo(
         isEditing: s.editingId === node.id,
         isDragged: s.draggedId === node.id,
         cardsCollapsed: s.cardsCollapsed,
+        editorMode: s.editorMode,
       })),
     );
 
@@ -206,15 +209,28 @@ export const Card = React.memo(
           }}
         >
           {isEditing ? (
-            <div className="relative group/edit w-full pt-4">
-              <AutoSizeTextarea
-                ref={textareaRef}
-                value={node.content}
-                onChange={(val: string) => updateContent(node.id, val)}
-                onBlur={() => setEditingId(null)}
-                autoFocus
-                className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
-              />
+            <div className="relative group/edit w-full">
+              {editorMode === "visual" ? (
+                <WysiwygEditor
+                  initialValue={node.content}
+                  onChange={(val: string) => updateContent(node.id, val)}
+                  autoFocus
+                  className={cn(
+                    PROSE_CARD,
+                    isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM,
+                    "w-full outline-none focus:outline-none min-h-[24px]"
+                  )}
+                />
+              ) : (
+                <AutoSizeTextarea
+                  ref={textareaRef}
+                  value={node.content}
+                  onChange={(val: string) => updateContent(node.id, val)}
+                  onBlur={() => setEditingId(null)}
+                  autoFocus
+                  className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
+                />
+              )}
               <div className="absolute -top-3 -right-3 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
                 <button
                   onMouseDown={handleSplitNode}

@@ -115,7 +115,7 @@ export default function App() {
               <div className="p-8 text-app-text-muted">Loading timeline...</div>
             }
           >
-            <TimelineView nodes={useAppStore.getState().nodes} />
+            <TimelineView />
           </Suspense>
         )}{" "}
       </main>{" "}

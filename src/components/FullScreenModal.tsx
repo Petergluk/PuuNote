@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 
 import { PuuNode } from "../types";
 import { AutoSizeTextarea } from "./AutoSizeTextarea";
+import { WysiwygEditor } from "./WysiwygEditor";
 import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PROSE_FULL } from "../utils/proseClasses";
@@ -21,6 +22,7 @@ export const FullScreenModal = ({
 }) => {
   const nodes = useAppStore((s) => s.nodes);
   const updateContent = useAppStore((s) => s.updateContent);
+  const editorMode = useAppStore((s) => s.editorMode);
   const focusModeScope = useAppStore((s) => s.focusModeScope);
   const [localActiveId, setLocalActiveId] = useState(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
@@ -49,33 +51,23 @@ export const FullScreenModal = ({
 
     if (focusModeScope === "single") return [targetNode];
 
-    if (focusModeScope === "column") {
+    if (focusModeScope === "branchLevel") {
+      // All siblings (nodes with the same parent)
       const parentId = targetNode.parentId;
       return nodes
         .filter((n: PuuNode) => n.parentId === parentId)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     }
 
-    // Default: branchLevel
-    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-    const pathIds: string[] = [];
-    let curId: string | null = nodeId;
-    while (curId) {
-      pathIds.unshift(curId);
-      curId = nodeMap.get(curId)?.parentId ?? null;
+    if (focusModeScope === "column") {
+      // Entire column (all nodes at the exact same depth)
+      const ordered = getDepthFirstNodes(nodes);
+      const augmentedTarget = ordered.find(n => n.id === targetNode.id);
+      const depth = augmentedTarget ? augmentedTarget.depth : 0;
+      return ordered.filter(n => n.depth === depth);
     }
 
-    const pathSet = new Set(pathIds);
-    const visible: PuuNode[] = [];
-    const ordered = getDepthFirstNodes(nodes);
-
-    ordered.forEach((n) => {
-      // Show node if it's in path or its parent is in path
-      if (pathSet.has(n.id) || (n.parentId && pathSet.has(n.parentId))) {
-        visible.push(n);
-      }
-    });
-    return visible;
+    return [targetNode];
   }, [nodes, nodeId, targetNode, focusModeScope]);
 
   const toggleCheckbox = useToggleCheckbox();
@@ -119,15 +111,24 @@ export const FullScreenModal = ({
               }`}
             >
               {isLocalActive ? (
-                <AutoSizeTextarea
-                  value={n.content}
-                  onChange={(val: string) => updateContent(n.id, val)}
-                  autoFocus
-                  dataAutoFocus
-                  placeholder="Type here..."
-                  className="block w-full resize-none overflow-hidden bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
-                  style={{ outline: "none", boxShadow: "none" }}
-                />
+                editorMode === "visual" ? (
+                  <WysiwygEditor
+                    initialValue={n.content}
+                    onChange={(val: string) => updateContent(n.id, val)}
+                    autoFocus
+                    className={`${PROSE_FULL} w-full outline-none focus:outline-none`}
+                  />
+                ) : (
+                  <AutoSizeTextarea
+                    value={n.content}
+                    onChange={(val: string) => updateContent(n.id, val)}
+                    autoFocus
+                    dataAutoFocus
+                    placeholder="Type here..."
+                    className="block w-full resize-none overflow-hidden bg-transparent font-sans text-app-text-primary leading-relaxed lg:text-lg focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0"
+                    style={{ outline: "none", boxShadow: "none" }}
+                  />
+                )
               ) : (
                 <div className={PROSE_FULL}>
                   <SafeMarkdown
@@ -135,7 +136,7 @@ export const FullScreenModal = ({
                       toggleCheckbox(n.id, n.content || "", idx, val)
                     }
                   >
-                    {n.content || "*Empty card...*"}
+                    {n.content || (n.metadata?.isGenerating ? "*Generating...*" : "*Empty card...*")}
                   </SafeMarkdown>
                 </div>
               )}

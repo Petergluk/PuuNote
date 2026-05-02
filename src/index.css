@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Yanone+Kaffeesatz:wght@200..700&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --font-yanone: "Yanone Kaffeesatz", sans-serif;
   --color-app-bg: var(--app-bg);
   --color-app-panel: var(--app-panel);
   --color-app-card: var(--app-card);
