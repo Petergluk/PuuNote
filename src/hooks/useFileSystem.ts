@@ -216,10 +216,14 @@ export function useFileSystemInit() {
         state.nodes !== prevState.nodes ||
         state.activeFileId !== prevState.activeFileId
       ) {
+        if (!state.activeFileId) return;
+
+        // KEEP IN SYNC EVEN DURING HYDRATION
+        fsManager.nodes = state.nodes;
+
         if (fsManager.isHydratingFile) return;
 
         const { activeFileId, nodes } = state;
-        if (!activeFileId) return;
         useAppStore.setState({ saveStatus: "unsaved" });
 
         // Save active file changes tracking

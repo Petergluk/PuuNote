@@ -79,6 +79,11 @@ export const canMergeNodes = (
   return { ok: true, orderedIds };
 };
 
+/**
+ * documentApi provides safe functions for manipulating the tree of nodes.
+ * It's important that these operations return a new array rather than mutating 
+ * in place, as this ensures React correctly detects state changes and triggers re-renders.
+ */
 export const documentApi = {
   updateContent: (nodes: PuuNode[], id: string, content: string): PuuNode[] => {
     const targetNode = nodes.find((n) => n.id === id);

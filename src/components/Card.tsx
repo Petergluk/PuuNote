@@ -210,10 +210,18 @@ export const Card = React.memo(
         >
           {isEditing ? (
             <div className="relative group/edit w-full">
+              {/* 
+                 The application deliberately supports both "visual" (WysiwygEditor) 
+                 and "markdown" (AutoSizeTextarea) modes. Maintaining both options 
+                 is important because users have different preferences for text editing.
+                 WysiwygEditor uses Tiptap for a rich experience, while AutoSizeTextarea 
+                 provides raw Markdown control.
+              */}
               {editorMode === "visual" ? (
                 <WysiwygEditor
                   initialValue={node.content}
                   onChange={(val: string) => updateContent(node.id, val)}
+                  onBlur={() => setEditingId(null)}
                   autoFocus
                   className={cn(
                     PROSE_CARD,

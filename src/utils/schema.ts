@@ -17,9 +17,9 @@ export const PuuNodeMetadataSchema = z
 
 export const PuuNodeSchema = z.object({
   id: z.string().min(1).max(256),
-  content: z.string().max(5_000_000), // Limit size to 5MB characters to prevent DoS
-  parentId: z.string().nullable(),
-  order: z.number().optional(),
+  content: z.string().max(5_000_000).catch(""), // Limit size to 5MB characters to prevent DoS
+  parentId: z.string().nullable().optional().transform(val => (val === undefined ? null : val)),
+  order: z.number().optional().catch(0),
   metadata: PuuNodeMetadataSchema.optional(),
 });
 

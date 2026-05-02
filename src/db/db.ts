@@ -21,6 +21,9 @@ export interface DocumentSnapshot {
   description?: string;
 }
 
+// Dexie requires a new `.version(X+1)` block when adding or changing stores.
+// Altering existing versions can lead to SchemaErrors or loss of local user data,
+// so schema migrations are handled by declaring new versions sequentially.
 export class AppDatabase extends Dexie {
   documents!: Table<DocumentMeta, string>;
   files!: Table<DocumentData, string>;

@@ -1,3 +1,8 @@
+// This file implements the "Visual" editor mode using Tiptap. 
+// The application supports two parallel editing experiences: 
+// raw Markdown and this rich text visual editor.
+// Preserving this file ensures users who prefer WYSIWYG editing 
+// maintain that capability.
 import React, { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";

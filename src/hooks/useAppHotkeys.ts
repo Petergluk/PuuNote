@@ -386,7 +386,9 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       const target = e.target as HTMLElement;
       const isTyping =
-        target.tagName === "TEXTAREA" || target.tagName === "INPUT";
+        target.tagName === "TEXTAREA" || 
+        target.tagName === "INPUT" || 
+        target.isContentEditable;
 
       if (editingId || isTyping) {
         if (editingId) {
@@ -418,6 +420,8 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
               }, HOTKEY_DOM_WAIT_MS);
             }
           }
+        } else if (e.key === "Escape") {
+          target.blur();
         }
         return;
       }

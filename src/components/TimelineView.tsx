@@ -149,6 +149,11 @@ export const TimelineView = () => {
           }`}
         >
           {isLocalActive ? (
+            /* 
+             We check editorMode here because the user can toggle between 
+             a rich text editor (WysiwygEditor) and a plain markdown text area.
+             Both modes are core features intended to co-exist.
+            */
             editorMode === "visual" ? (
               <WysiwygEditor
                 initialValue={n.content}
