@@ -1,10 +1,11 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Upload,
   Download,
   FileJson,
   Menu,
+  Minus,
   Undo2,
   Redo2,
   Network,
@@ -13,6 +14,9 @@ import {
   UnfoldVertical,
   Folder,
   Palette,
+  Paintbrush,
+  Plus,
+  RotateCcw,
   Search,
   Maximize,
   Minimize,
@@ -25,6 +29,13 @@ import {
   exitFullscreen,
   isFullscreen,
 } from "../utils/fullscreen";
+import {
+  adjustBranchColorRgb,
+  getBranchColor,
+  getBranchColorId,
+  getBranchPalette,
+} from "../utils/branchColors";
+import { buildTreeIndex } from "../utils/tree";
 
 interface HeaderProps {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -33,8 +44,10 @@ interface HeaderProps {
 export function Header({ handleImport }: HeaderProps) {
   const { t } = useTranslation();
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [branchColorMenuOpen, setBranchColorMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const branchColorMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const fileMenuOpen = useAppStore((s) => s.fileMenuOpen);
   const setFileMenuOpen = useAppStore((s) => s.setFileMenuOpen);
@@ -47,6 +60,12 @@ export function Header({ handleImport }: HeaderProps) {
   const undo = useAppStore((s) => s.undo);
   const redo = useAppStore((s) => s.redo);
   const setActiveId = useAppStore((s) => s.setActiveId);
+  const activeId = useAppStore((s) => s.activeId);
+  const nodes = useAppStore((s) => s.nodes);
+  const theme = useAppStore((s) => s.theme);
+  const branchColorIntensity = useAppStore((s) => s.branchColorIntensity);
+  const branchColorSpread = useAppStore((s) => s.branchColorSpread);
+  const branchColorTone = useAppStore((s) => s.branchColorTone);
   const clearSelection = useAppStore((s) => s.clearSelection);
   const cardsCollapsed = useAppStore((s) => s.cardsCollapsed);
   const exportToMarkdown = useAppStore((s) => s.exportToMarkdown);
@@ -56,12 +75,22 @@ export function Header({ handleImport }: HeaderProps) {
   const exportToJson = useAppStore((s) => s.exportToJson);
   const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const setActiveBranchColor = useAppStore((s) => s.setActiveBranchColor);
+  const clearAllBranchColors = useAppStore((s) => s.clearAllBranchColors);
+  const autoColorRootBranches = useAppStore((s) => s.autoColorRootBranches);
+  const setBranchColorIntensity = useAppStore((s) => s.setBranchColorIntensity);
+  const setBranchColorSpread = useAppStore((s) => s.setBranchColorSpread);
+  const setBranchColorTone = useAppStore((s) => s.setBranchColorTone);
 
   const uiMode = useAppStore((s) => s.uiMode);
   const setUiMode = useAppStore((s) => s.setUiMode);
 
   useClickOutside(exportMenuRef, () => {
     if (exportMenuOpen) setExportMenuOpen(false);
+  });
+
+  useClickOutside(branchColorMenuRef, () => {
+    if (branchColorMenuOpen) setBranchColorMenuOpen(false);
   });
 
   useClickOutside(mobileMenuRef, () => {
@@ -73,13 +102,33 @@ export function Header({ handleImport }: HeaderProps) {
       if (e.key === "Escape" && exportMenuOpen) {
         setExportMenuOpen(false);
       }
+      if (e.key === "Escape" && branchColorMenuOpen) {
+        setBranchColorMenuOpen(false);
+      }
       if (e.key === "Escape" && mobileMenuOpen) {
         setMobileMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [exportMenuOpen, mobileMenuOpen]);
+  }, [branchColorMenuOpen, exportMenuOpen, mobileMenuOpen]);
+
+  const activeBranchColorId = useMemo(() => {
+    if (!activeId) return null;
+    return getBranchColorId(buildTreeIndex(nodes), activeId);
+  }, [activeId, nodes]);
+  const activeBranchColor = getBranchColor(
+    theme,
+    activeBranchColorId,
+    branchColorTone,
+  );
+  const branchPalette = getBranchPalette(theme);
+  const setBranchIntensity = (value: number) =>
+    setBranchColorIntensity(Math.max(0, Math.min(300, Math.round(value))));
+  const setBranchSpread = (value: number) =>
+    setBranchColorSpread(Math.max(0, Math.min(100, Math.round(value))));
+  const setBranchTone = (value: number) =>
+    setBranchColorTone(Math.max(-100, Math.min(100, Math.round(value))));
 
   const toggleFullscreen = () => {
     if (!isFullscreen(document)) {
@@ -398,6 +447,217 @@ export function Header({ handleImport }: HeaderProps) {
         >
           <Palette size={16} />
         </button>
+        <div ref={branchColorMenuRef} className="relative hidden sm:block">
+          <button
+            onClick={() => setBranchColorMenuOpen((open) => !open)}
+            className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${
+              branchColorMenuOpen
+                ? "text-app-text-primary bg-app-card-hover"
+                : "text-app-text-secondary"
+            }`}
+            title="Branch color"
+            aria-label="Branch color"
+            aria-expanded={branchColorMenuOpen}
+          >
+            <Paintbrush
+              className="branch-color-paint"
+              size={16}
+              style={{
+                color: activeBranchColor
+                  ? `rgb(${activeBranchColor.rgb})`
+                  : undefined,
+              }}
+            />
+          </button>
+          {branchColorMenuOpen && (
+            <div className="absolute right-0 top-full z-[90] mt-2 grid w-[206px] grid-cols-5 gap-2 rounded border border-app-border bg-app-panel p-2 shadow-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeId) {
+                    setActiveBranchColor(null);
+                  } else {
+                    clearAllBranchColors();
+                  }
+                  setBranchColorMenuOpen(false);
+                }}
+                className={`flex h-8 w-8 items-center justify-center rounded border transition-colors ${
+                  activeBranchColorId === null
+                    ? "border-app-text-primary bg-app-card-hover text-app-text-primary"
+                    : "border-app-border bg-app-card text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+                }`}
+                title={
+                  activeId ? "Reset branch color" : "Reset all branch colors"
+                }
+                aria-label={
+                  activeId ? "Reset branch color" : "Reset all branch colors"
+                }
+              >
+                <RotateCcw size={14} />
+              </button>
+              {Object.values(branchPalette).map((color) => {
+                const rgb = adjustBranchColorRgb(color.rgb, branchColorTone);
+                return (
+                  <button
+                    key={color.id}
+                    type="button"
+                    data-branch-color-swatch
+                    onClick={() => {
+                      if (!activeId) return;
+                      setActiveBranchColor(color.id);
+                      setBranchColorMenuOpen(false);
+                    }}
+                    disabled={!activeId}
+                    className={`h-8 w-8 rounded border transition-transform ${
+                      !activeId
+                        ? "cursor-not-allowed opacity-35 grayscale"
+                        : activeBranchColorId === color.id
+                          ? "border-app-text-primary"
+                          : "border-app-border hover:scale-105"
+                    }`}
+                    style={{
+                      background: `linear-gradient(135deg, color-mix(in srgb, rgb(${rgb}) 76%, var(--app-card)), rgb(${rgb}))`,
+                      boxShadow:
+                        activeBranchColorId === color.id
+                          ? `0 0 0 2px color-mix(in srgb, rgb(${rgb}) 34%, transparent)`
+                          : undefined,
+                    }}
+                    title={color.label}
+                    aria-label={`Set branch color: ${color.label}`}
+                  />
+                );
+              })}
+              <div className="col-span-5 mt-1 grid gap-1 border-t border-app-border pt-2">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
+                  Яркость
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBranchIntensity(branchColorIntensity - 10)
+                    }
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="Less branch tint"
+                    aria-label="Less branch tint"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="300"
+                    step="5"
+                    value={branchColorIntensity}
+                    onChange={(event) =>
+                      setBranchIntensity(Number(event.target.value))
+                    }
+                    className="h-1 min-w-0 flex-1 cursor-pointer accent-app-accent"
+                    title="Branch tint intensity"
+                    aria-label="Branch tint intensity"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBranchIntensity(branchColorIntensity + 10)
+                    }
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="More branch tint"
+                    aria-label="More branch tint"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+              </div>
+              <div className="col-span-5 grid gap-1">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
+                  Заливка
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBranchSpread(branchColorSpread - 5)}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="Less branch fill"
+                    aria-label="Less branch fill"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={branchColorSpread}
+                    onChange={(event) =>
+                      setBranchSpread(Number(event.target.value))
+                    }
+                    className="h-1 min-w-0 flex-1 cursor-pointer accent-app-accent"
+                    title="Branch fill spread"
+                    aria-label="Branch fill spread"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setBranchSpread(branchColorSpread + 5)}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="More branch fill"
+                    aria-label="More branch fill"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+              </div>
+              <div className="col-span-5 grid gap-1">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
+                  <span>Оттенок</span>
+                  <span className="tabular-nums">{branchColorTone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBranchTone(branchColorTone - 5)}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="Mix palette with white"
+                    aria-label="Mix palette with white"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="5"
+                    value={branchColorTone}
+                    onChange={(event) =>
+                      setBranchTone(Number(event.target.value))
+                    }
+                    className="h-1 min-w-0 flex-1 cursor-pointer accent-app-accent"
+                    title="Branch palette tone"
+                    aria-label="Branch palette tone"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setBranchTone(branchColorTone + 5)}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-app-border bg-app-card text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                    title="Mix palette with black"
+                    aria-label="Mix palette with black"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => autoColorRootBranches()}
+                className="col-span-5 flex h-8 items-center justify-center rounded border border-app-border bg-app-card px-3 text-xs font-medium text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                title="Сделай красиво"
+                aria-label="Сделай красиво"
+              >
+                Сделай красиво
+              </button>
+            </div>
+          )}
+        </div>
         <label
           className="hidden sm:flex cursor-pointer bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center gap-2"
           title="Import"

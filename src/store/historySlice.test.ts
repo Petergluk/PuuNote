@@ -57,4 +57,77 @@ describe("history slice", () => {
 
     expect(useAppStore.getState().past).toHaveLength(2);
   });
+
+  it("stores branch color only on the root of the active branch", () => {
+    useAppStore.getState().setNodesRaw([
+      { id: "root", parentId: null, order: 0, content: "Root" },
+      { id: "child", parentId: "root", order: 0, content: "Child" },
+    ]);
+    useAppStore.setState({ activeId: "child", selectedIds: ["child"] });
+
+    useAppStore.getState().setActiveBranchColor("rose");
+
+    expect(
+      useAppStore.getState().nodes.find((node) => node.id === "root")?.metadata
+        ?.branchColor,
+    ).toBe("rose");
+    expect(
+      useAppStore.getState().nodes.find((node) => node.id === "child")?.metadata
+        ?.branchColor,
+    ).toBeUndefined();
+
+    useAppStore.getState().setActiveBranchColor(null);
+
+    expect(
+      useAppStore.getState().nodes.find((node) => node.id === "root")?.metadata,
+    ).toBeUndefined();
+  });
+
+  it("auto-colors root branches in visual order", () => {
+    useAppStore.getState().setNodesRaw([
+      { id: "second", parentId: null, order: 1, content: "Second" },
+      { id: "first", parentId: null, order: 0, content: "First" },
+      { id: "child", parentId: "first", order: 0, content: "Child" },
+    ]);
+
+    useAppStore.getState().autoColorRootBranches();
+
+    const nodes = useAppStore.getState().nodes;
+    expect(
+      nodes.find((node) => node.id === "first")?.metadata?.branchColor,
+    ).toBe("rose");
+    expect(
+      nodes.find((node) => node.id === "second")?.metadata?.branchColor,
+    ).toBe("coral");
+    expect(
+      nodes.find((node) => node.id === "child")?.metadata?.branchColor,
+    ).toBeUndefined();
+  });
+
+  it("clears all branch colors at once", () => {
+    useAppStore.getState().setNodesRaw([
+      {
+        id: "first",
+        parentId: null,
+        order: 0,
+        content: "First",
+        metadata: { branchColor: "rose" },
+      },
+      {
+        id: "second",
+        parentId: null,
+        order: 1,
+        content: "Second",
+        metadata: { branchColor: "coral", plugin: { keep: true } },
+      },
+    ]);
+
+    useAppStore.getState().clearAllBranchColors();
+
+    const nodes = useAppStore.getState().nodes;
+    expect(nodes.find((node) => node.id === "first")?.metadata).toBeUndefined();
+    expect(nodes.find((node) => node.id === "second")?.metadata).toEqual({
+      plugin: { keep: true },
+    });
+  });
 });

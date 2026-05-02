@@ -1,4 +1,10 @@
 import type { AppSlice, UiSlice } from "../appStoreTypes";
+import {
+  clampTune,
+  DEFAULT_THEME_TUNE,
+  getThemeId,
+  getThemeTune,
+} from "../../utils/themeTuning";
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   fileMenuOpen: false,
@@ -13,6 +19,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   settingsOpen: false,
   timelineOpen: false,
   colWidth: 320,
+  branchColorIntensity: 100,
+  branchColorSpread: 35,
+  branchColorTone: 0,
+  themeTuning: {},
   commandPaletteOpen: false,
   uiMode: "normal",
   saveStatus: "saved",
@@ -38,7 +48,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   setTheme: (theme) => set((s) => (s.theme === theme ? s : { theme })),
   toggleTheme: () =>
     set((state) => {
-      const themes = ["light", "dark", "blue", "brown"];
+      const themes = ["mono", "light", "light-cool", "dark", "blue", "brown"];
       const currentIndex = themes.indexOf(state.theme);
       const nextTheme =
         currentIndex === -1
@@ -73,6 +83,45 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.timelineOpen === timelineOpen ? s : { timelineOpen })),
   setColWidth: (colWidth) =>
     set((s) => (s.colWidth === colWidth ? s : { colWidth })),
+  setBranchColorIntensity: (branchColorIntensity) =>
+    set((s) =>
+      s.branchColorIntensity === branchColorIntensity
+        ? s
+        : { branchColorIntensity },
+    ),
+  setBranchColorSpread: (branchColorSpread) =>
+    set((s) =>
+      s.branchColorSpread === branchColorSpread ? s : { branchColorSpread },
+    ),
+  setBranchColorTone: (branchColorTone) =>
+    set((s) =>
+      s.branchColorTone === branchColorTone ? s : { branchColorTone },
+    ),
+  setThemeTuneValue: (theme, key, value) =>
+    set((s) => {
+      const themeId = getThemeId(theme);
+      const currentTune = getThemeTune(s.themeTuning, themeId);
+      const nextTune = {
+        ...currentTune,
+        [key]: clampTune(value),
+      };
+      return {
+        themeTuning: {
+          ...s.themeTuning,
+          [themeId]: nextTune,
+        },
+      };
+    }),
+  resetThemeTune: (theme) =>
+    set((s) => {
+      const themeId = getThemeId(theme);
+      return {
+        themeTuning: {
+          ...s.themeTuning,
+          [themeId]: DEFAULT_THEME_TUNE,
+        },
+      };
+    }),
   setUiMode: (uiMode) => set((s) => (s.uiMode === uiMode ? s : { uiMode })),
   setSaveStatus: (saveStatus) =>
     set((s) => (s.saveStatus === saveStatus ? s : { saveStatus })),

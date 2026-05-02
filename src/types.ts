@@ -1,5 +1,6 @@
 export interface PuuNodeMetadata {
   isGenerating?: boolean;
+  branchColor?: string;
   ai?: {
     provider?: string;
     jobId?: string;

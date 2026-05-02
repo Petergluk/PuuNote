@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useRef, useState } from "react";
+import React, { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { Maximize2, Scissors } from "lucide-react";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
@@ -13,6 +13,7 @@ import {
   PROSE_CARD_DIM,
 } from "../utils/proseClasses";
 import { cn } from "../utils/cn";
+import type { BranchColor } from "../utils/branchColors";
 
 type DropZone = "none" | "top" | "bottom" | "right";
 
@@ -41,7 +42,7 @@ function buildCardClasses(state: {
 
   if (isActive) {
     variant =
-      "bg-app-card-active border border-app-border-hover border-l-4 !border-l-orange-500 shadow-md opacity-100 z-50";
+      "bg-app-card-active border border-app-border-hover border-l-4 !border-l-[var(--branch-accent,#f97316)] shadow-md opacity-100 z-50";
   } else if (isSelected) {
     variant =
       "bg-app-card border border-app-accent border-l-4 opacity-100 shadow-md z-40";
@@ -65,10 +66,12 @@ export const Card = React.memo(
     node,
     isInPath,
     isDescendantFromActive,
+    branchColor,
   }: {
     node: PuuNode;
     isInPath: boolean;
     isDescendantFromActive: boolean;
+    branchColor: BranchColor | null;
   }) => {
     const {
       hasActiveNode,
@@ -153,6 +156,16 @@ export const Card = React.memo(
       isBright,
       isDragged,
     });
+    const branchStyle = useMemo(
+      () =>
+        branchColor
+          ? ({
+              "--branch-rgb": branchColor.rgb,
+              "--branch-accent": `rgb(${branchColor.rgb})`,
+            } as React.CSSProperties)
+          : undefined,
+      [branchColor],
+    );
 
     return (
       <div
@@ -166,6 +179,7 @@ export const Card = React.memo(
       >
         <div
           draggable={!isEditing}
+          style={branchStyle}
           onDragStart={(e) => {
             e.stopPropagation();
             e.dataTransfer.setData("nodeId", node.id);
@@ -212,6 +226,9 @@ export const Card = React.memo(
           className={cn(
             "w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col",
             cardClasses,
+            branchColor && "branch-card",
+            branchColor && isActive && "branch-card-active",
+            branchColor && isSelected && !isActive && "branch-card-selected",
           )}
           onClick={(e) => {
             e.stopPropagation();

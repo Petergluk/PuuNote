@@ -46,6 +46,8 @@ export default function App() {
   const uiMode = useAppStore((s) => s.uiMode);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
   const colWidth = useAppStore((s) => s.colWidth);
+  const branchColorIntensity = useAppStore((s) => s.branchColorIntensity);
+  const branchColorSpread = useAppStore((s) => s.branchColorSpread);
   const fullScreenId = useAppStore((s) => s.fullScreenId);
   const setFullScreenId = useAppStore((s) => s.setFullScreenId);
 
@@ -103,7 +105,13 @@ export default function App() {
       {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
       <main
         id="main-scroller"
-        style={{ "--col-width": `${colWidth}px` } as React.CSSProperties}
+        style={
+          {
+            "--col-width": `${colWidth}px`,
+            "--branch-tint": branchColorIntensity / 100,
+            "--branch-fill": branchColorSpread / 100,
+          } as React.CSSProperties
+        }
         className={`flex-1 overflow-x-auto w-full flex items-start relative bg-app-bg transition-colors duration-300 snap-x snap-mandatory sm:snap-none ${!timelineOpen ? "overflow-y-hidden" : "overflow-y-auto"}`}
       >
         {" "}

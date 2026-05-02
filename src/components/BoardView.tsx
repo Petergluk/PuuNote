@@ -6,6 +6,7 @@ import {
   computeAncestorPathFromIndex,
   computeDescendantIdsFromIndex,
 } from "../utils/tree";
+import { buildBranchColorIdMap, getBranchColor } from "../utils/branchColors";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Card } from "./Card";
 
@@ -17,6 +18,8 @@ export function BoardView() {
   const nodes = useAppStore((s) => s.nodes);
   const addChild = useAppStore((s) => s.addChild);
   const inactiveBranchesMode = useAppStore((s) => s.inactiveBranchesMode);
+  const theme = useAppStore((s) => s.theme);
+  const branchColorTone = useAppStore((s) => s.branchColorTone);
 
   const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
 
@@ -33,6 +36,11 @@ export function BoardView() {
   const activeDescendantIds = useMemo(
     () => computeDescendantIdsFromIndex(treeIndex, activeId),
     [treeIndex, activeId],
+  );
+
+  const branchColorIdByNode = useMemo(
+    () => buildBranchColorIdMap(nodes, treeIndex),
+    [nodes, treeIndex],
   );
 
   const useActiveCorridor = inactiveBranchesMode === "hide";
@@ -76,6 +84,11 @@ export function BoardView() {
                     node={node}
                     isInPath={activeAncestorSet.has(node.id)}
                     isDescendantFromActive={activeDescendantIds.has(node.id)}
+                    branchColor={getBranchColor(
+                      theme,
+                      branchColorIdByNode.get(node.id),
+                      branchColorTone,
+                    )}
                   />
                 </ErrorBoundary>
               ))}

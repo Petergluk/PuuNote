@@ -9,6 +9,8 @@ import { downloadTextFile } from "../../services/browserDownload";
 import type { AppSlice, DocumentSlice } from "../appStoreTypes";
 import { toast } from "sonner";
 import { PuuNode } from "../../types";
+import { buildTreeIndex } from "../../utils/tree";
+import { BRANCH_COLOR_IDS, getBranchRootId } from "../../utils/branchColors";
 
 export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
   const applyAndCapture = <T>(
@@ -75,6 +77,81 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
     updateContent: (id, content) => {
       get().setNodes((prev) => documentApi.updateContent(prev, id, content), {
         historyGroupKey: `content:${id}`,
+      });
+    },
+
+    setActiveBranchColor: (colorId) => {
+      const { activeId } = get();
+      if (!activeId) return;
+
+      get().setNodes((prev) => {
+        const rootId = getBranchRootId(buildTreeIndex(prev), activeId);
+        if (!rootId) return prev;
+
+        return prev.map((node) => {
+          if (node.id !== rootId) return node;
+
+          if (colorId) {
+            return {
+              ...node,
+              metadata: {
+                ...node.metadata,
+                branchColor: colorId,
+              },
+            };
+          }
+
+          const metadata = { ...node.metadata };
+          delete metadata.branchColor;
+          return {
+            ...node,
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+          };
+        });
+      });
+    },
+
+    clearAllBranchColors: () => {
+      get().setNodes((prev) =>
+        prev.map((node) => {
+          if (!node.metadata?.branchColor) return node;
+          const metadata = { ...node.metadata };
+          delete metadata.branchColor;
+          return {
+            ...node,
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+          };
+        }),
+      );
+    },
+
+    autoColorRootBranches: () => {
+      get().setNodes((prev) => {
+        const rootNodes = [...prev]
+          .filter((node) => node.parentId === null)
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (rootNodes.length === 0) return prev;
+
+        const colorByRootId = new Map(
+          rootNodes.map((node, index) => [
+            node.id,
+            BRANCH_COLOR_IDS[index % BRANCH_COLOR_IDS.length],
+          ]),
+        );
+
+        return prev.map((node) => {
+          const branchColor = colorByRootId.get(node.id);
+          if (!branchColor) return node;
+
+          return {
+            ...node,
+            metadata: {
+              ...node.metadata,
+              branchColor,
+            },
+          };
+        });
       });
     },
 

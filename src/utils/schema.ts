@@ -4,6 +4,7 @@ import { generateId } from "./id";
 export const PuuNodeMetadataSchema = z
   .object({
     isGenerating: z.boolean().optional(),
+    branchColor: z.string().optional(),
     ai: z
       .object({
         provider: z.string().optional(),

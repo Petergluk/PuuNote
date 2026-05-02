@@ -1,5 +1,6 @@
 import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
+import type { ThemeId, ThemeTune } from "../utils/themeTuning";
 
 export type InactiveBranchesMode = "dim" | "hide";
 export type PasteSplitMode = "separator" | "paragraph";
@@ -20,6 +21,10 @@ export interface UiSlice {
   settingsOpen: boolean;
   timelineOpen: boolean;
   colWidth: number;
+  branchColorIntensity: number;
+  branchColorSpread: number;
+  branchColorTone: number;
+  themeTuning: Partial<Record<ThemeId, ThemeTune>>;
   commandPaletteOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
   saveStatus: SaveStatus;
@@ -44,6 +49,15 @@ export interface UiSlice {
   setSettingsOpen: (open: boolean) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
+  setBranchColorIntensity: (intensity: number) => void;
+  setBranchColorSpread: (spread: number) => void;
+  setBranchColorTone: (tone: number) => void;
+  setThemeTuneValue: (
+    theme: string,
+    key: keyof ThemeTune,
+    value: number,
+  ) => void;
+  resetThemeTune: (theme: string) => void;
   setUiMode: (mode: "normal" | "fullscreen" | "zen") => void;
   setSaveStatus: (status: SaveStatus) => void;
   setFileMenuOpen: (open: boolean) => void;
@@ -89,6 +103,9 @@ export interface DocumentSlice {
   exportToStructuredMarkdown: () => void;
   exportToJson: () => void;
   updateContent: (id: string, content: string) => void;
+  setActiveBranchColor: (colorId: string | null) => void;
+  clearAllBranchColors: () => void;
+  autoColorRootBranches: () => void;
   addChild: (parentId: string | null) => void;
   addSibling: (siblingId: string | null) => void;
   deleteNode: (id: string) => void;

@@ -1,4 +1,5 @@
-import { X } from "lucide-react";
+import { Copy, RotateCcw, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -9,6 +10,13 @@ import type {
   InactiveBranchesMode,
   PasteSplitMode,
 } from "../store/appStoreTypes";
+import {
+  getThemeId,
+  getThemeTune,
+  THEME_IDS,
+  THEME_LABELS,
+  type ThemeTune,
+} from "../utils/themeTuning";
 
 const branchModes: Array<{
   value: InactiveBranchesMode;
@@ -51,10 +59,26 @@ const pasteSplitModes: Array<{
   { value: "paragraph", labelKey: "settings.paragraphs" },
 ];
 
+const themeTuneControls: Array<{
+  key: keyof ThemeTune;
+  label: string;
+}> = [
+  { key: "bg", label: "Фон" },
+  { key: "card", label: "Карточка" },
+  { key: "activeCard", label: "Активная" },
+  { key: "text", label: "Текст" },
+];
+
 export function SettingsPanel() {
   const { t, i18n } = useTranslation();
+  const [copied, setCopied] = useState(false);
   const settingsOpen = useAppStore((state) => state.settingsOpen);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
+  const theme = useAppStore((state) => state.theme);
+  const setTheme = useAppStore((state) => state.setTheme);
+  const themeTuning = useAppStore((state) => state.themeTuning);
+  const setThemeTuneValue = useAppStore((state) => state.setThemeTuneValue);
+  const resetThemeTune = useAppStore((state) => state.resetThemeTune);
   const inactiveBranchesMode = useAppStore(
     (state) => state.inactiveBranchesMode,
   );
@@ -74,6 +98,22 @@ export function SettingsPanel() {
   const panelRef = useFocusTrap<HTMLElement>(settingsOpen, () =>
     setSettingsOpen(false),
   );
+  const themeId = getThemeId(theme);
+  const currentThemeTune = getThemeTune(themeTuning, themeId);
+  const themeTuningJson = useMemo(
+    () => JSON.stringify(themeTuning, null, 2),
+    [themeTuning],
+  );
+
+  const copyThemeTuning = async () => {
+    try {
+      await navigator.clipboard.writeText(themeTuningJson);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   if (!settingsOpen) return null;
 
@@ -88,7 +128,7 @@ export function SettingsPanel() {
         aria-modal="true"
         aria-labelledby="settings-panel-title"
         tabIndex={-1}
-        className="absolute right-2 top-14 sm:right-6 w-[min(340px,calc(100vw-1rem))] rounded border border-app-border bg-app-panel shadow-2xl"
+        className="absolute right-2 top-14 max-h-[calc(100vh-4rem)] w-[min(420px,calc(100vw-1rem))] overflow-y-auto rounded border border-app-border bg-app-panel shadow-2xl sm:right-6"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-app-border px-4 py-3">
@@ -128,6 +168,87 @@ export function SettingsPanel() {
                   {lng.toUpperCase()}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="grid gap-3 border-t border-app-border pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-app-text-secondary">Тема</span>
+              <button
+                type="button"
+                onClick={() => resetThemeTune(theme)}
+                className="flex h-7 items-center gap-1.5 rounded border border-app-border bg-app-card px-2 text-xs text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                title="Сбросить настройки текущей темы"
+                aria-label="Сбросить настройки текущей темы"
+              >
+                <RotateCcw size={12} />
+                Сброс
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {THEME_IDS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setTheme(item)}
+                  aria-pressed={themeId === item}
+                  className={`rounded border px-2 py-1.5 text-left text-xs transition-colors ${
+                    themeId === item
+                      ? "border-app-text-primary bg-app-card-hover text-app-text-primary"
+                      : "border-app-border bg-app-card text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
+                  }`}
+                >
+                  {THEME_LABELS[item]}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 rounded border border-app-border bg-app-card/60 p-3">
+              {themeTuneControls.map((control) => (
+                <label key={control.key} className="grid gap-1">
+                  <span className="flex items-center justify-between gap-3 text-xs text-app-text-secondary">
+                    <span>{control.label}</span>
+                    <span className="tabular-nums text-app-text-muted">
+                      {currentThemeTune[control.key]}
+                    </span>
+                  </span>
+                  <input
+                    type="range"
+                    min="-50"
+                    max="50"
+                    step="1"
+                    value={currentThemeTune[control.key]}
+                    onChange={(event) =>
+                      setThemeTuneValue(
+                        theme,
+                        control.key,
+                        Number(event.target.value),
+                      )
+                    }
+                    className="h-1 w-full cursor-pointer accent-app-accent"
+                    aria-label={control.label}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="grid gap-2 rounded border border-app-border bg-app-card/60 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-app-text-secondary">
+                  Значения для фиксации
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void copyThemeTuning()}
+                  className="flex h-7 items-center gap-1.5 rounded border border-app-border bg-app-card px-2 text-xs text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
+                  title="Скопировать настройки тем"
+                  aria-label="Скопировать настройки тем"
+                >
+                  <Copy size={12} />
+                  {copied ? "Готово" : "Копия"}
+                </button>
+              </div>
+              <pre className="max-h-28 overflow-auto whitespace-pre-wrap rounded bg-app-bg p-2 text-[10px] leading-snug text-app-text-muted">
+                {themeTuningJson}
+              </pre>
             </div>
           </div>
 

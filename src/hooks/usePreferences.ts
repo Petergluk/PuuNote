@@ -1,5 +1,11 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
+import {
+  buildThemeCssVars,
+  normalizeThemeTuning,
+  type ThemeId,
+  type ThemeTune,
+} from "../utils/themeTuning";
 
 const safeLocalStorage = {
   getItem: (key: string) => {
@@ -18,20 +24,42 @@ const safeLocalStorage = {
   },
 };
 
-export const applyTheme = (theme: string) => {
+const clampBranchColorIntensity = (value: number) =>
+  Math.max(0, Math.min(300, Math.round(value)));
+
+const clampBranchColorSpread = (value: number) =>
+  Math.max(0, Math.min(100, Math.round(value)));
+
+const clampBranchColorTone = (value: number) =>
+  Math.max(-100, Math.min(100, Math.round(value)));
+
+export const applyTheme = (
+  theme: string,
+  themeTuning: Partial<Record<ThemeId, ThemeTune>> = {},
+) => {
   document.documentElement.classList.remove(
     "dark",
+    "theme-light-cool",
     "theme-blue",
     "theme-brown",
+    "theme-mono",
   );
   if (theme.startsWith("dark")) {
     document.documentElement.classList.add("dark");
   }
-  if (theme.includes("blue")) {
+  if (theme.includes("light-cool")) {
+    document.documentElement.classList.add("theme-light-cool");
+  } else if (theme.includes("blue")) {
     document.documentElement.classList.add("theme-blue");
   } else if (theme.includes("brown")) {
     document.documentElement.classList.add("theme-brown");
+  } else if (theme.includes("mono")) {
+    document.documentElement.classList.add("theme-mono");
   }
+  const cssVars = buildThemeCssVars(theme, themeTuning);
+  Object.entries(cssVars).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(key, value);
+  });
 };
 
 export function usePreferencesInit() {
@@ -40,6 +68,24 @@ export function usePreferencesInit() {
     const savedCollapsed =
       safeLocalStorage.getItem("puu_cardsCollapsed") === "true";
     const savedWidth = Number(safeLocalStorage.getItem("puu_colWidth")) || 357;
+    const savedBranchColorIntensity = clampBranchColorIntensity(
+      Number(safeLocalStorage.getItem("puu_branchColorIntensity")) || 100,
+    );
+    const savedBranchColorSpread = clampBranchColorSpread(
+      Number(safeLocalStorage.getItem("puu_branchColorSpread")) || 35,
+    );
+    const savedBranchColorTone = clampBranchColorTone(
+      Number(safeLocalStorage.getItem("puu_branchColorTone")) || 0,
+    );
+    const savedThemeTuning = (() => {
+      try {
+        return normalizeThemeTuning(
+          JSON.parse(safeLocalStorage.getItem("puu_themeTuning") || "{}"),
+        );
+      } catch {
+        return {};
+      }
+    })();
     const savedInactiveBranchesMode =
       safeLocalStorage.getItem("puu_inactiveBranchesMode") === "hide"
         ? "hide"
@@ -74,6 +120,10 @@ export function usePreferencesInit() {
     useAppStore.setState({
       cardsCollapsed: savedCollapsed,
       colWidth: savedWidth,
+      branchColorIntensity: savedBranchColorIntensity,
+      branchColorSpread: savedBranchColorSpread,
+      branchColorTone: savedBranchColorTone,
+      themeTuning: savedThemeTuning,
       inactiveBranchesMode: savedInactiveBranchesMode,
       focusModeScope: savedFocusModeScope,
       editorMode: savedEditorMode,
@@ -81,7 +131,7 @@ export function usePreferencesInit() {
       pasteSplitMode: savedPasteSplitMode,
       theme: savedTheme,
     });
-    applyTheme(savedTheme);
+    applyTheme(savedTheme, savedThemeTuning);
   }, []); /* Sync to LocalStorage & DOM */
 
   useEffect(() => {
@@ -94,6 +144,30 @@ export function usePreferencesInit() {
       }
       if (state.colWidth !== prevState.colWidth) {
         safeLocalStorage.setItem("puu_colWidth", state.colWidth.toString());
+      }
+      if (state.branchColorIntensity !== prevState.branchColorIntensity) {
+        safeLocalStorage.setItem(
+          "puu_branchColorIntensity",
+          state.branchColorIntensity.toString(),
+        );
+      }
+      if (state.branchColorSpread !== prevState.branchColorSpread) {
+        safeLocalStorage.setItem(
+          "puu_branchColorSpread",
+          state.branchColorSpread.toString(),
+        );
+      }
+      if (state.branchColorTone !== prevState.branchColorTone) {
+        safeLocalStorage.setItem(
+          "puu_branchColorTone",
+          state.branchColorTone.toString(),
+        );
+      }
+      if (state.themeTuning !== prevState.themeTuning) {
+        safeLocalStorage.setItem(
+          "puu_themeTuning",
+          JSON.stringify(state.themeTuning),
+        );
       }
       if (state.inactiveBranchesMode !== prevState.inactiveBranchesMode) {
         safeLocalStorage.setItem(
@@ -114,8 +188,13 @@ export function usePreferencesInit() {
         safeLocalStorage.setItem("puu_pasteSplitMode", state.pasteSplitMode);
       }
       if (state.theme !== prevState.theme) {
-        applyTheme(state.theme);
         safeLocalStorage.setItem("puu_theme", state.theme);
+      }
+      if (
+        state.theme !== prevState.theme ||
+        state.themeTuning !== prevState.themeTuning
+      ) {
+        applyTheme(state.theme, state.themeTuning);
       }
     });
     return unsubscribe;
