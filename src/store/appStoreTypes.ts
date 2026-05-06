@@ -1,5 +1,10 @@
 import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
+import type {
+  BranchColorId,
+  BranchColorSettings,
+  BranchColorSettingsById,
+} from "../utils/branchColors";
 import type { ThemeId, ThemeTune } from "../utils/themeTuning";
 
 export type InactiveBranchesMode = "dim" | "hide";
@@ -24,6 +29,12 @@ export interface UiSlice {
   branchColorIntensity: number;
   branchColorSpread: number;
   branchColorTone: number;
+  branchColorOpacity: number;
+  branchColorGradient: number;
+  branchColorSolid: boolean;
+  branchColorSettingsById: BranchColorSettingsById;
+  branchColorTuningTargetId: BranchColorId | null;
+  inactiveCardDim: number;
   themeTuning: Partial<Record<ThemeId, ThemeTune>>;
   commandPaletteOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
@@ -52,6 +63,16 @@ export interface UiSlice {
   setBranchColorIntensity: (intensity: number) => void;
   setBranchColorSpread: (spread: number) => void;
   setBranchColorTone: (tone: number) => void;
+  setBranchColorOpacity: (opacity: number) => void;
+  setBranchColorGradient: (gradient: number) => void;
+  setBranchColorSolid: (solid: boolean) => void;
+  setBranchColorSettingsForId: (
+    colorId: BranchColorId,
+    settings: Partial<BranchColorSettings>,
+  ) => void;
+  resetBranchColorSettingsForId: (colorId: BranchColorId) => void;
+  setBranchColorTuningTargetId: (colorId: BranchColorId | null) => void;
+  setInactiveCardDim: (dim: number) => void;
   setThemeTuneValue: (
     theme: string,
     key: keyof ThemeTune,

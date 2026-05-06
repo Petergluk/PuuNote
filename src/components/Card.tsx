@@ -55,7 +55,7 @@ function buildCardClasses(state: {
   } else {
     // Dim / inactive state
     variant =
-      "bg-app-panel border border-app-border opacity-60 hover:opacity-100 hover:bg-app-bg";
+      "inactive-card bg-app-panel border border-app-border hover:bg-app-bg";
   }
 
   return cn(base, variant, isDragged && "!opacity-10 scale-95");
@@ -162,6 +162,18 @@ export const Card = React.memo(
           ? ({
               "--branch-rgb": branchColor.rgb,
               "--branch-accent": `rgb(${branchColor.rgb})`,
+              "--branch-tint": branchColor.settings.intensity / 100,
+              "--branch-fill": branchColor.settings.fill / 100,
+              "--branch-bg-opacity": branchColor.settings.opacity / 100,
+              "--branch-gradient-mid-pos": `${
+                26 + branchColor.settings.gradient * 0.45
+              }%`,
+              "--branch-gradient-mid-mix": `${
+                7 + branchColor.settings.gradient * 0.1
+              }%`,
+              "--branch-gradient-end-mix": `${
+                branchColor.settings.gradient * 0.1
+              }%`,
             } as React.CSSProperties)
           : undefined,
       [branchColor],
@@ -224,9 +236,11 @@ export const Card = React.memo(
             }
           }}
           className={cn(
-            "w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col",
+            "relative w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col",
+            isEditing && "group/edit",
             cardClasses,
             branchColor && "branch-card",
+            branchColor?.settings.solid && "branch-fill-solid",
             branchColor && isActive && "branch-card-active",
             branchColor && isSelected && !isActive && "branch-card-selected",
           )}
@@ -244,8 +258,45 @@ export const Card = React.memo(
             if (!isEditing) setEditingId(node.id);
           }}
         >
+          {/* Editing toolbar layout invariant:
+             The scissors/fullscreen toolbar must be pinned to the real top-right
+             corner of the card border box. It is intentionally rendered here as
+             a direct absolute child of the card, whose class above includes
+             `relative`. Do not move this toolbar into the editor/text wrapper:
+             that wrapper participates in the card's `px-4`/text spacing, so
+             `right-0 top-0` there means "edge of the text area", not "edge of
+             the card". That mistake repeatedly leaves a visible inset from the
+             right or top edge.
+
+             The text clearance is handled separately below. The card already
+             has `py-3` (12px); the editing content wrapper adds `pt-3` (12px),
+             giving exactly 24px before the first text line. This leaves room for
+             the hover toolbar without making every editing card look like it has
+             a large permanent blank header. */}
+          {isEditing && (
+            <div className="absolute right-0 top-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
+              <button
+                onMouseDown={handleSplitNode}
+                className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
+                title="Split node at cursor"
+              >
+                <Scissors size={14} />
+              </button>
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setFullScreenId(node.id);
+                }}
+                className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
+                title="Expand to full screen"
+              >
+                <Maximize2 size={14} />
+              </button>
+            </div>
+          )}
           {isEditing ? (
-            <div className="relative group/edit w-full pt-8">
+            <div className="w-full pt-3">
               {/* 
                  The application deliberately supports both "visual" (WysiwygEditor) 
                  and "markdown" (AutoSizeTextarea) modes. Maintaining both options 
@@ -290,26 +341,6 @@ export const Card = React.memo(
                   className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
                 />
               )}
-              <div className="absolute top-0 right-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
-                <button
-                  onMouseDown={handleSplitNode}
-                  className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
-                  title="Split node at cursor"
-                >
-                  <Scissors size={14} />
-                </button>
-                <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setFullScreenId(node.id);
-                  }}
-                  className="p-1.5 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
-                  title="Expand to full screen"
-                >
-                  <Maximize2 size={14} />
-                </button>
-              </div>
             </div>
           ) : (
             <div className="relative">

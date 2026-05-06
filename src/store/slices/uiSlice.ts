@@ -1,14 +1,20 @@
 import type { AppSlice, UiSlice } from "../appStoreTypes";
 import {
   clampTune,
-  DEFAULT_THEME_TUNE,
+  DEFAULT_THEME_TUNING,
   getThemeId,
   getThemeTune,
 } from "../../utils/themeTuning";
+import {
+  DEFAULT_BRANCH_COLOR_SETTINGS,
+  normalizeBranchColorSettings,
+} from "../../utils/branchColors";
+
+const DEFAULT_INACTIVE_CARD_DIM = -25;
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   fileMenuOpen: false,
-  theme: "light",
+  theme: "mono",
   cardsCollapsed: false,
   inactiveBranchesMode: "dim",
   focusModeScope: "branchLevel",
@@ -19,10 +25,16 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   settingsOpen: false,
   timelineOpen: false,
   colWidth: 320,
-  branchColorIntensity: 100,
-  branchColorSpread: 35,
-  branchColorTone: 0,
-  themeTuning: {},
+  branchColorIntensity: DEFAULT_BRANCH_COLOR_SETTINGS.intensity,
+  branchColorSpread: DEFAULT_BRANCH_COLOR_SETTINGS.fill,
+  branchColorTone: DEFAULT_BRANCH_COLOR_SETTINGS.tone,
+  branchColorOpacity: DEFAULT_BRANCH_COLOR_SETTINGS.opacity,
+  branchColorGradient: DEFAULT_BRANCH_COLOR_SETTINGS.gradient,
+  branchColorSolid: DEFAULT_BRANCH_COLOR_SETTINGS.solid,
+  branchColorSettingsById: {},
+  branchColorTuningTargetId: null,
+  inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
+  themeTuning: DEFAULT_THEME_TUNING,
   commandPaletteOpen: false,
   uiMode: "normal",
   saveStatus: "saved",
@@ -97,6 +109,59 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) =>
       s.branchColorTone === branchColorTone ? s : { branchColorTone },
     ),
+  setBranchColorOpacity: (branchColorOpacity) =>
+    set((s) =>
+      s.branchColorOpacity === branchColorOpacity ? s : { branchColorOpacity },
+    ),
+  setBranchColorGradient: (branchColorGradient) =>
+    set((s) =>
+      s.branchColorGradient === branchColorGradient
+        ? s
+        : { branchColorGradient },
+    ),
+  setBranchColorSolid: (branchColorSolid) =>
+    set((s) =>
+      s.branchColorSolid === branchColorSolid ? s : { branchColorSolid },
+    ),
+  setBranchColorSettingsForId: (colorId, settings) =>
+    set((s) => {
+      const current = normalizeBranchColorSettings(
+        s.branchColorSettingsById[colorId],
+        {
+          intensity: s.branchColorIntensity,
+          fill: s.branchColorSpread,
+          opacity: s.branchColorOpacity,
+          gradient: s.branchColorGradient,
+          solid: s.branchColorSolid,
+          tone: s.branchColorTone,
+        },
+      );
+      return {
+        branchColorSettingsById: {
+          ...s.branchColorSettingsById,
+          [colorId]: normalizeBranchColorSettings({
+            ...current,
+            ...settings,
+          }),
+        },
+      };
+    }),
+  resetBranchColorSettingsForId: (colorId) =>
+    set((s) => {
+      const nextSettings = { ...s.branchColorSettingsById };
+      delete nextSettings[colorId];
+      return { branchColorSettingsById: nextSettings };
+    }),
+  setBranchColorTuningTargetId: (branchColorTuningTargetId) =>
+    set((s) =>
+      s.branchColorTuningTargetId === branchColorTuningTargetId
+        ? s
+        : { branchColorTuningTargetId },
+    ),
+  setInactiveCardDim: (inactiveCardDim) =>
+    set((s) =>
+      s.inactiveCardDim === inactiveCardDim ? s : { inactiveCardDim },
+    ),
   setThemeTuneValue: (theme, key, value) =>
     set((s) => {
       const themeId = getThemeId(theme);
@@ -116,9 +181,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => {
       const themeId = getThemeId(theme);
       return {
+        inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
         themeTuning: {
           ...s.themeTuning,
-          [themeId]: DEFAULT_THEME_TUNE,
+          [themeId]: DEFAULT_THEME_TUNING[themeId] ?? {},
         },
       };
     }),

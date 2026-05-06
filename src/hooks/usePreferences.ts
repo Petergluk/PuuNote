@@ -1,7 +1,12 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 import {
+  DEFAULT_BRANCH_COLOR_SETTINGS,
+  normalizeBranchColorSettingsById,
+} from "../utils/branchColors";
+import {
   buildThemeCssVars,
+  DEFAULT_THEME_TUNING,
   normalizeThemeTuning,
   type ThemeId,
   type ThemeTune,
@@ -32,6 +37,22 @@ const clampBranchColorSpread = (value: number) =>
 
 const clampBranchColorTone = (value: number) =>
   Math.max(-100, Math.min(100, Math.round(value)));
+
+const DEFAULT_INACTIVE_CARD_DIM = -25;
+
+const clampPercent = (value: string | null, fallback: number) => {
+  const parsed = value === null ? fallback : Number(value);
+  const safeValue = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.max(0, Math.min(100, Math.round(safeValue)));
+};
+
+const clampInactiveCardDim = (value: string | null) => {
+  const parsed = value === null ? DEFAULT_INACTIVE_CARD_DIM : Number(value);
+  const safeValue = Number.isFinite(parsed)
+    ? parsed
+    : DEFAULT_INACTIVE_CARD_DIM;
+  return Math.max(-50, Math.min(50, Math.round(safeValue)));
+};
 
 export const applyTheme = (
   theme: string,
@@ -69,21 +90,51 @@ export function usePreferencesInit() {
       safeLocalStorage.getItem("puu_cardsCollapsed") === "true";
     const savedWidth = Number(safeLocalStorage.getItem("puu_colWidth")) || 357;
     const savedBranchColorIntensity = clampBranchColorIntensity(
-      Number(safeLocalStorage.getItem("puu_branchColorIntensity")) || 100,
+      Number(safeLocalStorage.getItem("puu_branchColorIntensity")) ||
+        DEFAULT_BRANCH_COLOR_SETTINGS.intensity,
     );
     const savedBranchColorSpread = clampBranchColorSpread(
-      Number(safeLocalStorage.getItem("puu_branchColorSpread")) || 35,
+      Number(safeLocalStorage.getItem("puu_branchColorSpread")) ||
+        DEFAULT_BRANCH_COLOR_SETTINGS.fill,
     );
     const savedBranchColorTone = clampBranchColorTone(
-      Number(safeLocalStorage.getItem("puu_branchColorTone")) || 0,
+      Number(safeLocalStorage.getItem("puu_branchColorTone")) ||
+        DEFAULT_BRANCH_COLOR_SETTINGS.tone,
     );
-    const savedThemeTuning = (() => {
+    const savedBranchColorOpacity = clampPercent(
+      safeLocalStorage.getItem("puu_branchColorOpacity"),
+      DEFAULT_BRANCH_COLOR_SETTINGS.opacity,
+    );
+    const savedBranchColorGradient = clampPercent(
+      safeLocalStorage.getItem("puu_branchColorGradient"),
+      DEFAULT_BRANCH_COLOR_SETTINGS.gradient,
+    );
+    const savedBranchColorSolid =
+      safeLocalStorage.getItem("puu_branchColorSolid") === "true";
+    const savedBranchColorSettingsById = (() => {
       try {
-        return normalizeThemeTuning(
-          JSON.parse(safeLocalStorage.getItem("puu_themeTuning") || "{}"),
+        return normalizeBranchColorSettingsById(
+          JSON.parse(
+            safeLocalStorage.getItem("puu_branchColorSettingsById") || "{}",
+          ),
         );
       } catch {
         return {};
+      }
+    })();
+    const savedInactiveCardDim = clampInactiveCardDim(
+      safeLocalStorage.getItem("puu_inactiveCardDimV2"),
+    );
+    const savedThemeTuning = (() => {
+      try {
+        return {
+          ...DEFAULT_THEME_TUNING,
+          ...normalizeThemeTuning(
+            JSON.parse(safeLocalStorage.getItem("puu_themeTuning") || "{}"),
+          ),
+        };
+      } catch {
+        return DEFAULT_THEME_TUNING;
       }
     })();
     const savedInactiveBranchesMode =
@@ -111,11 +162,7 @@ export function usePreferencesInit() {
         : "separator";
     let savedTheme = safeLocalStorage.getItem("puu_theme");
     if (!savedTheme) {
-      savedTheme =
-        typeof window !== "undefined" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
+      savedTheme = "mono";
     }
     useAppStore.setState({
       cardsCollapsed: savedCollapsed,
@@ -123,6 +170,11 @@ export function usePreferencesInit() {
       branchColorIntensity: savedBranchColorIntensity,
       branchColorSpread: savedBranchColorSpread,
       branchColorTone: savedBranchColorTone,
+      branchColorOpacity: savedBranchColorOpacity,
+      branchColorGradient: savedBranchColorGradient,
+      branchColorSolid: savedBranchColorSolid,
+      branchColorSettingsById: savedBranchColorSettingsById,
+      inactiveCardDim: savedInactiveCardDim,
       themeTuning: savedThemeTuning,
       inactiveBranchesMode: savedInactiveBranchesMode,
       focusModeScope: savedFocusModeScope,
@@ -161,6 +213,36 @@ export function usePreferencesInit() {
         safeLocalStorage.setItem(
           "puu_branchColorTone",
           state.branchColorTone.toString(),
+        );
+      }
+      if (state.branchColorOpacity !== prevState.branchColorOpacity) {
+        safeLocalStorage.setItem(
+          "puu_branchColorOpacity",
+          state.branchColorOpacity.toString(),
+        );
+      }
+      if (state.branchColorGradient !== prevState.branchColorGradient) {
+        safeLocalStorage.setItem(
+          "puu_branchColorGradient",
+          state.branchColorGradient.toString(),
+        );
+      }
+      if (state.branchColorSolid !== prevState.branchColorSolid) {
+        safeLocalStorage.setItem(
+          "puu_branchColorSolid",
+          String(state.branchColorSolid),
+        );
+      }
+      if (state.branchColorSettingsById !== prevState.branchColorSettingsById) {
+        safeLocalStorage.setItem(
+          "puu_branchColorSettingsById",
+          JSON.stringify(state.branchColorSettingsById),
+        );
+      }
+      if (state.inactiveCardDim !== prevState.inactiveCardDim) {
+        safeLocalStorage.setItem(
+          "puu_inactiveCardDimV2",
+          state.inactiveCardDim.toString(),
         );
       }
       if (state.themeTuning !== prevState.themeTuning) {

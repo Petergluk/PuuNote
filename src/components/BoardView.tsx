@@ -6,7 +6,11 @@ import {
   computeAncestorPathFromIndex,
   computeDescendantIdsFromIndex,
 } from "../utils/tree";
-import { buildBranchColorIdMap, getBranchColor } from "../utils/branchColors";
+import {
+  buildBranchColorIdMap,
+  getBranchColor,
+  getBranchColorSettings,
+} from "../utils/branchColors";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Card } from "./Card";
 
@@ -19,7 +23,13 @@ export function BoardView() {
   const addChild = useAppStore((s) => s.addChild);
   const inactiveBranchesMode = useAppStore((s) => s.inactiveBranchesMode);
   const theme = useAppStore((s) => s.theme);
+  const branchColorIntensity = useAppStore((s) => s.branchColorIntensity);
+  const branchColorSpread = useAppStore((s) => s.branchColorSpread);
   const branchColorTone = useAppStore((s) => s.branchColorTone);
+  const branchColorOpacity = useAppStore((s) => s.branchColorOpacity);
+  const branchColorGradient = useAppStore((s) => s.branchColorGradient);
+  const branchColorSolid = useAppStore((s) => s.branchColorSolid);
+  const branchColorSettingsById = useAppStore((s) => s.branchColorSettingsById);
 
   const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
 
@@ -41,6 +51,24 @@ export function BoardView() {
   const branchColorIdByNode = useMemo(
     () => buildBranchColorIdMap(nodes, treeIndex),
     [nodes, treeIndex],
+  );
+  const globalBranchColorSettings = useMemo(
+    () => ({
+      intensity: branchColorIntensity,
+      fill: branchColorSpread,
+      opacity: branchColorOpacity,
+      gradient: branchColorGradient,
+      solid: branchColorSolid,
+      tone: branchColorTone,
+    }),
+    [
+      branchColorGradient,
+      branchColorIntensity,
+      branchColorOpacity,
+      branchColorSolid,
+      branchColorSpread,
+      branchColorTone,
+    ],
   );
 
   const useActiveCorridor = inactiveBranchesMode === "hide";
@@ -75,23 +103,32 @@ export function BoardView() {
             key={colIndex}
             style={{ zIndex: Math.max(1, 30 - colIndex) }}
             ref={(el) => setColRef(colIndex, el)}
-            className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar px-2 sm:px-4 transition-all duration-200 col-spacer relative"
+            className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar px-2 transition-all duration-200 col-spacer relative"
           >
             <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[95vh] mx-auto transition-all duration-200 col-spacer">
-              {colNodes.map((node) => (
-                <ErrorBoundary key={node.id}>
-                  <Card
-                    node={node}
-                    isInPath={activeAncestorSet.has(node.id)}
-                    isDescendantFromActive={activeDescendantIds.has(node.id)}
-                    branchColor={getBranchColor(
-                      theme,
-                      branchColorIdByNode.get(node.id),
-                      branchColorTone,
-                    )}
-                  />
-                </ErrorBoundary>
-              ))}
+              {colNodes.map((node) => {
+                const branchColorId = branchColorIdByNode.get(node.id);
+                const branchColorSettings = getBranchColorSettings(
+                  globalBranchColorSettings,
+                  branchColorSettingsById,
+                  branchColorId,
+                );
+                return (
+                  <ErrorBoundary key={node.id}>
+                    <Card
+                      node={node}
+                      isInPath={activeAncestorSet.has(node.id)}
+                      isDescendantFromActive={activeDescendantIds.has(node.id)}
+                      branchColor={getBranchColor(
+                        theme,
+                        branchColorId,
+                        branchColorSettings.tone,
+                        branchColorSettings,
+                      )}
+                    />
+                  </ErrorBoundary>
+                );
+              })}
               {colNodes.length === 0 && colIndex === 0 && (
                 <div
                   onClick={() => addChild(null)}

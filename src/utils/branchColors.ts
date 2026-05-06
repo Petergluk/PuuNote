@@ -19,27 +19,124 @@ export interface BranchColor {
   id: BranchColorId;
   label: string;
   rgb: string;
+  settings: BranchColorSettings;
 }
 
 type ThemePalette = Record<BranchColorId, BranchColor>;
 
+export type BranchColorSettings = {
+  intensity: number;
+  fill: number;
+  opacity: number;
+  gradient: number;
+  solid: boolean;
+  tone: number;
+};
+
+export type BranchColorSettingsById = Partial<
+  Record<BranchColorId, BranchColorSettings>
+>;
+
+export const DEFAULT_BRANCH_COLOR_SETTINGS: BranchColorSettings = {
+  intensity: 140,
+  fill: 100,
+  opacity: 100,
+  gradient: 70,
+  solid: false,
+  tone: 0,
+};
+
 const labels: Record<BranchColorId, string> = {
-  rose: "#FF0101",
-  coral: "#FF9D00",
-  amber: "#FFF600",
-  olive: "#00FF43",
-  mint: "#00FFC6",
-  cyan: "#00D7FF",
-  blue: "#006CC2",
-  violet: "#3000E1",
-  plum: "#E700F5",
+  rose: "#FF806F",
+  coral: "#FFAD38",
+  amber: "#FFFE6E",
+  olive: "#17CD00",
+  mint: "#00DBA8",
+  cyan: "#00C2D4",
+  blue: "#529AFF",
+  violet: "#BD7DFF",
+  plum: "#FF75D0",
+};
+
+const basePaletteValues: Record<BranchColorId, string> = {
+  rose: "255 128 111",
+  coral: "255 173 56",
+  amber: "255 254 110",
+  olive: "23 205 0",
+  mint: "0 219 168",
+  cyan: "0 194 212",
+  blue: "82 154 255",
+  violet: "189 125 255",
+  plum: "255 117 208",
 };
 
 const makePalette = (values: Record<BranchColorId, string>): ThemePalette => {
   return BRANCH_COLOR_IDS.reduce((palette, id) => {
-    palette[id] = { id, label: labels[id], rgb: values[id] };
+    palette[id] = {
+      id,
+      label: labels[id],
+      rgb: values[id],
+      settings: DEFAULT_BRANCH_COLOR_SETTINGS,
+    };
     return palette;
   }, {} as ThemePalette);
+};
+
+const clampNumber = (
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+) => {
+  const parsed = Number(value);
+  const safeValue = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.max(min, Math.min(max, Math.round(safeValue)));
+};
+
+export const normalizeBranchColorSettings = (
+  value: unknown,
+  fallback: BranchColorSettings = DEFAULT_BRANCH_COLOR_SETTINGS,
+): BranchColorSettings => {
+  const source =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  return {
+    intensity: clampNumber(source.intensity, 0, 300, fallback.intensity),
+    fill: clampNumber(source.fill, 0, 100, fallback.fill),
+    opacity: clampNumber(source.opacity, 0, 100, fallback.opacity),
+    gradient: clampNumber(source.gradient, 0, 100, fallback.gradient),
+    solid: typeof source.solid === "boolean" ? source.solid : fallback.solid,
+    tone: clampNumber(source.tone, -100, 100, fallback.tone),
+  };
+};
+
+export const normalizeBranchColorSettingsById = (
+  value: unknown,
+): BranchColorSettingsById => {
+  if (!value || typeof value !== "object") return {};
+  const source = value as Record<string, unknown>;
+  return BRANCH_COLOR_IDS.reduce((result, colorId) => {
+    if (source[colorId]) {
+      result[colorId] = normalizeBranchColorSettings(source[colorId]);
+    }
+    return result;
+  }, {} as BranchColorSettingsById);
+};
+
+export const getBranchColorSettings = (
+  globalSettings: BranchColorSettings,
+  settingsById: BranchColorSettingsById,
+  colorId?: string | null,
+) => {
+  const base = normalizeBranchColorSettings(globalSettings);
+  if (!colorId || !BRANCH_COLOR_IDS.includes(colorId as BranchColorId)) {
+    return base;
+  }
+  return normalizeBranchColorSettings(
+    settingsById[colorId as BranchColorId],
+    base,
+  );
 };
 
 export const adjustBranchColorRgb = (rgb: string, tone: number) => {
@@ -58,50 +155,10 @@ export const adjustBranchColorRgb = (rgb: string, tone: number) => {
 };
 
 const palettes: Record<string, ThemePalette> = {
-  light: makePalette({
-    rose: "255 1 1",
-    coral: "255 157 0",
-    amber: "255 246 0",
-    olive: "0 255 67",
-    mint: "0 255 198",
-    cyan: "0 215 255",
-    blue: "0 108 194",
-    violet: "48 0 225",
-    plum: "231 0 245",
-  }),
-  dark: makePalette({
-    rose: "255 1 1",
-    coral: "255 157 0",
-    amber: "255 246 0",
-    olive: "0 255 67",
-    mint: "0 255 198",
-    cyan: "0 215 255",
-    blue: "0 108 194",
-    violet: "48 0 225",
-    plum: "231 0 245",
-  }),
-  blue: makePalette({
-    rose: "255 1 1",
-    coral: "255 157 0",
-    amber: "255 246 0",
-    olive: "0 255 67",
-    mint: "0 255 198",
-    cyan: "0 215 255",
-    blue: "0 108 194",
-    violet: "48 0 225",
-    plum: "231 0 245",
-  }),
-  brown: makePalette({
-    rose: "255 1 1",
-    coral: "255 157 0",
-    amber: "255 246 0",
-    olive: "0 255 67",
-    mint: "0 255 198",
-    cyan: "0 215 255",
-    blue: "0 108 194",
-    violet: "48 0 225",
-    plum: "231 0 245",
-  }),
+  light: makePalette(basePaletteValues),
+  dark: makePalette(basePaletteValues),
+  blue: makePalette(basePaletteValues),
+  brown: makePalette(basePaletteValues),
 };
 
 export const normalizeThemeForBranchPalette = (theme: string) => {
@@ -118,14 +175,20 @@ export const getBranchColor = (
   theme: string,
   colorId?: string | null,
   tone = 0,
+  settings: BranchColorSettings = DEFAULT_BRANCH_COLOR_SETTINGS,
 ) => {
   if (!colorId) return null;
   const palette = getBranchPalette(theme);
   const color = palette[colorId as BranchColorId];
   if (!color) return null;
+  const resolvedSettings = normalizeBranchColorSettings({
+    ...settings,
+    tone,
+  });
   return {
     ...color,
-    rgb: adjustBranchColorRgb(color.rgb, tone),
+    rgb: adjustBranchColorRgb(color.rgb, resolvedSettings.tone),
+    settings: resolvedSettings,
   };
 };
 
@@ -156,7 +219,8 @@ export const getBranchColorId = (
   const rootId = getBranchRootId(treeIndex, nodeId);
   if (!rootId) return null;
   const colorId = treeIndex.nodeMap.get(rootId)?.metadata?.branchColor;
-  return typeof colorId === "string" ? colorId : null;
+  if (!BRANCH_COLOR_IDS.includes(colorId as BranchColorId)) return null;
+  return colorId as BranchColorId;
 };
 
 export const buildBranchColorIdMap = (

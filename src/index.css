@@ -140,6 +140,14 @@ body,
   content: none !important;
 }
 
+/* Tailwind Typography wraps inline code in generated backticks by default.
+   In PuuNote inline code is often used for keyboard keys, so the generated
+   punctuation looks like a rendering bug rather than useful Markdown syntax. */
+.prose :not(pre) > code::before,
+.prose :not(pre) > code::after {
+  content: none !important;
+}
+
 /* Красивые чекбоксы для списков задач [ ] и [x] */
 .prose input[type="checkbox"] {
   @apply appearance-none w-4 h-4 inline-block align-baseline rounded-sm border-2 cursor-pointer relative mx-1 mt-1 shrink-0 opacity-100;
@@ -190,7 +198,10 @@ body,
         rgb(var(--branch-rgb))
           min(
             100%,
-            calc(var(--branch-tint, 1) * var(--branch-fill, 0.35) * 24%)
+            calc(
+              var(--branch-tint, 1) * var(--branch-fill, 0.35) *
+                var(--branch-bg-opacity, 1) * 24%
+            )
           ),
         var(--app-card)
       )
@@ -200,18 +211,45 @@ body,
         rgb(var(--branch-rgb))
           min(
             100%,
-            calc(var(--branch-tint, 1) * var(--branch-fill, 0.35) * 14%)
+            calc(
+              var(--branch-tint, 1) * var(--branch-fill, 0.35) *
+                var(--branch-bg-opacity, 1) *
+                var(--branch-gradient-mid-mix, 13%)
+            )
           ),
         var(--app-card)
       )
-      48%,
+      var(--branch-gradient-mid-pos, 55%),
     color-mix(
         in srgb,
         rgb(var(--branch-rgb))
-          min(100%, calc(var(--branch-tint, 1) * var(--branch-fill, 0.35) * 4%)),
+          min(
+            100%,
+            calc(
+              var(--branch-tint, 1) * var(--branch-fill, 0.35) *
+                var(--branch-bg-opacity, 1) * var(--branch-gradient-end-mix, 6%)
+            )
+          ),
         var(--app-card)
       )
       100%
+  );
+}
+
+.branch-fill-solid.branch-card,
+.branch-fill-solid .branch-card {
+  background-image: none;
+  background-color: color-mix(
+    in srgb,
+    rgb(var(--branch-rgb))
+      min(
+        100%,
+        calc(
+          var(--branch-tint, 1) * var(--branch-fill, 0.35) *
+            var(--branch-bg-opacity, 1) * 24%
+        )
+      ),
+    var(--app-card)
   );
 }
 
@@ -255,10 +293,30 @@ body,
 .theme-mono .branch-card,
 .theme-mono .branch-card:hover,
 .theme-mono .branch-card-active,
-.theme-mono .branch-card-selected {
+.theme-mono .branch-card-selected,
+.theme-mono .branch-fill-solid .branch-card {
   border-color: var(--app-border);
   background-image: none;
+  background-color: var(--app-card);
   box-shadow: none;
+  --branch-accent: var(--app-border-hover);
+}
+
+.theme-mono .branch-card-active {
+  background-color: var(--app-card-active);
+  border-left-color: var(--app-border-hover) !important;
+}
+
+.theme-mono .branch-card-selected {
+  border-left-color: var(--app-border) !important;
+}
+
+.inactive-card {
+  opacity: var(--inactive-card-opacity, 0.6);
+}
+
+.inactive-card:hover {
+  opacity: 1;
 }
 
 .theme-mono .branch-color-paint {
@@ -269,7 +327,12 @@ body,
   filter: grayscale(1);
 }
 
-/* Responsive Column Widths */
+/* Responsive Column Widths
+   The board is intentionally compact. On desktop each column container is the
+   requested card width plus 16px total gutter: 8px on the right of one column
+   and 8px on the left of the next. This 16px gap is a repeatedly confirmed
+   product choice for this editor; adding more "breathing room" makes the board
+   feel sparse without creating useful space. */
 .column-container {
   width: 100vw;
   scroll-snap-align: start;
@@ -279,7 +342,7 @@ body,
 }
 @media (min-width: 640px) {
   .column-container {
-    width: calc(var(--col-width) + 32px);
+    width: calc(var(--col-width) + 16px);
     scroll-snap-align: none;
   }
   .column-inner {

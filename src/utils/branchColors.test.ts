@@ -39,10 +39,10 @@ describe("branchColors", () => {
     expect(colorMap.get("root-b")).toBe(null);
   });
 
-  it("uses the Adobe rainbow palette for branch colors", () => {
-    expect(getBranchColor("light", "rose")?.rgb).toBe("255 1 1");
-    expect(getBranchColor("dark", "coral")?.rgb).toBe("255 157 0");
-    expect(getBranchColor("blue", "plum")?.rgb).toBe("231 0 245");
+  it("uses the soft rainbow palette for branch colors", () => {
+    expect(getBranchColor("light", "rose")?.rgb).toBe("255 128 111");
+    expect(getBranchColor("dark", "coral")?.rgb).toBe("255 173 56");
+    expect(getBranchColor("blue", "plum")?.rgb).toBe("255 117 208");
     expect(getBranchColor("unknown", "not-a-color")).toBe(null);
   });
 });

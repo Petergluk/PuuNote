@@ -3,6 +3,7 @@ export type ThemeTune = {
   card: number;
   activeCard: number;
   text: number;
+  warmth: number;
 };
 
 export const DEFAULT_THEME_TUNE: ThemeTune = {
@@ -10,6 +11,7 @@ export const DEFAULT_THEME_TUNE: ThemeTune = {
   card: 0,
   activeCard: 0,
   text: 0,
+  warmth: 0,
 };
 
 export const THEME_IDS = [
@@ -22,6 +24,23 @@ export const THEME_IDS = [
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
+
+export const DEFAULT_THEME_TUNING: Partial<Record<ThemeId, ThemeTune>> = {
+  light: {
+    bg: 0,
+    card: -6,
+    activeCard: 27,
+    text: 0,
+    warmth: 0,
+  },
+  mono: {
+    bg: -9,
+    card: -4,
+    activeCard: 0,
+    text: 0,
+    warmth: 0,
+  },
+};
 
 export const THEME_LABELS: Record<ThemeId, string> = {
   mono: "B/W",
@@ -141,6 +160,21 @@ const toHex = (value: number) =>
     .toString(16)
     .padStart(2, "0");
 
+type Rgb = {
+  r: number;
+  g: number;
+  b: number;
+};
+
+const mixRgb = (from: Rgb, to: Rgb, amount: number): Rgb => ({
+  r: from.r + (to.r - from.r) * amount,
+  g: from.g + (to.g - from.g) * amount,
+  b: from.b + (to.b - from.b) * amount,
+});
+
+const luminance = (color: Rgb) =>
+  color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722;
+
 export const adjustHexBrightness = (hex: string, adjustment: number) => {
   const clamped = Math.max(-50, Math.min(50, Math.round(adjustment)));
   if (clamped === 0) return hex;
@@ -153,6 +187,32 @@ export const adjustHexBrightness = (hex: string, adjustment: number) => {
     rgb.g + (target - rgb.g) * amount,
   )}${toHex(rgb.b + (target - rgb.b) * amount)}`;
 };
+
+export const adjustHexTemperature = (hex: string, warmth: number) => {
+  const clamped = Math.max(-50, Math.min(50, Math.round(warmth)));
+  if (clamped === 0) return hex;
+
+  const rgb = hexToRgb(hex);
+  const amount = Math.pow(Math.abs(clamped) / 50, 1.08);
+  const lightness = Math.max(0, Math.min(1, luminance(rgb) / 255));
+  const warmSepia = mixRgb(
+    { r: 96, g: 48, b: 18 },
+    { r: 238, g: 202, b: 160 },
+    lightness,
+  );
+  const coolBlue = mixRgb(
+    { r: 14, g: 42, b: 78 },
+    { r: 196, g: 232, b: 255 },
+    lightness,
+  );
+  const target = clamped > 0 ? warmSepia : coolBlue;
+  const shifted = mixRgb(rgb, target, amount * (clamped > 0 ? 0.82 : 0.86));
+
+  return `#${toHex(shifted.r)}${toHex(shifted.g)}${toHex(shifted.b)}`;
+};
+
+const tuneColor = (hex: string, brightness: number, warmth: number) =>
+  adjustHexBrightness(adjustHexTemperature(hex, warmth), brightness);
 
 export const getThemeId = (theme: string): ThemeId =>
   THEME_IDS.includes(theme as ThemeId) ? (theme as ThemeId) : "light";
@@ -170,6 +230,7 @@ export const normalizeThemeTuning = (
       card: clampTune((tune as Record<string, unknown>).card),
       activeCard: clampTune((tune as Record<string, unknown>).activeCard),
       text: clampTune((tune as Record<string, unknown>).text),
+      warmth: clampTune((tune as Record<string, unknown>).warmth),
     };
   }
   return result;
@@ -181,7 +242,14 @@ export const clampTune = (value: unknown) =>
 export const getThemeTune = (
   themeTuning: Partial<Record<ThemeId, ThemeTune>>,
   theme: string,
-) => themeTuning[getThemeId(theme)] ?? DEFAULT_THEME_TUNE;
+) => {
+  const themeId = getThemeId(theme);
+  return {
+    ...DEFAULT_THEME_TUNE,
+    ...DEFAULT_THEME_TUNING[themeId],
+    ...themeTuning[themeId],
+  };
+};
 
 export const buildThemeCssVars = (
   theme: string,
@@ -192,22 +260,24 @@ export const buildThemeCssVars = (
   const tune = getThemeTune(themeTuning, themeId);
 
   return {
-    "--app-bg": adjustHexBrightness(colors.bg, tune.bg),
-    "--app-panel": adjustHexBrightness(colors.panel, tune.bg),
-    "--app-card": adjustHexBrightness(colors.card, tune.card),
-    "--app-card-hover": adjustHexBrightness(colors.cardHover, tune.card),
-    "--app-card-active": adjustHexBrightness(
+    "--app-bg": tuneColor(colors.bg, tune.bg, tune.warmth),
+    "--app-panel": tuneColor(colors.panel, tune.bg, tune.warmth),
+    "--app-card": tuneColor(colors.card, tune.card, tune.warmth),
+    "--app-card-hover": tuneColor(colors.cardHover, tune.card, tune.warmth),
+    "--app-card-active": tuneColor(
       colors.cardActive,
       tune.activeCard,
+      tune.warmth,
     ),
     "--app-border": colors.border,
     "--app-border-hover": colors.borderHover,
-    "--app-text-primary": adjustHexBrightness(colors.textPrimary, tune.text),
-    "--app-text-secondary": adjustHexBrightness(
+    "--app-text-primary": tuneColor(colors.textPrimary, tune.text, tune.warmth),
+    "--app-text-secondary": tuneColor(
       colors.textSecondary,
       tune.text,
+      tune.warmth,
     ),
-    "--app-text-muted": adjustHexBrightness(colors.textMuted, tune.text),
+    "--app-text-muted": tuneColor(colors.textMuted, tune.text, tune.warmth),
     "--app-accent": colors.accent,
   };
 };
