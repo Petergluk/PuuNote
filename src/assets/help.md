@@ -268,7 +268,7 @@ PuuNote — горизонтальный древовидный редактор
         [Сайт OpenAI](https://openai.com) — `[Сайт OpenAI](https://openai.com)`
 
         **Изображение:**
-        ![Пример картинки](https://via.placeholder.com/150) — `![Пример картинки](https://via.placeholder.com/150)`
+        `![Описание изображения](./image.png)`
 
 ---
 

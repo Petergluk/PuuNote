@@ -26,6 +26,13 @@ export const THEME_IDS = [
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export const DEFAULT_THEME_TUNING: Partial<Record<ThemeId, ThemeTune>> = {
+  mono: {
+    bg: -9,
+    card: -4,
+    activeCard: 0,
+    text: 0,
+    warmth: 0,
+  },
   light: {
     bg: 0,
     card: -6,
@@ -33,9 +40,30 @@ export const DEFAULT_THEME_TUNING: Partial<Record<ThemeId, ThemeTune>> = {
     text: 0,
     warmth: 0,
   },
-  mono: {
-    bg: -9,
-    card: -4,
+  "light-cool": {
+    bg: 0,
+    card: 0,
+    activeCard: 0,
+    text: 0,
+    warmth: 0,
+  },
+  dark: {
+    bg: 0,
+    card: 0,
+    activeCard: 0,
+    text: 0,
+    warmth: 0,
+  },
+  blue: {
+    bg: 0,
+    card: 0,
+    activeCard: 0,
+    text: 0,
+    warmth: 0,
+  },
+  brown: {
+    bg: 0,
+    card: 0,
     activeCard: 0,
     text: 0,
     warmth: 0,

@@ -244,15 +244,19 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
     },
 
     mergeNodes: (masterId, nodeIdsToMerge) => {
+      let didMerge = false;
       get().setNodes((prev) => {
         const validation = canMergeNodes(prev, masterId, nodeIdsToMerge);
         if (!validation.ok) {
-          console.warn(validation.reason || "Selected cards cannot be merged.");
+          toast.warning(validation.reason || "Selected cards cannot be merged.");
           return prev;
         }
+        didMerge = true;
         return documentApi.mergeNodes(prev, masterId, nodeIdsToMerge);
       });
-      set({ activeId: masterId, selectedIds: [masterId], editingId: null });
+      if (didMerge) {
+        set({ activeId: masterId, selectedIds: [masterId], editingId: null });
+      }
     },
 
     moveNode: (sourceId, targetId, position) => {

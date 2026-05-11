@@ -11,8 +11,10 @@ import {
   Plus,
   Trash2,
   Sparkles,
+  Combine,
   type LucideIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   DocumentService,
   type ActiveSearchDocument,
@@ -21,6 +23,7 @@ import {
 import { runMockExpandSelectedCard } from "../domain/aiOperations";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { getMergeSelectionState } from "../utils/mergeSelection";
 
 interface CommandItem {
   id: string;
@@ -180,6 +183,31 @@ export function CommandPalette() {
             setActiveIds: (activeId, selectedIds) => {
               useAppStore.setState({ activeId, selectedIds });
             },
+          });
+        },
+      },
+      {
+        id: "merge-selected-cards",
+        label: t("Merge selected cards"),
+        icon: Combine,
+        run: () => {
+          const store = useAppStore.getState();
+          const mergeSelection = getMergeSelectionState(
+            store.nodes,
+            store.activeId,
+            store.selectedIds,
+          );
+
+          if (!mergeSelection.ok || !mergeSelection.masterId) {
+            toast.warning(
+              mergeSelection.reason || "Selected cards cannot be merged.",
+            );
+            return;
+          }
+
+          const { masterId, nodeIdsToMerge, orderedIds } = mergeSelection;
+          store.openConfirm(`Merge ${orderedIds.length} selected cards?`, () => {
+            useAppStore.getState().mergeNodes(masterId, nodeIdsToMerge);
           });
         },
       },

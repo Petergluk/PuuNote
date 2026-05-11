@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
-import { Keyboard, Columns, History } from "lucide-react";
+import { Keyboard, Columns, History, Combine } from "lucide-react";
+import { toast } from "sonner";
 import {
   INITIAL_NODES,
   TUTORIAL_DOCUMENT_TITLE,
@@ -23,6 +24,7 @@ import {
 import { ShortcutsModal } from "./ShortcutsModal";
 import { TutorialModal } from "./TutorialModal";
 import { SnapshotPanel } from "./SnapshotPanel";
+import { getMergeSelectionState } from "../utils/mergeSelection";
 
 export function Footer() {
   const { t } = useTranslation();
@@ -74,6 +76,29 @@ export function Footer() {
     return { activePathLength, cardsCount, wordCount };
   }, [nodes, activeId]);
 
+  const mergeSelection = useMemo(
+    () => getMergeSelectionState(nodes, activeId, selectedIds),
+    [activeId, nodes, selectedIds],
+  );
+
+  const mergeTitle = mergeSelection.ok
+    ? `Merge ${mergeSelection.orderedIds.length} selected cards`
+    : mergeSelection.reason || "Selected cards cannot be merged.";
+
+  const handleMergeSelected = () => {
+    if (!mergeSelection.ok || !mergeSelection.masterId) {
+      toast.warning(mergeTitle);
+      return;
+    }
+
+    const { masterId, nodeIdsToMerge, orderedIds } = mergeSelection;
+    useAppStore
+      .getState()
+      .openConfirm(`Merge ${orderedIds.length} selected cards?`, () => {
+        useAppStore.getState().mergeNodes(masterId, nodeIdsToMerge);
+      });
+  };
+
   const saveStatusClass =
     saveStatus === "error"
       ? "text-red-500"
@@ -114,9 +139,26 @@ export function Footer() {
         <div className="flex gap-6 text-[10px] text-app-text-muted font-mono tracking-widest uppercase hidden lg:flex">
           {" "}
           {selectedIds.length > 1 ? (
-            <span className="text-app-accent font-semibold">
-              SELECTED: {selectedIds.length}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-app-accent font-semibold">
+                SELECTED: {selectedIds.length}
+              </span>
+              <button
+                type="button"
+                onClick={handleMergeSelected}
+                aria-disabled={!mergeSelection.ok}
+                title={mergeTitle}
+                aria-label={t("Merge selected cards")}
+                className={`inline-flex h-6 items-center gap-1.5 rounded border px-2 text-[10px] font-semibold transition-colors ${
+                  mergeSelection.ok
+                    ? "border-app-accent text-app-accent hover:bg-app-card-hover"
+                    : "border-app-border text-app-text-muted opacity-70 hover:bg-app-card-hover"
+                }`}
+              >
+                <Combine size={13} />
+                MERGE
+              </button>
+            </div>
           ) : (
             <>
               <span>

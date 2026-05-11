@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Combine, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { canMergeNodes } from "../domain/documentTree";
 import { computeDescendantIds } from "../utils/tree";
+import { getMergeSelectionState } from "../utils/mergeSelection";
 import { useAppStore } from "../store/useAppStore";
 
 interface CardRect {
@@ -53,12 +53,10 @@ export function FloatingCardActions() {
   const [cardRect, setCardRect] = useState<CardRect | null>(null);
   const [visibleCardId, setVisibleCardId] = useState<string | null>(null);
 
-  const mergeValidation = useMemo(() => {
-    if (!activeId || selectedIds.length < 2) {
-      return { ok: false, orderedIds: [] };
-    }
-    return canMergeNodes(nodes, activeId, selectedIds);
-  }, [activeId, nodes, selectedIds]);
+  const mergeSelection = useMemo(
+    () => getMergeSelectionState(nodes, activeId, selectedIds),
+    [activeId, nodes, selectedIds],
+  );
 
   /** True on touch-primary devices (phones, tablets) */
   const isTouchDevice = useMemo(
@@ -323,7 +321,7 @@ export function FloatingCardActions() {
           >
             <Trash2 size={12} />
           </motion.button>
-          {mergeValidation.ok && (
+          {mergeSelection.ok && mergeSelection.masterId && (
             <motion.button
               type="button"
               className={ACTION_CLASS}
@@ -332,16 +330,18 @@ export function FloatingCardActions() {
                 top: cardRect.top,
                 transform: "translate(-50%, -50%)",
               }}
-              title="Merge Selected"
+              title={`Merge ${mergeSelection.orderedIds.length} selected cards`}
               aria-label="Merge selected cards"
               onClick={(event) => {
                 event.stopPropagation();
-                const count = mergeValidation.orderedIds.length;
+                const { masterId, nodeIdsToMerge, orderedIds } =
+                  mergeSelection;
+                if (!masterId) return;
                 useAppStore
                   .getState()
                   .openConfirm(
-                    `Merge ${count} cards into one? This cannot be undone easily.`,
-                    () => mergeNodes(activeId, selectedIds),
+                    `Merge ${orderedIds.length} selected cards?`,
+                    () => mergeNodes(masterId, nodeIdsToMerge),
                   );
               }}
               {...keepVisibleHandlers}

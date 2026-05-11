@@ -338,7 +338,7 @@ export const Card = React.memo(
                   onChange={(val: string) => updateContent(node.id, val)}
                   onBlur={() => setEditingId(null)}
                   autoFocus
-                  className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
+                  className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-sm text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
                 />
               )}
             </div>

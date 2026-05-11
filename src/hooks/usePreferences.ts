@@ -65,16 +65,16 @@ export const applyTheme = (
     "theme-brown",
     "theme-mono",
   );
-  if (theme.startsWith("dark")) {
+  if (theme === "dark" || theme === "blue" || theme === "brown") {
     document.documentElement.classList.add("dark");
   }
-  if (theme.includes("light-cool")) {
+  if (theme === "light-cool") {
     document.documentElement.classList.add("theme-light-cool");
-  } else if (theme.includes("blue")) {
+  } else if (theme === "blue") {
     document.documentElement.classList.add("theme-blue");
-  } else if (theme.includes("brown")) {
+  } else if (theme === "brown") {
     document.documentElement.classList.add("theme-brown");
-  } else if (theme.includes("mono")) {
+  } else if (theme === "mono") {
     document.documentElement.classList.add("theme-mono");
   }
   const cssVars = buildThemeCssVars(theme, themeTuning);

@@ -27,6 +27,22 @@ describe("markdownParser clipboard round-trip", () => {
     expect(parsed[2].parentId).toBe(parsed[1].id);
   });
 
+  it("exports formatted html for external rich paste targets", () => {
+    const html = exportNodesToClipboardHtml([
+      {
+        id: "root",
+        parentId: null,
+        order: 0,
+        content: "Title\n**Bold** text\n- First\n- Second",
+      },
+    ]);
+
+    expect(html).toContain("<h1>Title</h1>");
+    expect(html).toContain("<strong>Bold</strong>");
+    expect(html).toContain("<ul><li>First</li><li>Second</li></ul>");
+    expect(parseClipboardHtmlNodes(html)).toHaveLength(1);
+  });
+
   it("keeps a copied branch nested through the plain markdown fallback", () => {
     const parsed = parseMarkdownToNodes(exportNodesToMarkdown(branchNodes));
 

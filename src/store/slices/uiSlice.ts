@@ -7,6 +7,7 @@ import {
 } from "../../utils/themeTuning";
 import {
   DEFAULT_BRANCH_COLOR_SETTINGS,
+  DEFAULT_BRANCH_COLORS_BY_ID,
   normalizeBranchColorSettings,
 } from "../../utils/branchColors";
 
@@ -14,7 +15,7 @@ const DEFAULT_INACTIVE_CARD_DIM = -25;
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   fileMenuOpen: false,
-  theme: "mono",
+  theme: "dark",
   cardsCollapsed: false,
   inactiveBranchesMode: "dim",
   focusModeScope: "branchLevel",
@@ -31,7 +32,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   branchColorOpacity: DEFAULT_BRANCH_COLOR_SETTINGS.opacity,
   branchColorGradient: DEFAULT_BRANCH_COLOR_SETTINGS.gradient,
   branchColorSolid: DEFAULT_BRANCH_COLOR_SETTINGS.solid,
-  branchColorSettingsById: {},
+  branchColorSettingsById: DEFAULT_BRANCH_COLORS_BY_ID,
   branchColorTuningTargetId: null,
   inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
   themeTuning: DEFAULT_THEME_TUNING,

@@ -23,9 +23,11 @@ class FileSystemManager {
     if (this.timer) clearTimeout(this.timer);
     this.fileId = fileId;
     this.nodes = nodes;
+    const scheduledFileId = fileId;
+    const scheduledNodes = nodes;
     this.timer = setTimeout(() => {
       this.timer = null;
-      onSave(this.fileId, this.nodes);
+      onSave(scheduledFileId, scheduledNodes);
     }, 1000);
   }
 

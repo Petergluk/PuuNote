@@ -183,6 +183,23 @@ describe("documentTree", () => {
     expect(childOfSecond?.order).toBe(1); // after "Child of master"
   });
 
+  it("should merge more than two sibling nodes", () => {
+    const nodes: PuuNode[] = [
+      { id: "1", parentId: null, order: 0, content: "First" },
+      { id: "2", parentId: null, order: 1, content: "Second" },
+      { id: "3", parentId: null, order: 2, content: "Third" },
+      { id: "4", parentId: "3", order: 0, content: "Child of third" },
+    ];
+
+    const updated = documentApi.mergeNodes(nodes, "2", ["1", "2", "3"]);
+
+    expect(updated.map((node) => node.id).sort()).toEqual(["2", "4"]);
+    expect(updated.find((n) => n.id === "2")?.content).toBe(
+      "First\n\nSecond\n\nThird",
+    );
+    expect(updated.find((n) => n.id === "4")?.parentId).toBe("2");
+  });
+
   it("should validate merge only for sibling cards", () => {
     const nodes: PuuNode[] = [
       { id: "1", parentId: null, order: 0, content: "Root" },

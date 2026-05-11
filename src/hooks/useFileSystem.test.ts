@@ -36,7 +36,7 @@ describe("FileSystemManager", () => {
     vi.useRealTimers();
   });
 
-  it("uses the latest manager state when a delayed save fires", () => {
+  it("keeps a delayed save bound to the scheduled file snapshot", () => {
     vi.useFakeTimers();
     const initialNodes = [node("empty", "")];
     const hydratedNodes = [node("loaded", "Loaded document")];
@@ -49,7 +49,7 @@ describe("FileSystemManager", () => {
 
     vi.advanceTimersByTime(1000);
 
-    expect(saved).toEqual([{ fileId: "doc-a", nodes: hydratedNodes }]);
+    expect(saved).toEqual([{ fileId: "doc-a", nodes: initialNodes }]);
   });
 
   it("flushes a pending save immediately and marks it saved", async () => {
