@@ -165,6 +165,8 @@ export const Card = React.memo(
               "--branch-tint": branchColor.settings.intensity / 100,
               "--branch-fill": branchColor.settings.fill / 100,
               "--branch-bg-opacity": branchColor.settings.opacity / 100,
+              "--branch-border-width": `${branchColor.settings.borderWidth}px`,
+              "--branch-border-mix": branchColor.settings.borderBrightness,
               "--branch-gradient-mid-pos": `${
                 26 + branchColor.settings.gradient * 0.45
               }%`,

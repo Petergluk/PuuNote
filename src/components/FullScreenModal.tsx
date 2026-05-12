@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Minimize2 } from "lucide-react";
+import { Minimize2, Copy, Download, Check } from "lucide-react";
 import { motion } from "motion/react";
 
 import { PuuNode } from "../types";
@@ -24,12 +24,22 @@ export const FullScreenModal = ({
   const updateContent = useAppStore((s) => s.updateContent);
   const editorMode = useAppStore((s) => s.editorMode);
   const focusModeScope = useAppStore((s) => s.focusModeScope);
-  const [localActiveId, setLocalActiveId] = useState(nodeId);
+  const [localActiveId, setLocalActiveId] = useState<string | null>(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
+  
+  const [copied, setCopied] = useState(false);
+  const [isIdle, setIsIdle] = useState(false);
+  const idleTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleUserActivity = () => {
+    setIsIdle(false);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setIsIdle(true), 3000);
+  };
 
   useEffect(() => {
-    if (activeElRef.current) {
+    if (activeElRef.current && localActiveId === nodeId) {
       activeElRef.current.scrollIntoView({
         behavior: "smooth",
         block: "center",
@@ -40,10 +50,18 @@ export const FullScreenModal = ({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      handleUserActivity();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  useEffect(() => {
+    handleUserActivity();
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, []);
 
   const targetNode = nodes.find((n: PuuNode) => n.id === nodeId);
   const visibleNodes = useMemo(() => {
@@ -74,6 +92,34 @@ export const FullScreenModal = ({
 
   if (!targetNode) return null;
 
+  const getCombinedText = () => {
+    return visibleNodes.map((n: PuuNode) => n.content || "").join("\n\n");
+  };
+
+  const handleCopy = async () => {
+    const text = getCombinedText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleExport = () => {
+    const text = getCombinedText();
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `puunote-export-${new Date().toISOString().split("T")[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <motion.div
       ref={dialogRef}
@@ -86,26 +132,48 @@ export const FullScreenModal = ({
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.15 }}
       className="fixed inset-0 z-[100] bg-app-bg flex flex-col outline-none"
+      onClick={() => setLocalActiveId(null)}
+      onMouseMove={handleUserActivity}
+      onTouchStart={handleUserActivity}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-6 right-6 z-10 p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
-        title="Close Focus Mode (Esc)"
-        aria-label="Close Focus Mode"
-      >
-        <Minimize2 size={20} />
-      </button>
+      <div className={`absolute top-6 right-6 z-10 flex items-center gap-2 transition-opacity duration-1000 ${isIdle ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
+          title="Copy Markdown"
+          aria-label="Copy Markdown"
+        >
+          {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleExport(); }}
+          className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
+          title="Export as Markdown"
+          aria-label="Export as Markdown"
+        >
+          <Download size={20} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
+          title="Close Focus Mode (Esc)"
+          aria-label="Close Focus Mode"
+        >
+          <Minimize2 size={20} />
+        </button>
+      </div>
 
       <div className="hide-scrollbar flex-1 overflow-auto px-6 py-14 sm:px-10 lg:px-16 lg:py-20 max-w-4xl mx-auto w-full flex flex-col gap-5 relative pb-[35vh]">
         {visibleNodes.map((n: PuuNode) => {
           const isLocalActive = n.id === localActiveId;
+          const isGlobalUnfocused = localActiveId === null;
           return (
             <div
               key={n.id}
               ref={n.id === nodeId ? activeElRef : null}
-              onClick={() => setLocalActiveId(n.id)}
+              onClick={(e) => { e.stopPropagation(); setLocalActiveId(n.id); }}
               className={`rounded border px-6 py-4 transition-all duration-200 cursor-text ${
-                isLocalActive
+                isLocalActive || isGlobalUnfocused
                   ? "border-transparent bg-transparent opacity-100"
                   : "border-transparent opacity-35 hover:border-app-border hover:opacity-80"
               }`}
@@ -155,3 +223,4 @@ export const FullScreenModal = ({
     </motion.div>
   );
 };
+

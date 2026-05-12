@@ -32,6 +32,8 @@ export interface UiSlice {
   branchColorOpacity: number;
   branchColorGradient: number;
   branchColorSolid: boolean;
+  branchColorBorderWidth: number;
+  branchColorBorderBrightness: number;
   branchColorSettingsById: BranchColorSettingsById;
   branchColorTuningTargetId: BranchColorId | null;
   inactiveCardDim: number;
@@ -66,6 +68,8 @@ export interface UiSlice {
   setBranchColorOpacity: (opacity: number) => void;
   setBranchColorGradient: (gradient: number) => void;
   setBranchColorSolid: (solid: boolean) => void;
+  setBranchColorBorderWidth: (width: number) => void;
+  setBranchColorBorderBrightness: (brightness: number) => void;
   setBranchColorSettingsForId: (
     colorId: BranchColorId,
     settings: Partial<BranchColorSettings>,

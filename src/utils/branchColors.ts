@@ -31,10 +31,12 @@ export type BranchColorSettings = {
   gradient: number;
   solid: boolean;
   tone: number;
+  borderWidth: number;
+  borderBrightness: number;
 };
 
 export type BranchColorSettingsById = Partial<
-  Record<BranchColorId, BranchColorSettings>
+  Record<BranchColorId, Partial<BranchColorSettings>>
 >;
 
 export const DEFAULT_BRANCH_COLOR_SETTINGS: BranchColorSettings = {
@@ -44,6 +46,8 @@ export const DEFAULT_BRANCH_COLOR_SETTINGS: BranchColorSettings = {
   gradient: 70,
   solid: false,
   tone: 0,
+  borderWidth: 1,
+  borderBrightness: 34,
 };
 
 export const DEFAULT_BRANCH_COLORS_BY_ID: BranchColorSettingsById = {
@@ -121,6 +125,8 @@ export const normalizeBranchColorSettings = (
     gradient: clampNumber(source.gradient, 0, 100, fallback.gradient),
     solid: typeof source.solid === "boolean" ? source.solid : fallback.solid,
     tone: clampNumber(source.tone, -100, 100, fallback.tone),
+    borderWidth: clampNumber(source.borderWidth, 0, 8, fallback.borderWidth),
+    borderBrightness: clampNumber(source.borderBrightness, 0, 100, fallback.borderBrightness),
   };
 };
 

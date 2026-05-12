@@ -108,9 +108,13 @@ export function Header({ handleImport }: HeaderProps) {
   const setBranchColorIntensity = useAppStore((s) => s.setBranchColorIntensity);
   const setBranchColorSpread = useAppStore((s) => s.setBranchColorSpread);
   const setBranchColorTone = useAppStore((s) => s.setBranchColorTone);
+  const branchColorBorderWidth = useAppStore((s) => s.branchColorBorderWidth);
+  const branchColorBorderBrightness = useAppStore((s) => s.branchColorBorderBrightness);
   const setBranchColorOpacity = useAppStore((s) => s.setBranchColorOpacity);
   const setBranchColorGradient = useAppStore((s) => s.setBranchColorGradient);
   const setBranchColorSolid = useAppStore((s) => s.setBranchColorSolid);
+  const setBranchColorBorderWidth = useAppStore((s) => s.setBranchColorBorderWidth);
+  const setBranchColorBorderBrightness = useAppStore((s) => s.setBranchColorBorderBrightness);
   const setBranchColorSettingsForId = useAppStore(
     (s) => s.setBranchColorSettingsForId,
   );
@@ -180,6 +184,8 @@ export function Header({ handleImport }: HeaderProps) {
       gradient: branchColorGradient,
       solid: branchColorSolid,
       tone: branchColorTone,
+      borderWidth: branchColorBorderWidth,
+      borderBrightness: branchColorBorderBrightness,
     }),
     [
       branchColorGradient,
@@ -188,6 +194,8 @@ export function Header({ handleImport }: HeaderProps) {
       branchColorSolid,
       branchColorSpread,
       branchColorTone,
+      branchColorBorderWidth,
+      branchColorBorderBrightness,
     ],
   );
   const tuningBranchColorId =
@@ -270,7 +278,7 @@ export function Header({ handleImport }: HeaderProps) {
     ],
   );
   const setBranchSetting = (
-    key: "intensity" | "fill" | "opacity" | "gradient" | "tone",
+    key: "intensity" | "fill" | "opacity" | "gradient" | "tone" | "borderWidth" | "borderBrightness",
     value: number,
   ) => {
     const ranges = {
@@ -279,6 +287,8 @@ export function Header({ handleImport }: HeaderProps) {
       opacity: [0, 100],
       gradient: [0, 100],
       tone: [-100, 100],
+      borderWidth: [0, 8],
+      borderBrightness: [0, 100],
     } as const;
     const [min, max] = ranges[key];
     const nextValue = clamp(value, min, max);
@@ -291,6 +301,8 @@ export function Header({ handleImport }: HeaderProps) {
     if (key === "opacity") setBranchColorOpacity(nextValue);
     if (key === "gradient") setBranchColorGradient(nextValue);
     if (key === "tone") setBranchColorTone(nextValue);
+    if (key === "borderWidth") setBranchColorBorderWidth(nextValue);
+    if (key === "borderBrightness") setBranchColorBorderBrightness(nextValue);
   };
   const setBranchSolid = (solid: boolean) => {
     if (tuningBranchColorId) {
@@ -949,6 +961,24 @@ export function Header({ handleImport }: HeaderProps) {
                   value={currentBranchColorSettings.tone}
                   fillStyle={{ background: branchSliderColor }}
                   onChange={setBranchTone}
+                />
+                <MiniSlider
+                  label="Яркость рамочки"
+                  min={0}
+                  max={100}
+                  step={2}
+                  value={currentBranchColorSettings.borderBrightness}
+                  fillStyle={{ background: branchSliderColor }}
+                  onChange={(value) => setBranchSetting("borderBrightness", value)}
+                />
+                <MiniSlider
+                  label="Толщина рамочки"
+                  min={0}
+                  max={8}
+                  step={1}
+                  value={currentBranchColorSettings.borderWidth}
+                  fillStyle={{ background: branchSliderColor }}
+                  onChange={(value) => setBranchSetting("borderWidth", value)}
                 />
               </div>
               <button

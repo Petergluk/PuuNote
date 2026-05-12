@@ -29,6 +29,8 @@ export function BoardView() {
   const branchColorOpacity = useAppStore((s) => s.branchColorOpacity);
   const branchColorGradient = useAppStore((s) => s.branchColorGradient);
   const branchColorSolid = useAppStore((s) => s.branchColorSolid);
+  const branchColorBorderWidth = useAppStore((s) => s.branchColorBorderWidth);
+  const branchColorBorderBrightness = useAppStore((s) => s.branchColorBorderBrightness);
   const branchColorSettingsById = useAppStore((s) => s.branchColorSettingsById);
 
   const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
@@ -60,6 +62,8 @@ export function BoardView() {
       gradient: branchColorGradient,
       solid: branchColorSolid,
       tone: branchColorTone,
+      borderWidth: branchColorBorderWidth,
+      borderBrightness: branchColorBorderBrightness,
     }),
     [
       branchColorGradient,
@@ -68,6 +72,8 @@ export function BoardView() {
       branchColorSolid,
       branchColorSpread,
       branchColorTone,
+      branchColorBorderWidth,
+      branchColorBorderBrightness,
     ],
   );
 

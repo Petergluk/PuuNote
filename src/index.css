@@ -185,12 +185,12 @@ body,
 }
 
 .branch-card {
+  border-width: var(--branch-border-width, 1px) !important;
   border-color: color-mix(
     in srgb,
-    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 34%)),
+    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 1%)),
     var(--app-border)
   );
-  background-color: var(--app-card);
   background-image: linear-gradient(
     90deg,
     color-mix(
@@ -203,7 +203,7 @@ body,
                 var(--branch-bg-opacity, 1) * 24%
             )
           ),
-        var(--app-card)
+        transparent
       )
       0%,
     color-mix(
@@ -217,7 +217,7 @@ body,
                 var(--branch-gradient-mid-mix, 13%)
             )
           ),
-        var(--app-card)
+        transparent
       )
       var(--branch-gradient-mid-pos, 55%),
     color-mix(
@@ -230,10 +230,15 @@ body,
                 var(--branch-bg-opacity, 1) * var(--branch-gradient-end-mix, 6%)
             )
           ),
-        var(--app-card)
+        transparent
       )
       100%
   );
+}
+
+.branch-card.branch-card-active,
+.branch-card.branch-card-selected {
+  border-left-width: calc(var(--branch-border-width, 1px) + 3px) !important;
 }
 
 .branch-fill-solid.branch-card,
@@ -249,14 +254,14 @@ body,
             var(--branch-bg-opacity, 1) * 24%
         )
       ),
-    var(--app-card)
+    transparent
   );
 }
 
 .branch-card:hover {
   border-color: color-mix(
     in srgb,
-    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 48%)),
+    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 1.41%)),
     var(--app-border-hover)
   );
 }
@@ -264,20 +269,20 @@ body,
 .branch-card-active {
   border-color: color-mix(
     in srgb,
-    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 52%)),
+    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 1.53%)),
     var(--app-border-hover)
   );
   box-shadow:
     inset 0 0 0 1px
       color-mix(
         in srgb,
-        rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 18%)),
+        rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 0.53%)),
         transparent
       ),
     0 10px 24px
       color-mix(
         in srgb,
-        rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 15%)),
+        rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 0.44%)),
         transparent
       );
 }
@@ -285,7 +290,7 @@ body,
 .branch-card-selected {
   border-color: color-mix(
     in srgb,
-    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * 58%)),
+    rgb(var(--branch-rgb)) min(100%, calc(var(--branch-tint, 1) * var(--branch-border-mix, 34) * 1.7%)),
     var(--app-accent)
   );
 }
