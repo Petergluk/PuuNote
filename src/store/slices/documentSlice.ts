@@ -10,7 +10,7 @@ import type { AppSlice, DocumentSlice } from "../appStoreTypes";
 import { toast } from "sonner";
 import { PuuNode } from "../../types";
 import { buildTreeIndex } from "../../utils/tree";
-import { BRANCH_COLOR_IDS, getBranchRootId, THEME_DEFAULT_BRANCH_COLORS, THEME_DEFAULT_GLOBAL_SETTINGS } from "../../utils/branchColors";
+import { getBranchRootId, getAutoColorIds, THEME_DEFAULT_BRANCH_COLORS, THEME_DEFAULT_GLOBAL_SETTINGS } from "../../utils/branchColors";
 
 export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
   const applyAndCapture = <T>(
@@ -156,10 +156,11 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
 
         if (rootNodes.length === 0) return prev;
 
+        const autoColorIds = getAutoColorIds(state.theme);
         const colorByRootId = new Map(
           rootNodes.map((node, index) => [
             node.id,
-            BRANCH_COLOR_IDS[index % BRANCH_COLOR_IDS.length],
+            autoColorIds[index % autoColorIds.length],
           ]),
         );
 

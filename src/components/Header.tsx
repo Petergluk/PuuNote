@@ -62,7 +62,9 @@ export function Header({ handleImport }: HeaderProps) {
   const [themeTuneMenuOpen, setThemeTuneMenuOpen] = useState(false);
   const [themeTuneCopied, setThemeTuneCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [beautifulClicks, setBeautifulClicks] = useState(0);
+  // Secret unlock: fast triple-click on "Сделай красиво" — only works in mono theme
+  const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(false);
+  const beautifulClickTimesRef = useRef<number[]>([]);
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const branchColorMenuRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,7 @@ export function Header({ handleImport }: HeaderProps) {
   const nodes = useAppStore((s) => s.nodes);
   const theme = useAppStore((s) => s.theme);
   
-  const isMonoUnlocked = theme !== "mono" || beautifulClicks >= 3;
+  // isSettingsUnlocked is declared above with useState
   const branchColorIntensity = useAppStore((s) => s.branchColorIntensity);
   const branchColorSpread = useAppStore((s) => s.branchColorSpread);
   const branchColorTone = useAppStore((s) => s.branchColorTone);
@@ -175,6 +177,14 @@ export function Header({ handleImport }: HeaderProps) {
       setBranchColorTuningTargetId(null);
     }
   }, [branchColorMenuOpen, setBranchColorTuningTargetId]);
+
+  // Reset unlock when switching away from mono theme
+  useEffect(() => {
+    if (theme !== "mono") {
+      setIsSettingsUnlocked(false);
+      beautifulClickTimesRef.current = [];
+    }
+  }, [theme]);
 
   const activeBranchColorId = useMemo(() => {
     if (!activeId) return null;
@@ -667,7 +677,7 @@ export function Header({ handleImport }: HeaderProps) {
         >
           <Palette size={16} />
         </button>
-        {isMonoUnlocked && (
+        {isSettingsUnlocked && (
           <div ref={themeTuneMenuRef} className="relative hidden sm:block">
             <button
               onClick={() => setThemeTuneMenuOpen((open) => !open)}
@@ -820,6 +830,7 @@ export function Header({ handleImport }: HeaderProps) {
             <div className="absolute right-0 top-full z-[90] mt-2 grid w-[206px] grid-cols-5 gap-2 rounded border border-app-border bg-app-panel p-2 shadow-xl">
               <button
                 type="button"
+                disabled={theme === "mono"}
                 onClick={() => {
                   if (activeId) {
                     setActiveBranchColor(null);
@@ -830,7 +841,9 @@ export function Header({ handleImport }: HeaderProps) {
                   setBranchColorMenuOpen(false);
                 }}
                 className={`flex h-8 w-8 items-center justify-center rounded border transition-colors ${
-                  activeBranchColorId === null
+                  theme === "mono"
+                    ? "border-app-border bg-app-card text-app-text-muted opacity-40 cursor-not-allowed"
+                    : activeBranchColorId === null
                     ? "border-app-text-primary bg-app-card-hover text-app-text-primary"
                     : "border-app-border bg-app-card text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
                 }`}
@@ -858,6 +871,7 @@ export function Header({ handleImport }: HeaderProps) {
                     key={color.id}
                     type="button"
                     data-branch-color-swatch
+                    disabled={theme === "mono"}
                     onClick={() => {
                       if (tuningBranchColorId === color.id) {
                         setBranchColorTuningTargetId(null);
@@ -873,25 +887,24 @@ export function Header({ handleImport }: HeaderProps) {
                     }}
                     onContextMenu={(event) => {
                       event.preventDefault();
+                      if (theme === "mono") return;
                       resetBranchColorSettingsForId(color.id);
                       setBranchColorTuningTargetId(color.id);
                     }}
                     className={`h-8 w-8 rounded border transition-transform ${
-                      isCurrentColor
+                      theme === "mono"
+                        ? "border-app-border opacity-40 cursor-not-allowed"
+                        : isCurrentColor
                         ? "border-app-text-primary"
                         : "border-app-border hover:scale-105"
                     }`}
                     style={{
                       background: `linear-gradient(135deg, color-mix(in srgb, rgb(${rgb}) 76%, var(--app-card)), rgb(${rgb}))`,
-                      boxShadow: isCurrentColor
+                      boxShadow: isCurrentColor && theme !== "mono"
                         ? `0 0 0 2px color-mix(in srgb, rgb(${rgb}) 34%, transparent)`
                         : undefined,
                     }}
-                    title={
-                      activeId
-                        ? `${color.label}: назначить ветке и настроить`
-                        : `${color.label}: выбрать для настройки`
-                    }
+                    title={theme === "mono" ? undefined : color.label}
                     aria-label={
                       activeId
                         ? `Set and tune branch color: ${color.label}`
@@ -900,117 +913,123 @@ export function Header({ handleImport }: HeaderProps) {
                   />
                 );
               })}
-              <div className="col-span-5 -mt-0.5 flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
-                <span>
-                  {tuningBranchColorId
-                    ? branchPalette[tuningBranchColorId].label
-                    : "Общие цвета"}
-                </span>
-                {tuningBranchColorId && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      resetBranchColorSettingsForId(tuningBranchColorId)
-                    }
-                    className="rounded border border-app-border bg-app-card px-1.5 py-0.5 text-[10px] text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
-                    title="Сбросить настройки этого цвета"
-                    aria-label="Сбросить настройки этого цвета"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
-              <div className="col-span-5 mt-1 grid gap-2 border-t border-app-border pt-2">
-                <MiniSlider
-                  label="Яркость"
-                  min={0}
-                  max={300}
-                  step={5}
-                  value={currentBranchColorSettings.intensity}
-                  fillStyle={{
-                    background: `color-mix(in srgb, ${branchSliderColor} ${branchIntensityMix}%, var(--app-card))`,
-                  }}
-                  onChange={setBranchIntensity}
-                />
-                <MiniSlider
-                  label="Заливка"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={currentBranchColorSettings.fill}
-                  fillStyle={{
-                    background: `color-mix(in srgb, ${branchSliderColor} ${branchFillMix}%, var(--app-card))`,
-                  }}
-                  onChange={setBranchSpread}
-                />
-              </div>
-              <div className="col-span-5 grid gap-2">
-                <MiniSlider
-                  label="Прозрачность"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={currentBranchColorSettings.opacity}
-                  fillStyle={{
-                    background: branchSliderColor,
-                    opacity: currentBranchColorSettings.opacity / 100,
-                  }}
-                  onChange={(value) => setBranchSetting("opacity", value)}
-                />
-                <MiniSlider
-                  label="Плавность"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={currentBranchColorSettings.gradient}
-                  fillStyle={{
-                    background: `linear-gradient(90deg, color-mix(in srgb, ${branchSliderColor} ${branchFillMix}%, var(--app-card)) 0%, color-mix(in srgb, ${branchSliderColor} ${branchGradientMidMix}%, var(--app-card)) ${branchGradientMidPos}%, color-mix(in srgb, ${branchSliderColor} ${branchGradientEndMix}%, var(--app-card)) 100%)`,
-                  }}
-                  onChange={(value) => setBranchSetting("gradient", value)}
-                />
-                <label className="flex h-8 items-center justify-between gap-3 rounded border border-app-border bg-app-card px-2 text-xs text-app-text-secondary">
-                  <span>Однотонная заливка</span>
+              {/* Always-visible: intensity slider + solid checkbox in one row */}
+              <div className="col-span-5 mt-0.5 flex items-center gap-1.5 border-t border-app-border pt-2">
+                <div className="min-w-0 flex-1">
+                  <MiniSlider
+                    label="Яркость"
+                    hideLabel
+                    min={0}
+                    max={300}
+                    step={5}
+                    value={currentBranchColorSettings.intensity}
+                    fillStyle={{
+                      background: `color-mix(in srgb, ${branchSliderColor} ${branchIntensityMix}%, var(--app-card))`,
+                    }}
+                    onChange={setBranchIntensity}
+                    disabled={theme === "mono"}
+                  />
+                </div>
+                <label
+                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-app-border bg-app-card${
+                    theme === "mono" ? " opacity-40 cursor-not-allowed pointer-events-none" : " cursor-pointer"
+                  }`}
+                  title="Однотонная заливка"
+                >
                   <input
                     type="checkbox"
                     checked={currentBranchColorSettings.solid}
                     onChange={(event) => setBranchSolid(event.target.checked)}
-                    className="h-4 w-4 accent-app-accent"
+                    className="h-3 w-3 accent-app-accent"
                     aria-label="Однотонная заливка"
                   />
                 </label>
               </div>
-              <div className="col-span-5 grid gap-1">
-                <MiniSlider
-                  label="Оттенок"
-                  min={-100}
-                  max={100}
-                  step={5}
-                  value={currentBranchColorSettings.tone}
-                  fillStyle={{ background: branchSliderColor }}
-                  onChange={setBranchTone}
-                />
-                <MiniSlider
-                  label="Яркость рамочки"
-                  min={0}
-                  max={100}
-                  step={2}
-                  value={currentBranchColorSettings.borderBrightness}
-                  fillStyle={{ background: branchSliderColor }}
-                  onChange={(value) => setBranchSetting("borderBrightness", value)}
-                />
-                <MiniSlider
-                  label="Толщина рамочки"
-                  min={0}
-                  max={8}
-                  step={1}
-                  value={currentBranchColorSettings.borderWidth}
-                  fillStyle={{ background: branchSliderColor }}
-                  onChange={(value) => setBranchSetting("borderWidth", value)}
-                />
-              </div>
+              {/* Advanced sliders — visible only when unlocked */}
+              {isSettingsUnlocked && (
+                <div className="col-span-5 grid gap-2">
+                  <MiniSlider
+                    label="Заливка"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={currentBranchColorSettings.fill}
+                    fillStyle={{
+                      background: `color-mix(in srgb, ${branchSliderColor} ${branchFillMix}%, var(--app-card))`,
+                    }}
+                    onChange={setBranchSpread}
+                    disabled={theme === "mono"}
+                  />
+                  <MiniSlider
+                    label="Прозрачность"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={currentBranchColorSettings.opacity}
+                    fillStyle={{
+                      background: branchSliderColor,
+                      opacity: currentBranchColorSettings.opacity / 100,
+                    }}
+                    onChange={(value) => setBranchSetting("opacity", value)}
+                  />
+                  <MiniSlider
+                    label="Плавность"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={currentBranchColorSettings.gradient}
+                    fillStyle={{
+                      background: `linear-gradient(90deg, color-mix(in srgb, ${branchSliderColor} ${branchFillMix}%, var(--app-card)) 0%, color-mix(in srgb, ${branchSliderColor} ${branchGradientMidMix}%, var(--app-card)) ${branchGradientMidPos}%, color-mix(in srgb, ${branchSliderColor} ${branchGradientEndMix}%, var(--app-card)) 100%)`,
+                    }}
+                    onChange={(value) => setBranchSetting("gradient", value)}
+                  />
+                  <MiniSlider
+                    label="Оттенок"
+                    min={-100}
+                    max={100}
+                    step={5}
+                    value={currentBranchColorSettings.tone}
+                    fillStyle={{ background: branchSliderColor }}
+                    onChange={setBranchTone}
+                  />
+                  <MiniSlider
+                    label="Яркость рамочки"
+                    min={0}
+                    max={100}
+                    step={2}
+                    value={currentBranchColorSettings.borderBrightness}
+                    fillStyle={{ background: branchSliderColor }}
+                    onChange={(value) => setBranchSetting("borderBrightness", value)}
+                  />
+                  <MiniSlider
+                    label="Толщина рамочки"
+                    min={0}
+                    max={8}
+                    step={1}
+                    value={currentBranchColorSettings.borderWidth}
+                    fillStyle={{ background: branchSliderColor }}
+                    onChange={(value) => setBranchSetting("borderWidth", value)}
+                  />
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => autoColorRootBranches()}
+                onClick={() => {
+                  autoColorRootBranches();
+                  // Fast triple-click unlock — only in mono theme
+                  if (theme === "mono") {
+                    const now = Date.now();
+                    const recent = [
+                      ...beautifulClickTimesRef.current.filter((t) => now - t < 600),
+                      now,
+                    ];
+                    beautifulClickTimesRef.current = recent;
+                    if (recent.length >= 3) {
+                      setIsSettingsUnlocked((prev) => !prev);
+                      beautifulClickTimesRef.current = [];
+                    }
+                  }
+                }}
                 className="col-span-5 flex h-8 items-center justify-center rounded border border-app-border bg-app-card px-3 text-xs font-medium text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
                 title="Сделай красиво"
                 aria-label="Сделай красиво"

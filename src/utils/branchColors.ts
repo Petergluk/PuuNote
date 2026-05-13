@@ -15,6 +15,25 @@ export const BRANCH_COLOR_IDS = [
 
 export type BranchColorId = (typeof BRANCH_COLOR_IDS)[number];
 
+/** Auto-color sequence for light themes: skip violet (looks too close to blue/plum) */
+const AUTO_COLOR_IDS_LIGHT: BranchColorId[] = [
+  "rose", "coral", "amber", "olive", "mint", "cyan", "blue", "plum",
+];
+
+/** Auto-color sequence for dark themes: skip amber/yellow (looks muddy on dark bg) */
+const AUTO_COLOR_IDS_DARK: BranchColorId[] = [
+  "rose", "coral", "olive", "mint", "cyan", "blue", "violet", "plum",
+];
+
+/** Returns the appropriate auto-color sequence for the current theme. */
+export const getAutoColorIds = (theme: string): BranchColorId[] => {
+  const isDark =
+    theme.startsWith("dark") ||
+    theme === "blue" ||
+    theme === "brown";
+  return isDark ? AUTO_COLOR_IDS_DARK : AUTO_COLOR_IDS_LIGHT;
+};
+
 export interface BranchColor {
   id: BranchColorId;
   label: string;

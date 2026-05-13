@@ -8,6 +8,8 @@ type MiniSliderProps = {
   max: number;
   step?: number;
   fillStyle?: CSSProperties;
+  disabled?: boolean;
+  hideLabel?: boolean;
   onChange: (value: number) => void;
   onStepDown?: () => void;
   onStepUp?: () => void;
@@ -23,6 +25,8 @@ export function MiniSlider({
   max,
   step = 1,
   fillStyle,
+  disabled = false,
+  hideLabel = false,
   onChange,
   onStepDown,
   onStepUp,
@@ -45,10 +49,12 @@ export function MiniSlider({
   };
 
   return (
-    <div className="grid gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
-        {label}
-      </span>
+    <div className={`grid gap-1${disabled ? " opacity-35 pointer-events-none select-none" : ""}`}>
+      {!hideLabel && (
+        <span className="text-[10px] font-medium uppercase tracking-wide text-app-text-muted">
+          {label}
+        </span>
+      )}
       <div className="flex h-[18px] w-full select-none overflow-hidden rounded-[7px] border border-app-border bg-app-card">
         <button
           type="button"
