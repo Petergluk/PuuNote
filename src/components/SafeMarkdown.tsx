@@ -32,15 +32,22 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({
               tagNames: defaultSchema.tagNames
                 ? defaultSchema.tagNames.filter(
                     (tag) =>
-                      !["svg", "math", "style", "script", "iframe"].includes(
-                        tag,
-                      ),
+                      ![
+                        "svg",
+                        "math",
+                        "style",
+                        "script",
+                        "iframe",
+                        "object",
+                        "embed",
+                        "form",
+                      ].includes(tag),
                   )
                 : [],
               protocols: {
                 ...defaultSchema.protocols,
                 src: ["http", "https"],
-                href: ["http", "https"], // strict mode without mailto or data
+                href: ["http", "https"],
               },
             },
           ],
