@@ -1,17 +1,19 @@
-@font-face {
-  font-family: "YanoneKaffeesatz";
-  src: url("/fonts/YanoneKaffeesatz-VariableFont_wght.ttf") format("truetype");
-  font-weight: 200 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  @font-face {
+    font-family: 'Yanone Kaffeesatz';
+    src: url('/fonts/YanoneKaffeesatz-VariableFont_wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+}
+
 @theme {
-  --font-yanone: "YanoneKaffeesatz", sans-serif;
+  --font-yanone: "Yanone Kaffeesatz", sans-serif;
   --color-app-bg: var(--app-bg);
   --color-app-panel: var(--app-panel);
   --color-app-card: var(--app-card);

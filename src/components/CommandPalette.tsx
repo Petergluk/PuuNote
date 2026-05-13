@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import Fuse from "fuse.js";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "../hooks/useFileSystem";
+import { PluginRegistry } from "../plugins/registry";
 import {
   Search,
   Palette,
@@ -12,7 +13,6 @@ import {
   Trash2,
   Sparkles,
   Combine,
-  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,7 +28,7 @@ import { getMergeSelectionState } from "../utils/mergeSelection";
 interface CommandItem {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: any;
   run: () => void | Promise<void>;
   destructive?: boolean;
 }
@@ -144,8 +144,7 @@ export function CommandPalette() {
     };
   }, [query, fuse]);
 
-  const commandItems = useMemo<CommandItem[]>(
-    () => [
+  const commandItems: CommandItem[] = [
       {
         id: "toggle-theme",
         label: t("Toggle Theme"),
@@ -228,17 +227,14 @@ export function CommandPalette() {
             );
         },
       },
-    ],
-    [
-      activeFileId,
-      createNewFile,
-      deleteFile,
-      setTimelineOpen,
-      t,
-      toggleCardsCollapsed,
-      toggleTheme,
-    ],
-  );
+      ...PluginRegistry.getCommands().map(cmd => ({
+        id: cmd.id,
+        label: cmd.label,
+        icon: cmd.icon || Sparkles,
+        run: cmd.run,
+        destructive: cmd.destructive,
+      }))
+    ];
 
   const activeListLength = query.trim()
     ? searchResults.length
