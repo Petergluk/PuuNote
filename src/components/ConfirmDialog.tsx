@@ -18,7 +18,7 @@ export const ConfirmDialog: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <motion.div
           ref={dialogRef}
           role="dialog"

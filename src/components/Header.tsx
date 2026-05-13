@@ -181,6 +181,7 @@ export function Header({ handleImport }: HeaderProps) {
   // Reset unlock when switching away from mono theme
   useEffect(() => {
     if (theme !== "mono") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsSettingsUnlocked(false);
       beautifulClickTimesRef.current = [];
     }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, ComponentType } from "react";
 import { PuuNode } from "../types";
 
 export interface PluginHooks {
@@ -15,16 +15,42 @@ export interface CardActionHook {
   isVisible?: (nodeId: string) => boolean;
 }
 
+export interface CommandHook {
+  id: string;
+  label: string;
+  icon?: ComponentType<{ size?: number; className?: string }>;
+  destructive?: boolean;
+  run: () => void | Promise<void>;
+}
+
 export interface PluginDefinition {
   id: string;
   name: string;
   version: string;
   hooks?: PluginHooks;
   cardActions?: CardActionHook[];
+  commands?: CommandHook[];
+  init?: (api: PluginAPI) => void | Promise<void>;
+  unload?: () => void | Promise<void>;
+}
+
+export interface PluginAPI {
+  getState: () => import("../store/appStoreTypes").AppStore;
+  addJob: (title: string) => string;
+  updateJobProgress: (id: string, progress: number, statusText?: string) => void;
+  completeJob: (id: string, resultLabel: string, onClick?: () => void) => void;
+  failJob: (id: string, error: string) => void;
+  toast: (msg: string, type?: "success" | "error" | "warning" | "info") => void;
 }
 
 class PluginRegistryClass {
   private plugins: Map<string, PluginDefinition> = new Map();
+  private api!: PluginAPI;
+
+  initialize(api: PluginAPI) {
+    this.api = api;
+  }
+
   private emitHook<T extends keyof PluginHooks>(
     hookName: T,
     ...args: Parameters<NonNullable<PluginHooks[T]>>
@@ -40,14 +66,30 @@ class PluginRegistryClass {
     }
   }
 
-  register(plugin: PluginDefinition) {
+  async register(plugin: PluginDefinition) {
     if (this.plugins.has(plugin.id)) {
       console.warn(`Plugin ${plugin.id} is already registered. Overwriting.`);
+      await this.unregister(plugin.id);
     }
     this.plugins.set(plugin.id, plugin);
+    if (plugin.init && this.api) {
+      try {
+        await plugin.init(this.api);
+      } catch (err) {
+        console.error(`[PluginRegistry] ${plugin.id}.init failed`, err);
+      }
+    }
   }
 
-  unregister(pluginId: string) {
+  async unregister(pluginId: string) {
+    const plugin = this.plugins.get(pluginId);
+    if (plugin?.unload) {
+      try {
+        await plugin.unload();
+      } catch (err) {
+        console.error(`[PluginRegistry] ${pluginId}.unload failed`, err);
+      }
+    }
     this.plugins.delete(pluginId);
   }
 
@@ -67,6 +109,16 @@ class PluginRegistryClass {
       }
     }
     return actions;
+  }
+
+  getCommands(): CommandHook[] {
+    const commands: CommandHook[] = [];
+    for (const plugin of this.plugins.values()) {
+      if (plugin.commands) {
+        commands.push(...plugin.commands);
+      }
+    }
+    return commands;
   }
 
   emitNodeCreated(node: PuuNode) {

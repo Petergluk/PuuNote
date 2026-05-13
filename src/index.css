@@ -1,5 +1,5 @@
 @font-face {
-  font-family: "Yanone Kaffeesatz";
+  font-family: "YanoneKaffeesatz";
   src: url("/fonts/YanoneKaffeesatz-VariableFont_wght.ttf") format("truetype");
   font-weight: 200 700;
   font-style: normal;
@@ -11,7 +11,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-yanone: "Yanone Kaffeesatz", sans-serif;
+  --font-yanone: "YanoneKaffeesatz", sans-serif;
   --color-app-bg: var(--app-bg);
   --color-app-panel: var(--app-panel);
   --color-app-card: var(--app-card);
