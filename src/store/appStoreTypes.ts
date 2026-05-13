@@ -14,6 +14,11 @@ export type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 export type FocusModeScope = "single" | "column" | "branchLevel";
 export type EditorMode = "markdown" | "visual";
 
+export interface ThemeBranchSettings {
+  global: BranchColorSettings;
+  byId: BranchColorSettingsById;
+}
+
 export interface UiSlice {
   fileMenuOpen: boolean;
   theme: string;
@@ -35,6 +40,7 @@ export interface UiSlice {
   branchColorBorderWidth: number;
   branchColorBorderBrightness: number;
   branchColorSettingsById: BranchColorSettingsById;
+  themeBranchSettings: Record<string, ThemeBranchSettings>;
   branchColorTuningTargetId: BranchColorId | null;
   inactiveCardDim: number;
   themeTuning: Partial<Record<ThemeId, ThemeTune>>;

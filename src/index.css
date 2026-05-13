@@ -300,7 +300,7 @@ body,
 .theme-mono .branch-card-active,
 .theme-mono .branch-card-selected,
 .theme-mono .branch-fill-solid .branch-card {
-  border-color: var(--app-border);
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--branch-border-mix, 34) * 1%), var(--app-border));
   background-image: none;
   background-color: var(--app-card);
   box-shadow: none;
@@ -314,6 +314,26 @@ body,
 
 .theme-mono .branch-card-selected {
   border-left-color: var(--app-border) !important;
+}
+
+.uncolored-card {
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--uncolored-border-mix, 0) * 1%), var(--app-border)) !important;
+}
+.uncolored-card.border-transparent {
+  border-color: transparent !important;
+}
+.uncolored-card.border-app-border {
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--uncolored-border-mix, 0) * 1%), var(--app-border)) !important;
+}
+.uncolored-card.border-app-border-hover,
+.group\/card-wrapper:hover .uncolored-card.group-hover\/card-wrapper\:border-app-border-hover {
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--uncolored-border-mix, 0) * 1%), var(--app-border-hover)) !important;
+}
+.group\/card-wrapper:hover .uncolored-card.group-hover\/card-wrapper\:border-app-border {
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--uncolored-border-mix, 0) * 1%), var(--app-border)) !important;
+}
+.uncolored-card.border-app-accent {
+  border-color: color-mix(in srgb, var(--app-text-primary) calc(var(--uncolored-border-mix, 0) * 1%), var(--app-accent)) !important;
 }
 
 .inactive-card {

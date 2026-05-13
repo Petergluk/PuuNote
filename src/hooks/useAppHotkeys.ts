@@ -442,6 +442,20 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         return;
       }
 
+      if (e.key === "ArrowRight" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const currentState = useAppStore.getState();
+        currentState.setColWidth(Math.min(500, currentState.colWidth + 25));
+        return;
+      }
+
+      if (e.key === "ArrowLeft" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const currentState = useAppStore.getState();
+        currentState.setColWidth(Math.max(200, currentState.colWidth - 25));
+        return;
+      }
+
       if (!activeId) return;
 
       if (e.key === "Enter") {

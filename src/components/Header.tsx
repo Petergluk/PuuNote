@@ -62,6 +62,8 @@ export function Header({ handleImport }: HeaderProps) {
   const [themeTuneMenuOpen, setThemeTuneMenuOpen] = useState(false);
   const [themeTuneCopied, setThemeTuneCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [beautifulClicks, setBeautifulClicks] = useState(0);
+
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const branchColorMenuRef = useRef<HTMLDivElement>(null);
   const themeTuneMenuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +82,8 @@ export function Header({ handleImport }: HeaderProps) {
   const activeId = useAppStore((s) => s.activeId);
   const nodes = useAppStore((s) => s.nodes);
   const theme = useAppStore((s) => s.theme);
+  
+  const isMonoUnlocked = theme !== "mono" || beautifulClicks >= 3;
   const branchColorIntensity = useAppStore((s) => s.branchColorIntensity);
   const branchColorSpread = useAppStore((s) => s.branchColorSpread);
   const branchColorTone = useAppStore((s) => s.branchColorTone);
@@ -325,6 +329,18 @@ export function Header({ handleImport }: HeaderProps) {
     }
   };
 
+  const clickTimeoutRef = useRef<number | null>(null);
+
+  const exitFullscreenState = () => {
+    setUiMode("normal");
+    const exitFunc = exitFullscreen(document);
+    if (exitFunc && exitFunc.catch) {
+      exitFunc.catch(() => {
+        /* ignore */
+      });
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!isFullscreen(document)) {
       setUiMode("fullscreen");
@@ -336,16 +352,24 @@ export function Header({ handleImport }: HeaderProps) {
       }
     } else {
       if (uiMode === "fullscreen") {
-        setUiMode("zen");
+        if (clickTimeoutRef.current) return;
+        clickTimeoutRef.current = window.setTimeout(() => {
+          setUiMode("zen");
+          clickTimeoutRef.current = null;
+        }, 250);
       } else {
-        setUiMode("normal");
-        const exitFunc = exitFullscreen(document);
-        if (exitFunc && exitFunc.catch) {
-          exitFunc.catch(() => {
-            /* ignore */
-          });
-        }
+        exitFullscreenState();
       }
+    }
+  };
+
+  const handleFullscreenDoubleClick = () => {
+    if (isFullscreen(document) && uiMode === "fullscreen") {
+      if (clickTimeoutRef.current) {
+        window.clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      exitFullscreenState();
     }
   };
 
@@ -608,6 +632,7 @@ export function Header({ handleImport }: HeaderProps) {
         </div>
         <button
           onClick={toggleFullscreen}
+          onDoubleClick={handleFullscreenDoubleClick}
           className="hidden sm:flex bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2"
           title="Toggle Fullscreen"
           aria-label="Toggle fullscreen"
@@ -642,20 +667,21 @@ export function Header({ handleImport }: HeaderProps) {
         >
           <Palette size={16} />
         </button>
-        <div ref={themeTuneMenuRef} className="relative hidden sm:block">
-          <button
-            onClick={() => setThemeTuneMenuOpen((open) => !open)}
-            className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${
-              themeTuneMenuOpen
-                ? "text-app-text-primary bg-app-card-hover"
-                : "text-app-text-secondary"
-            }`}
-            title="Theme tuning"
-            aria-label="Theme tuning"
-            aria-expanded={themeTuneMenuOpen}
-          >
-            <SlidersHorizontal size={16} />
-          </button>
+        {isMonoUnlocked && (
+          <div ref={themeTuneMenuRef} className="relative hidden sm:block">
+            <button
+              onClick={() => setThemeTuneMenuOpen((open) => !open)}
+              className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${
+                themeTuneMenuOpen
+                  ? "text-app-text-primary bg-app-card-hover"
+                  : "text-app-text-secondary"
+              }`}
+              title="Theme tuning"
+              aria-label="Theme tuning"
+              aria-expanded={themeTuneMenuOpen}
+            >
+              <SlidersHorizontal size={16} />
+            </button>
           {themeTuneMenuOpen && (
             <div className="absolute right-0 top-full z-[90] mt-2 grid w-[260px] gap-3 rounded border border-app-border bg-app-panel p-3 shadow-xl">
               <div className="flex items-center justify-between gap-2">
@@ -767,6 +793,7 @@ export function Header({ handleImport }: HeaderProps) {
             </div>
           )}
         </div>
+        )}
         <div ref={branchColorMenuRef} className="relative hidden sm:block">
           <button
             onClick={() => setBranchColorMenuOpen((open) => !open)}

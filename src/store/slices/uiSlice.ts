@@ -9,9 +9,46 @@ import {
   DEFAULT_BRANCH_COLOR_SETTINGS,
   DEFAULT_BRANCH_COLORS_BY_ID,
   normalizeBranchColorSettings,
+  THEME_DEFAULT_GLOBAL_SETTINGS,
+  THEME_DEFAULT_BRANCH_COLORS,
+  type BranchColorSettings,
+  type BranchColorSettingsById,
 } from "../../utils/branchColors";
 
 const DEFAULT_INACTIVE_CARD_DIM = -25;
+
+function updateBranchSettings(s: UiSlice, partialGlobal: Partial<BranchColorSettings>, newById?: BranchColorSettingsById) {
+  const nextGlobal = {
+    intensity: partialGlobal.intensity ?? s.branchColorIntensity,
+    fill: partialGlobal.fill ?? s.branchColorSpread,
+    opacity: partialGlobal.opacity ?? s.branchColorOpacity,
+    gradient: partialGlobal.gradient ?? s.branchColorGradient,
+    solid: partialGlobal.solid ?? s.branchColorSolid,
+    tone: partialGlobal.tone ?? s.branchColorTone,
+    borderWidth: partialGlobal.borderWidth ?? s.branchColorBorderWidth,
+    borderBrightness: partialGlobal.borderBrightness ?? s.branchColorBorderBrightness,
+  };
+  const nextById = newById ?? s.branchColorSettingsById;
+  
+  return {
+    branchColorIntensity: nextGlobal.intensity,
+    branchColorSpread: nextGlobal.fill,
+    branchColorOpacity: nextGlobal.opacity,
+    branchColorGradient: nextGlobal.gradient,
+    branchColorSolid: nextGlobal.solid,
+    branchColorTone: nextGlobal.tone,
+    branchColorBorderWidth: nextGlobal.borderWidth,
+    branchColorBorderBrightness: nextGlobal.borderBrightness,
+    branchColorSettingsById: nextById,
+    themeBranchSettings: {
+      ...s.themeBranchSettings,
+      [s.theme]: {
+        global: nextGlobal,
+        byId: nextById,
+      }
+    }
+  };
+}
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   fileMenuOpen: false,
@@ -35,6 +72,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   branchColorBorderWidth: DEFAULT_BRANCH_COLOR_SETTINGS.borderWidth,
   branchColorBorderBrightness: DEFAULT_BRANCH_COLOR_SETTINGS.borderBrightness,
   branchColorSettingsById: DEFAULT_BRANCH_COLORS_BY_ID,
+  themeBranchSettings: {},
   branchColorTuningTargetId: null,
   inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
   themeTuning: DEFAULT_THEME_TUNING,
@@ -60,16 +98,85 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) =>
       s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen },
     ),
-  setTheme: (theme) => set((s) => (s.theme === theme ? s : { theme })),
+  setTheme: (theme) => set((s) => {
+    if (s.theme === theme) return s;
+    const currentThemeSettings = {
+      global: {
+        intensity: s.branchColorIntensity,
+        fill: s.branchColorSpread,
+        opacity: s.branchColorOpacity,
+        gradient: s.branchColorGradient,
+        solid: s.branchColorSolid,
+        tone: s.branchColorTone,
+        borderWidth: s.branchColorBorderWidth,
+        borderBrightness: s.branchColorBorderBrightness,
+      },
+      byId: s.branchColorSettingsById,
+    };
+    const nextThemeSettings = s.themeBranchSettings[theme] || {
+      global: THEME_DEFAULT_GLOBAL_SETTINGS[theme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
+      byId: THEME_DEFAULT_BRANCH_COLORS[theme] || {},
+    };
+    return {
+      theme,
+      themeBranchSettings: {
+        ...s.themeBranchSettings,
+        [s.theme]: currentThemeSettings,
+      },
+      branchColorIntensity: nextThemeSettings.global.intensity,
+      branchColorSpread: nextThemeSettings.global.fill,
+      branchColorOpacity: nextThemeSettings.global.opacity,
+      branchColorGradient: nextThemeSettings.global.gradient,
+      branchColorSolid: nextThemeSettings.global.solid,
+      branchColorTone: nextThemeSettings.global.tone,
+      branchColorBorderWidth: nextThemeSettings.global.borderWidth,
+      branchColorBorderBrightness: nextThemeSettings.global.borderBrightness,
+      branchColorSettingsById: nextThemeSettings.byId,
+    };
+  }),
   toggleTheme: () =>
-    set((state) => {
+    set((s) => {
       const themes = ["mono", "light", "light-cool", "dark", "blue", "brown"];
-      const currentIndex = themes.indexOf(state.theme);
-      const nextTheme =
+      const currentIndex = themes.indexOf(s.theme);
+      const theme =
         currentIndex === -1
           ? "light"
           : themes[(currentIndex + 1) % themes.length];
-      return { theme: nextTheme };
+      
+      const currentThemeSettings = {
+        global: {
+          intensity: s.branchColorIntensity,
+          fill: s.branchColorSpread,
+          opacity: s.branchColorOpacity,
+          gradient: s.branchColorGradient,
+          solid: s.branchColorSolid,
+          tone: s.branchColorTone,
+          borderWidth: s.branchColorBorderWidth,
+          borderBrightness: s.branchColorBorderBrightness,
+        },
+        byId: s.branchColorSettingsById,
+      };
+      const nextThemeSettings = s.themeBranchSettings[theme] || {
+        global: THEME_DEFAULT_GLOBAL_SETTINGS[theme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
+        byId: THEME_DEFAULT_BRANCH_COLORS[theme] || {},
+      };
+      
+      return {
+        theme,
+        themeBranchSettings: {
+          ...s.themeBranchSettings,
+          [s.theme]: currentThemeSettings,
+        },
+        branchColorIntensity: nextThemeSettings.global.intensity,
+        branchColorSpread: nextThemeSettings.global.fill,
+        branchColorOpacity: nextThemeSettings.global.opacity,
+        branchColorGradient: nextThemeSettings.global.gradient,
+        branchColorSolid: nextThemeSettings.global.solid,
+        branchColorTone: nextThemeSettings.global.tone,
+        branchColorBorderWidth: nextThemeSettings.global.borderWidth,
+        branchColorBorderBrightness: nextThemeSettings.global.borderBrightness,
+        branchColorSettingsById: nextThemeSettings.byId,
+      };
     }),
   setCardsCollapsed: (cardsCollapsed) =>
     set((s) => (s.cardsCollapsed === cardsCollapsed ? s : { cardsCollapsed })),
@@ -109,7 +216,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.intensity;
         }
       }
-      return { branchColorIntensity, branchColorSettingsById };
+      return updateBranchSettings(s, { intensity: branchColorIntensity }, branchColorSettingsById);
     }),
   setBranchColorSpread: (branchColorSpread) =>
     set((s) => {
@@ -122,7 +229,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.fill;
         }
       }
-      return { branchColorSpread, branchColorSettingsById };
+      return updateBranchSettings(s, { fill: branchColorSpread }, branchColorSettingsById);
     }),
   setBranchColorTone: (branchColorTone) =>
     set((s) => {
@@ -135,7 +242,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.tone;
         }
       }
-      return { branchColorTone, branchColorSettingsById };
+      return updateBranchSettings(s, { tone: branchColorTone }, branchColorSettingsById);
     }),
   setBranchColorOpacity: (branchColorOpacity) =>
     set((s) => {
@@ -148,7 +255,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.opacity;
         }
       }
-      return { branchColorOpacity, branchColorSettingsById };
+      return updateBranchSettings(s, { opacity: branchColorOpacity }, branchColorSettingsById);
     }),
   setBranchColorGradient: (branchColorGradient) =>
     set((s) => {
@@ -161,7 +268,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.gradient;
         }
       }
-      return { branchColorGradient, branchColorSettingsById };
+      return updateBranchSettings(s, { gradient: branchColorGradient }, branchColorSettingsById);
     }),
   setBranchColorSolid: (branchColorSolid) =>
     set((s) => {
@@ -174,7 +281,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.solid;
         }
       }
-      return { branchColorSolid, branchColorSettingsById };
+      return updateBranchSettings(s, { solid: branchColorSolid }, branchColorSettingsById);
     }),
   setBranchColorBorderWidth: (branchColorBorderWidth) =>
     set((s) => {
@@ -187,7 +294,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.borderWidth;
         }
       }
-      return { branchColorBorderWidth, branchColorSettingsById };
+      return updateBranchSettings(s, { borderWidth: branchColorBorderWidth }, branchColorSettingsById);
     }),
   setBranchColorBorderBrightness: (branchColorBorderBrightness) =>
     set((s) => {
@@ -200,7 +307,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           delete branchColorSettingsById[id]!.borderBrightness;
         }
       }
-      return { branchColorBorderBrightness, branchColorSettingsById };
+      return updateBranchSettings(s, { borderBrightness: branchColorBorderBrightness }, branchColorSettingsById);
     }),
   setBranchColorSettingsForId: (colorId, settings) =>
     set((s) => {
@@ -217,21 +324,20 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
           borderBrightness: s.branchColorBorderBrightness,
         },
       );
-      return {
-        branchColorSettingsById: {
-          ...s.branchColorSettingsById,
-          [colorId]: normalizeBranchColorSettings({
-            ...current,
-            ...settings,
-          }),
-        },
+      const nextSettingsById = {
+        ...s.branchColorSettingsById,
+        [colorId]: normalizeBranchColorSettings({
+          ...current,
+          ...settings,
+        }),
       };
+      return updateBranchSettings(s, {}, nextSettingsById);
     }),
   resetBranchColorSettingsForId: (colorId) =>
     set((s) => {
       const nextSettings = { ...s.branchColorSettingsById };
       delete nextSettings[colorId];
-      return { branchColorSettingsById: nextSettings };
+      return updateBranchSettings(s, {}, nextSettings);
     }),
   setBranchColorTuningTargetId: (branchColorTuningTargetId) =>
     set((s) =>

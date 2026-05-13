@@ -10,7 +10,7 @@ import type { AppSlice, DocumentSlice } from "../appStoreTypes";
 import { toast } from "sonner";
 import { PuuNode } from "../../types";
 import { buildTreeIndex } from "../../utils/tree";
-import { BRANCH_COLOR_IDS, getBranchRootId } from "../../utils/branchColors";
+import { BRANCH_COLOR_IDS, getBranchRootId, THEME_DEFAULT_BRANCH_COLORS, THEME_DEFAULT_GLOBAL_SETTINGS } from "../../utils/branchColors";
 
 export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
   const applyAndCapture = <T>(
@@ -126,6 +126,29 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
     },
 
     autoColorRootBranches: () => {
+      const state = get();
+      const themeConfig = THEME_DEFAULT_BRANCH_COLORS[state.theme] || {};
+      const globalConfig = THEME_DEFAULT_GLOBAL_SETTINGS[state.theme] || THEME_DEFAULT_GLOBAL_SETTINGS.light;
+      
+      set({
+        branchColorIntensity: globalConfig.intensity,
+        branchColorSpread: globalConfig.fill,
+        branchColorTone: globalConfig.tone,
+        branchColorOpacity: globalConfig.opacity,
+        branchColorGradient: globalConfig.gradient,
+        branchColorSolid: globalConfig.solid,
+        branchColorBorderWidth: globalConfig.borderWidth,
+        branchColorBorderBrightness: globalConfig.borderBrightness,
+        branchColorSettingsById: themeConfig,
+        themeBranchSettings: {
+          ...state.themeBranchSettings,
+          [state.theme]: {
+            global: globalConfig,
+            byId: themeConfig,
+          }
+        }
+      });
+
       get().setNodes((prev) => {
         const rootNodes = [...prev]
           .filter((node) => node.parentId === null)

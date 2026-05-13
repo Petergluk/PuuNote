@@ -45,6 +45,7 @@ export const FullScreenModal = ({
         block: "center",
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export const FullScreenModal = ({
   }, [onClose]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     handleUserActivity();
     return () => {
       if (idleTimer.current) clearTimeout(idleTimer.current);

@@ -39,34 +39,87 @@ export type BranchColorSettingsById = Partial<
   Record<BranchColorId, Partial<BranchColorSettings>>
 >;
 
-export const DEFAULT_BRANCH_COLOR_SETTINGS: BranchColorSettings = {
-  intensity: 140,
-  fill: 100,
-  opacity: 100,
-  gradient: 70,
-  solid: false,
-  tone: 0,
-  borderWidth: 1,
-  borderBrightness: 34,
+export const THEME_DEFAULT_GLOBAL_SETTINGS: Record<string, BranchColorSettings> = {
+  light: {
+    intensity: 120,
+    fill: 100,
+    opacity: 100,
+    gradient: 55,
+    solid: true,
+    tone: -25,
+    borderWidth: 2,
+    borderBrightness: 25,
+  },
+  "light-cool": {
+    intensity: 110,
+    fill: 90,
+    opacity: 100,
+    gradient: 50,
+    solid: true,
+    tone: -35,
+    borderWidth: 2,
+    borderBrightness: 30,
+  },
+  mono: {
+    intensity: 140,
+    fill: 100,
+    opacity: 100,
+    gradient: 70,
+    solid: false,
+    tone: 0,
+    borderWidth: 1,
+    borderBrightness: 34,
+  },
+  dark: {
+    intensity: 130,
+    fill: 100,
+    opacity: 100,
+    gradient: 60,
+    solid: false,
+    tone: -10,
+    borderWidth: 2,
+    borderBrightness: 32,
+  },
+  blue: {
+    intensity: 120,
+    fill: 70,
+    opacity: 100,
+    gradient: 40,
+    solid: false,
+    tone: -20,
+    borderWidth: 1,
+    borderBrightness: 28,
+  },
+  brown: {
+    intensity: 100,
+    fill: 100,
+    opacity: 100,
+    gradient: 75,
+    solid: true,
+    tone: -15,
+    borderWidth: 1,
+    borderBrightness: 50,
+  },
 };
 
-export const DEFAULT_BRANCH_COLORS_BY_ID: BranchColorSettingsById = {
-  rose: { intensity: 220, fill: 100, opacity: 100, gradient: 75, solid: false, tone: 20 },
-  coral: { intensity: 300, fill: 100, opacity: 100, gradient: 60, solid: false, tone: 25 },
-  amber: { intensity: 300, fill: 100, opacity: 100, gradient: 80, solid: false, tone: 60 },
-  olive: { intensity: 300, fill: 100, opacity: 100, gradient: 50, solid: false, tone: 40 },
-  mint: { intensity: 300, fill: 100, opacity: 100, gradient: 55, solid: false, tone: 40 },
-  cyan: { intensity: 300, fill: 100, opacity: 100, gradient: 40, solid: false, tone: 25 },
-  blue: { intensity: 300, fill: 100, opacity: 100, gradient: 40, solid: false, tone: 45 },
-  violet: { intensity: 300, fill: 100, opacity: 100, gradient: 30, solid: false, tone: 30 },
-  plum: { intensity: 300, fill: 100, opacity: 100, gradient: 35, solid: false, tone: 30 },
+export const DEFAULT_BRANCH_COLOR_SETTINGS: BranchColorSettings = THEME_DEFAULT_GLOBAL_SETTINGS.light;
+
+export const THEME_DEFAULT_BRANCH_COLORS: Record<string, BranchColorSettingsById> = {
+  light: {},
+  "light-cool": {},
+  mono: {},
+  dark: {},
+  blue: {},
+  brown: {},
 };
+
+export const DEFAULT_BRANCH_COLORS_BY_ID: BranchColorSettingsById = THEME_DEFAULT_BRANCH_COLORS.light;
 
 
 const labels: Record<BranchColorId, string> = {
   rose: "#FF806F",
   coral: "#FFAD38",
-  amber: "#FFFE6E",
+  amber: "#FFFE42",
   olive: "#17CD00",
   mint: "#00DBA8",
   cyan: "#00C2D4",
@@ -78,7 +131,7 @@ const labels: Record<BranchColorId, string> = {
 const basePaletteValues: Record<BranchColorId, string> = {
   rose: "255 128 111",
   coral: "255 173 56",
-  amber: "255 254 110",
+  amber: "255 254 66",
   olive: "23 205 0",
   mint: "0 219 168",
   cyan: "0 194 212",

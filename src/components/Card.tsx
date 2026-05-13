@@ -81,6 +81,8 @@ export const Card = React.memo(
       isDragged,
       cardsCollapsed,
       editorMode,
+      globalBorderWidth,
+      globalBorderBrightness,
     } = useAppStore(
       useShallow((s) => ({
         hasActiveNode: s.activeId !== null,
@@ -90,6 +92,8 @@ export const Card = React.memo(
         isDragged: s.draggedId === node.id,
         cardsCollapsed: s.cardsCollapsed,
         editorMode: s.editorMode,
+        globalBorderWidth: s.branchColorBorderWidth,
+        globalBorderBrightness: s.branchColorBorderBrightness,
       })),
     );
 
@@ -177,8 +181,14 @@ export const Card = React.memo(
                 branchColor.settings.gradient * 0.1
               }%`,
             } as React.CSSProperties)
-          : undefined,
-      [branchColor],
+          : ({
+              "--uncolored-border-mix": globalBorderBrightness,
+              borderTopWidth: `${globalBorderWidth}px`,
+              borderRightWidth: `${globalBorderWidth}px`,
+              borderBottomWidth: `${globalBorderWidth}px`,
+              borderLeftWidth: `${globalBorderWidth + (isActive || isSelected ? 3 : 0)}px`,
+            } as React.CSSProperties),
+      [branchColor, globalBorderWidth, globalBorderBrightness, isActive, isSelected],
     );
 
     return (
@@ -241,7 +251,7 @@ export const Card = React.memo(
             "relative w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col",
             isEditing && "group/edit",
             cardClasses,
-            branchColor && "branch-card",
+            branchColor ? "branch-card" : "uncolored-card",
             branchColor?.settings.solid && "branch-fill-solid",
             branchColor && isActive && "branch-card-active",
             branchColor && isSelected && !isActive && "branch-card-selected",

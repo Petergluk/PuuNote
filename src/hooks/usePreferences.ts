@@ -3,6 +3,8 @@ import { useAppStore } from "../store/useAppStore";
 import {
   DEFAULT_BRANCH_COLOR_SETTINGS,
   normalizeBranchColorSettingsById,
+  THEME_DEFAULT_GLOBAL_SETTINGS,
+  THEME_DEFAULT_BRANCH_COLORS
 } from "../utils/branchColors";
 import {
   buildThemeCssVars,
@@ -39,6 +41,12 @@ const clampBranchColorTone = (value: number) =>
   Math.max(-100, Math.min(100, Math.round(value)));
 
 const DEFAULT_INACTIVE_CARD_DIM = -25;
+
+const clampNumber = (value: string | null, min: number, max: number, fallback: number) => {
+  const parsed = value === null ? fallback : Number(value);
+  const safeValue = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.max(min, Math.min(max, Math.round(safeValue)));
+};
 
 const clampPercent = (value: string | null, fallback: number) => {
   const parsed = value === null ? fallback : Number(value);
@@ -89,29 +97,45 @@ export function usePreferencesInit() {
     const savedCollapsed =
       safeLocalStorage.getItem("puu_cardsCollapsed") === "true";
     const savedWidth = Number(safeLocalStorage.getItem("puu_colWidth")) || 357;
-    const savedBranchColorIntensity = clampBranchColorIntensity(
+    let savedBranchColorIntensity = clampBranchColorIntensity(
       Number(safeLocalStorage.getItem("puu_branchColorIntensity")) ||
         DEFAULT_BRANCH_COLOR_SETTINGS.intensity,
     );
-    const savedBranchColorSpread = clampBranchColorSpread(
+    let savedBranchColorSpread = clampBranchColorSpread(
       Number(safeLocalStorage.getItem("puu_branchColorSpread")) ||
         DEFAULT_BRANCH_COLOR_SETTINGS.fill,
     );
-    const savedBranchColorTone = clampBranchColorTone(
+    let savedBranchColorTone = clampBranchColorTone(
       Number(safeLocalStorage.getItem("puu_branchColorTone")) ||
         DEFAULT_BRANCH_COLOR_SETTINGS.tone,
     );
-    const savedBranchColorOpacity = clampPercent(
+    let savedBranchColorOpacity = clampPercent(
       safeLocalStorage.getItem("puu_branchColorOpacity"),
       DEFAULT_BRANCH_COLOR_SETTINGS.opacity,
     );
-    const savedBranchColorGradient = clampPercent(
+    let savedBranchColorGradient = clampPercent(
       safeLocalStorage.getItem("puu_branchColorGradient"),
       DEFAULT_BRANCH_COLOR_SETTINGS.gradient,
     );
-    const savedBranchColorSolid =
-      safeLocalStorage.getItem("puu_branchColorSolid") === "true";
-    const savedBranchColorSettingsById = (() => {
+    const branchColorSolidStr = safeLocalStorage.getItem("puu_branchColorSolid");
+    let savedBranchColorSolid =
+      branchColorSolidStr !== null
+        ? branchColorSolidStr === "true"
+        : DEFAULT_BRANCH_COLOR_SETTINGS.solid;
+    
+    let savedBranchColorBorderWidth = clampNumber(
+      safeLocalStorage.getItem("puu_branchColorBorderWidth"),
+      0,
+      8,
+      DEFAULT_BRANCH_COLOR_SETTINGS.borderWidth,
+    );
+    let savedBranchColorBorderBrightness = clampNumber(
+      safeLocalStorage.getItem("puu_branchColorBorderBrightness"),
+      0,
+      100,
+      DEFAULT_BRANCH_COLOR_SETTINGS.borderBrightness,
+    );
+    let savedBranchColorSettingsById = (() => {
       try {
         return normalizeBranchColorSettingsById(
           JSON.parse(
@@ -164,6 +188,43 @@ export function usePreferencesInit() {
     if (!savedTheme) {
       savedTheme = "mono";
     }
+
+    const savedThemeBranchSettingsStr = safeLocalStorage.getItem("puu_themeBranchSettings");
+    let savedThemeBranchSettings = savedThemeBranchSettingsStr ? JSON.parse(savedThemeBranchSettingsStr) : null;
+
+    if (!savedThemeBranchSettings) {
+      savedThemeBranchSettings = {
+        [savedTheme]: {
+          global: {
+            intensity: savedBranchColorIntensity,
+            fill: savedBranchColorSpread,
+            tone: savedBranchColorTone,
+            opacity: savedBranchColorOpacity,
+            gradient: savedBranchColorGradient,
+            solid: savedBranchColorSolid,
+            borderWidth: savedBranchColorBorderWidth,
+            borderBrightness: savedBranchColorBorderBrightness,
+          },
+          byId: savedBranchColorSettingsById,
+        }
+      };
+      safeLocalStorage.setItem("puu_themeBranchSettings", JSON.stringify(savedThemeBranchSettings));
+    } else {
+      const activeThemeSettings = savedThemeBranchSettings[savedTheme] || {
+        global: THEME_DEFAULT_GLOBAL_SETTINGS[savedTheme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
+        byId: THEME_DEFAULT_BRANCH_COLORS[savedTheme] || {},
+      };
+      savedBranchColorIntensity = activeThemeSettings.global.intensity;
+      savedBranchColorSpread = activeThemeSettings.global.fill;
+      savedBranchColorTone = activeThemeSettings.global.tone;
+      savedBranchColorOpacity = activeThemeSettings.global.opacity;
+      savedBranchColorGradient = activeThemeSettings.global.gradient;
+      savedBranchColorSolid = activeThemeSettings.global.solid;
+      savedBranchColorBorderWidth = activeThemeSettings.global.borderWidth;
+      savedBranchColorBorderBrightness = activeThemeSettings.global.borderBrightness;
+      savedBranchColorSettingsById = activeThemeSettings.byId;
+    }
+
     useAppStore.setState({
       cardsCollapsed: savedCollapsed,
       colWidth: savedWidth,
@@ -173,7 +234,10 @@ export function usePreferencesInit() {
       branchColorOpacity: savedBranchColorOpacity,
       branchColorGradient: savedBranchColorGradient,
       branchColorSolid: savedBranchColorSolid,
+      branchColorBorderWidth: savedBranchColorBorderWidth,
+      branchColorBorderBrightness: savedBranchColorBorderBrightness,
       branchColorSettingsById: savedBranchColorSettingsById,
+      themeBranchSettings: savedThemeBranchSettings,
       inactiveCardDim: savedInactiveCardDim,
       themeTuning: savedThemeTuning,
       inactiveBranchesMode: savedInactiveBranchesMode,
@@ -233,10 +297,28 @@ export function usePreferencesInit() {
           String(state.branchColorSolid),
         );
       }
+      if (state.branchColorBorderWidth !== prevState.branchColorBorderWidth) {
+        safeLocalStorage.setItem(
+          "puu_branchColorBorderWidth",
+          state.branchColorBorderWidth.toString(),
+        );
+      }
+      if (state.branchColorBorderBrightness !== prevState.branchColorBorderBrightness) {
+        safeLocalStorage.setItem(
+          "puu_branchColorBorderBrightness",
+          state.branchColorBorderBrightness.toString(),
+        );
+      }
       if (state.branchColorSettingsById !== prevState.branchColorSettingsById) {
         safeLocalStorage.setItem(
           "puu_branchColorSettingsById",
           JSON.stringify(state.branchColorSettingsById),
+        );
+      }
+      if (state.themeBranchSettings !== prevState.themeBranchSettings) {
+        safeLocalStorage.setItem(
+          "puu_themeBranchSettings",
+          JSON.stringify(state.themeBranchSettings),
         );
       }
       if (state.inactiveCardDim !== prevState.inactiveCardDim) {
