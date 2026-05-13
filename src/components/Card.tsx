@@ -14,6 +14,7 @@ import {
 } from "../utils/proseClasses";
 import { cn } from "../utils/cn";
 import type { BranchColor } from "../utils/branchColors";
+import { PluginRegistry } from "../plugins/registry";
 
 type DropZone = "none" | "top" | "bottom" | "right";
 
@@ -287,6 +288,20 @@ export const Card = React.memo(
              a large permanent blank header. */}
           {isEditing && (
             <div className="absolute right-0 top-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
+              {PluginRegistry.getCardActions(node.id).map(action => (
+                <button
+                  key={action.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    action.onClick(node.id);
+                  }}
+                  className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
+                  title={action.label}
+                >
+                  {action.icon}
+                </button>
+              ))}
               <button
                 onMouseDown={handleSplitNode}
                 className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
