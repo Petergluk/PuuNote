@@ -29,6 +29,8 @@ export interface UiSlice {
   focusModeScope: FocusModeScope;
   editorMode: EditorMode;
   settingsOpen: boolean;
+  pluginsOpen: boolean;
+  disabledPlugins: string[];
   timelineOpen: boolean;
   colWidth: number;
   branchColorIntensity: number;
@@ -66,6 +68,8 @@ export interface UiSlice {
   setFocusModeScope: (mode: FocusModeScope) => void;
   setEditorMode: (mode: EditorMode) => void;
   setSettingsOpen: (open: boolean) => void;
+  setPluginsOpen: (open: boolean) => void;
+  setDisabledPlugins: (plugins: string[]) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
   setBranchColorIntensity: (intensity: number) => void;

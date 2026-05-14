@@ -1,4 +1,4 @@
-import { X, RotateCcw } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { JobRunner } from "../domain/jobRunner";
 import { Job, useJobStore } from "../store/useJobStore";
 
@@ -32,10 +32,10 @@ export function JobPanel() {
         {hasFinished && (
           <button
             onClick={clearCompleted}
-            className="p-1 text-app-text-muted hover:text-app-text-primary"
-            title="Clear finished jobs"
+            className="p-1 text-app-text-muted hover:text-app-text-primary transition-colors"
+            title="Очистить завершенные"
           >
-            <RotateCcw size={14} />
+            <Trash2 size={14} />
           </button>
         )}
       </div>

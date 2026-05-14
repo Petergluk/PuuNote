@@ -61,6 +61,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   editorEnterMode: "enterNewline",
   pasteSplitMode: "separator",
   settingsOpen: false,
+  pluginsOpen: false,
+  disabledPlugins: JSON.parse(localStorage.getItem('PUU_DISABLED_PLUGINS') || '[]'),
   timelineOpen: false,
   colWidth: 320,
   branchColorIntensity: DEFAULT_BRANCH_COLOR_SETTINGS.intensity,
@@ -201,6 +203,12 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.pasteSplitMode === pasteSplitMode ? s : { pasteSplitMode })),
   setSettingsOpen: (settingsOpen) =>
     set((s) => (s.settingsOpen === settingsOpen ? s : { settingsOpen })),
+  setPluginsOpen: (pluginsOpen) =>
+    set((s) => (s.pluginsOpen === pluginsOpen ? s : { pluginsOpen })),
+  setDisabledPlugins: (disabledPlugins) => {
+    localStorage.setItem('PUU_DISABLED_PLUGINS', JSON.stringify(disabledPlugins));
+    set(() => ({ disabledPlugins }));
+  },
   setTimelineOpen: (timelineOpen) =>
     set((s) => (s.timelineOpen === timelineOpen ? s : { timelineOpen })),
   setColWidth: (colWidth) =>

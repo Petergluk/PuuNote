@@ -2,7 +2,7 @@ import { useAppStore } from "../store/useAppStore";
 import { useJobStore } from "../store/useJobStore";
 import { PluginRegistry, type PluginAPI } from "./registry";
 import { toast } from "sonner";
-import { CUSTOM_PLUGINS } from "./custom";
+import { CUSTOM_PLUGINS } from "./index";
 
 // Create the unified API object for plugins
 export const pluginApi: PluginAPI = {

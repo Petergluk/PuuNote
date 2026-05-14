@@ -32,7 +32,7 @@ const diffAndEmit = (prevNodes: PuuNode[], nextNodes: PuuNode[]) => {
       prev.content !== next.content ||
       prev.parentId !== next.parentId ||
       prev.order !== next.order ||
-      JSON.stringify(prev.metadata) !== JSON.stringify(next.metadata)
+      prev.metadata !== next.metadata
     ) {
       PluginRegistry.emitNodeUpdated(next);
     }
@@ -44,11 +44,6 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
   past: [],
   future: [],
 
-  /**
-   * ⚠️ Полностью сбрасывает undo/redo историю.
-   * Используется ТОЛЬКО при загрузке/переключении файлов (hydration).
-   * Не вызывать из пользовательских действий или плагинов.
-   */
   setNodesRaw: (nodes) => {
     activeHistoryGroup = null;
     set({ nodes: uniqueById(nodes), past: [], future: [] });

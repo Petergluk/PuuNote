@@ -27,6 +27,7 @@ export interface PluginDefinition {
   id: string;
   name: string;
   version: string;
+  description?: string;
   hooks?: PluginHooks;
   cardActions?: CardActionHook[];
   commands?: CommandHook[];
@@ -55,7 +56,9 @@ class PluginRegistryClass {
     hookName: T,
     ...args: Parameters<NonNullable<PluginHooks[T]>>
   ) {
+    const disabledPlugins = this.api?.getState().disabledPlugins || [];
     for (const plugin of this.plugins.values()) {
+      if (disabledPlugins.includes(plugin.id)) continue;
       const hook = plugin.hooks?.[hookName];
       if (!hook) continue;
       try {
@@ -99,7 +102,9 @@ class PluginRegistryClass {
 
   getCardActions(nodeId: string): CardActionHook[] {
     const actions: CardActionHook[] = [];
+    const disabledPlugins = this.api?.getState().disabledPlugins || [];
     for (const plugin of this.plugins.values()) {
+      if (disabledPlugins.includes(plugin.id)) continue;
       if (plugin.cardActions) {
         for (const action of plugin.cardActions) {
           if (!action.isVisible || action.isVisible(nodeId)) {
@@ -113,7 +118,9 @@ class PluginRegistryClass {
 
   getCommands(): CommandHook[] {
     const commands: CommandHook[] = [];
+    const disabledPlugins = this.api?.getState().disabledPlugins || [];
     for (const plugin of this.plugins.values()) {
+      if (disabledPlugins.includes(plugin.id)) continue;
       if (plugin.commands) {
         commands.push(...plugin.commands);
       }

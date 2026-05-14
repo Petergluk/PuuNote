@@ -25,10 +25,12 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { getMergeSelectionState } from "../utils/mergeSelection";
 
+import type { ComponentType } from "react";
+
 interface CommandItem {
   id: string;
   label: string;
-  icon: any;
+  icon: ComponentType<{ size?: number; className?: string }>;
   run: () => void | Promise<void>;
   destructive?: boolean;
 }

@@ -10,6 +10,7 @@ import { JobPanel } from "./components/JobPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FloatingCardActions } from "./components/FloatingCardActions";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { PluginsPanel } from "./components/PluginsPanel";
 
 import { Minimize } from "lucide-react";
 
@@ -32,6 +33,7 @@ const CommandPalette = lazy(() =>
 import { useFileSystemInit } from "./hooks/useFileSystem";
 import { usePreferencesInit } from "./hooks/usePreferences";
 import { useAppHotkeys } from "./hooks/useAppHotkeys";
+import { useGlobalHotkeys } from "./hooks/useGlobalHotkeys";
 import { useAppStore } from "./store/useAppStore";
 import { useFileImport } from "./hooks/useFileImport";
 import { BoardView } from "./components/BoardView";
@@ -42,6 +44,7 @@ export default function App() {
   /* Initialize Managers */
   useFileSystemInit();
   usePreferencesInit();
+  useGlobalHotkeys();
   const { handleKeyDown } = useAppHotkeys(containerRef);
   const uiMode = useAppStore((s) => s.uiMode);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
@@ -181,6 +184,9 @@ export default function App() {
         </ErrorBoundary>
         <ErrorBoundary>
           <SettingsPanel />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <PluginsPanel />
         </ErrorBoundary>
         <ErrorBoundary>
           <ConfirmDialog />

@@ -14,6 +14,7 @@ import {
   Maximize,
   Minimize,
   Settings,
+  Blocks,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import {
@@ -301,6 +302,15 @@ export function Header({ handleImport }: HeaderProps) {
           aria-label={t("Fullscreen")}
         >
           <Maximize size={15} />
+        </button>
+        <button
+          onClick={() => { useAppStore.getState().setPluginsOpen(!useAppStore.getState().pluginsOpen) }}
+          className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium hidden sm:flex items-center gap-2 ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover" : "text-app-text-secondary"}`}
+          title="Plugins"
+          aria-label="Plugins"
+          aria-pressed={useAppStore.getState().pluginsOpen}
+        >
+          <Blocks size={16} />
         </button>
         <button
           onClick={() => setSettingsOpen(!settingsOpen)}

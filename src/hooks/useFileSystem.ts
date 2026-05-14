@@ -387,12 +387,7 @@ export function useFileSystemActions() {
     title?: string,
     metadata?: PuuDocumentMetadata,
   ) => {
-    fsManager.switchController?.abort();
-    fsManager.switchController = new AbortController();
-    const signal = fsManager.switchController.signal;
-
     await flushPendingSave();
-    if (signal.aborted) return;
 
     const nodesToUse = initialNodes || [
       {
@@ -424,7 +419,7 @@ export function useFileSystemActions() {
       return;
     }
 
-    if (signal.aborted || !newDoc) return;
+    if (!newDoc) return;
 
     fsManager.isHydratingFile = true;
     useAppStore.getState().setNodesRaw(normalizedNodes);

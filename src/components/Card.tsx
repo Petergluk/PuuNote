@@ -296,7 +296,7 @@ export const Card = React.memo(
                     e.stopPropagation();
                     action.onClick(node.id);
                   }}
-                  className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
+                  className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
                   title={action.label}
                 >
                   {action.icon}
@@ -304,7 +304,7 @@ export const Card = React.memo(
               ))}
               <button
                 onMouseDown={handleSplitNode}
-                className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
+                className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
                 title="Split node at cursor"
               >
                 <Scissors size={14} />
@@ -315,7 +315,7 @@ export const Card = React.memo(
                   e.stopPropagation();
                   setFullScreenId(node.id);
                 }}
-                className="p-1 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors"
+                className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
                 title="Expand to full screen"
               >
                 <Maximize2 size={14} />

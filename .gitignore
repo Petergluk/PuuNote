@@ -6,8 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-
-# Dead weight — OCR data, font archives, scratch scripts
-*.traineddata
-*.zip
-test-*.mjs

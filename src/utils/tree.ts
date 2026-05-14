@@ -5,9 +5,13 @@ export interface TreeIndex {
   childrenMap: Map<string | null, PuuNode[]>;
 }
 
-
+let _cachedNodes: PuuNode[] | null = null;
+let _cachedTreeIndex: TreeIndex | null = null;
 
 export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
+  if (nodes === _cachedNodes && _cachedTreeIndex) {
+    return _cachedTreeIndex;
+  }
 
   const nodeMap = new Map<string, PuuNode>();
   const childrenMap = new Map<string | null, PuuNode[]>();
@@ -19,7 +23,10 @@ export const buildTreeIndex = (nodes: PuuNode[]): TreeIndex => {
     childrenMap.set(n.parentId, children);
   }
 
-  return { nodeMap, childrenMap };
+  const result = { nodeMap, childrenMap };
+  _cachedNodes = nodes;
+  _cachedTreeIndex = result;
+  return result;
 };
 
 export const orderedChildrenFromIndex = (
