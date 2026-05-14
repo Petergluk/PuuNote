@@ -1,5 +1,5 @@
 import { buildTreeIndex, getDepthFirstNodesFromIndex } from "../../utils/tree";
-import type { AppSlice, SelectionSlice } from "../appStoreTypes";
+import type { AppSlice, SelectionSlice, AppStore } from "../appStoreTypes";
 
 export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
   activeId: null,
@@ -14,8 +14,7 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
         if (activeId) {
           // Trigger a layout re-alignment using a slight trick to break out of zustand set
           // Or just update layoutAlignTrigger right here
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return { layoutAlignTrigger: state.layoutAlignTrigger + 1 } as any;
+          return { layoutAlignTrigger: state.layoutAlignTrigger + 1 } as Partial<AppStore>;
         }
         return state;
       }
