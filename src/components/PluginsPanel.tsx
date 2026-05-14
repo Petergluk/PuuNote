@@ -197,7 +197,7 @@ export function PluginsPanel() {
                     <input
                       type="password"
                       className="w-full max-w-md rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow"
-                      placeholder={((typeof import.meta !== 'undefined' && (import.meta as any).env) || {}).VITE_GLOBAL_GEMINI_API_KEY ? "Установлен из .env" : "AIzaSy..."}
+                      placeholder={((typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as unknown as { env: Record<string, string> }).env : {}).VITE_GLOBAL_GEMINI_API_KEY) ? "Установлен из .env" : "AIzaSy..."}
                       defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY') || ''}
                       onChange={(e) => {
                         const val = e.target.value.trim();

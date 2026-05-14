@@ -49,7 +49,6 @@ export interface UiSlice {
   commandPaletteOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
   saveStatus: SaveStatus;
-  layoutAlignTrigger: number;
   confirmDialog: {
     isOpen: boolean;
     message: string;
@@ -59,7 +58,6 @@ export interface UiSlice {
   setCommandPaletteOpen: (open: boolean) => void;
   setTheme: (theme: string) => void;
   toggleTheme: () => void;
-  triggerLayoutAlign: () => void;
   setCardsCollapsed: (collapsed: boolean) => void;
   toggleCardsCollapsed: () => void;
   setInactiveBranchesMode: (mode: InactiveBranchesMode) => void;
@@ -107,6 +105,8 @@ export interface SelectionSlice {
   editingId: string | null;
   draggedId: string | null;
   fullScreenId: string | null;
+  layoutAlignTrigger: number;
+  triggerLayoutAlign: () => void;
   setActiveId: (id: string | null) => void;
   toggleSelection: (id: string, isShift?: boolean) => void;
   clearSelection: () => void;

@@ -1,9 +1,10 @@
 import type { AppSlice, HistorySlice } from "../appStoreTypes";
+import { MAX_HISTORY_STATES } from "../../constants";
 
 import { PluginRegistry } from "../../plugins/registry";
 import type { PuuNode } from "../../types";
 
-const HISTORY_LIMIT = 50;
+const HISTORY_LIMIT = MAX_HISTORY_STATES;
 const DEFAULT_HISTORY_GROUP_DELAY_MS = 5000;
 
 let activeHistoryGroup: { key: string; updatedAt: number } | null = null;

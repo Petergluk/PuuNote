@@ -10,6 +10,8 @@ import {
   type ThemeTune,
 } from "../utils/themeTuning";
 
+import { COPY_SUCCESS_TIMEOUT_MS } from "../constants";
+
 const themeTuneControls: Array<{
   key: keyof ThemeTune;
   label: string;
@@ -46,7 +48,7 @@ export function ThemeMenu() {
     try {
       await navigator.clipboard.writeText(themeTuningJson);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      window.setTimeout(() => setCopied(false), COPY_SUCCESS_TIMEOUT_MS);
     } catch {
       setCopied(false);
     }

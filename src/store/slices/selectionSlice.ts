@@ -1,25 +1,27 @@
 import { buildTreeIndex, getDepthFirstNodesFromIndex } from "../../utils/tree";
-import type { AppSlice, SelectionSlice, AppStore } from "../appStoreTypes";
+import type { AppSlice, SelectionSlice } from "../appStoreTypes";
 
-export const createSelectionSlice: AppSlice<SelectionSlice> = (set) => ({
+export const createSelectionSlice: AppSlice<SelectionSlice> = (set, get) => ({
   activeId: null,
   selectedIds: [],
   editingId: null,
   draggedId: null,
   fullScreenId: null,
+  layoutAlignTrigger: 0,
 
-  setActiveId: (activeId) =>
-    set((state) => {
-      if (state.activeId === activeId) {
-        if (activeId) {
-          // Trigger a layout re-alignment using a slight trick to break out of zustand set
-          // Or just update layoutAlignTrigger right here
-          return { layoutAlignTrigger: state.layoutAlignTrigger + 1 } as Partial<AppStore>;
-        }
-        return state;
+  triggerLayoutAlign: () =>
+    set((state) => ({ layoutAlignTrigger: state.layoutAlignTrigger + 1 })),
+
+  setActiveId: (activeId) => {
+    const state = get();
+    if (state.activeId === activeId) {
+      if (activeId) {
+        state.triggerLayoutAlign();
       }
-      return { activeId, selectedIds: activeId ? [activeId] : [] };
-    }),
+      return;
+    }
+    set({ activeId, selectedIds: activeId ? [activeId] : [] });
+  },
 
   toggleSelection: (id, isShift) =>
     set((state) => {

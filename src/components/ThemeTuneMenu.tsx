@@ -9,6 +9,7 @@ import {
   THEME_LABELS,
 } from "../utils/themeTuning";
 import { MiniSlider } from "./MiniSlider";
+import { COPY_SUCCESS_TIMEOUT_MS } from "../constants";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, Math.round(value)));
@@ -95,7 +96,7 @@ export function ThemeTuneMenu() {
     try {
       await navigator.clipboard.writeText(tuningExportJson);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
+      window.setTimeout(() => setCopied(false), COPY_SUCCESS_TIMEOUT_MS);
     } catch {
       setCopied(false);
     }

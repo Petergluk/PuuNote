@@ -81,7 +81,7 @@ export const myAwesomePlugin: PluginDefinition = {
     {
       id: "my-card-action",
       label: "Process Card",
-      icon: () => <Replace size={16} />,
+      icon: <Replace size={16} />,
       isVisible: (nodeId: string) => true,
       onClick: (nodeId: string) => {
         // Context action logic here
@@ -189,11 +189,24 @@ try {
 }
 ```
 
-### 3.3 Accessing Environment Variables & User Keys
+### 3.3 Accessing Environment Variables & API Keys
 
 To ensure the best UX across Local, Cloud hosting (like Render), and Google Studio Preview plugins should access sensitive keys via:
-1. Environment Key (e.g. `import.meta.env.VITE_GEMINI_PLUGIN_API_KEY`)
-2. Saved state in `localStorage`
+1. Local Storage user-provided key: `localStorage.getItem('GLOBAL_GEMINI_API_KEY')`
+2. Environment Key fallback: `import.meta.env.VITE_GLOBAL_GEMINI_API_KEY` or `import.meta.env.VITE_GEMINI_API_KEY`
 3. Optional Stubbing (e.g., if rendering in AI Studio without a key, you may fallback to simulated processing to show the UI working)
 
-You can allow users to modify this in the **Plugins Panel**.
+You can advise users to configure these keys in the **Plugins Panel**.
+
+Example snippet for plugins accessing Gemini:
+
+```typescript
+const localKeyString = localStorage.getItem('GLOBAL_GEMINI_API_KEY');
+const envKeyString = import.meta.env.VITE_GLOBAL_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+const apiKey = localKeyString || envKeyString;
+
+if (!apiKey) {
+    // Optionally provide stub functionality if possible in preview
+    console.warn("No Gemini API Key provided.");
+}
+```

@@ -1,3 +1,5 @@
+import { THEMES } from "../constants";
+
 export type ThemeTune = {
   bg: number;
   card: number;
@@ -14,16 +16,9 @@ export const DEFAULT_THEME_TUNE: ThemeTune = {
   warmth: 0,
 };
 
-export const THEME_IDS = [
-  "mono",
-  "light",
-  "light-cool",
-  "dark",
-  "blue",
-  "brown",
-] as const;
+export const THEME_IDS = THEMES;
 
-export type ThemeId = (typeof THEME_IDS)[number];
+export type ThemeId = (typeof THEMES)[number];
 
 export const DEFAULT_THEME_TUNING: Partial<Record<ThemeId, ThemeTune>> = {
   mono: {

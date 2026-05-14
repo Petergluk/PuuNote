@@ -5,6 +5,7 @@ import {
   getThemeId,
   getThemeTune,
 } from "../../utils/themeTuning";
+import { THEMES } from "../../constants";
 import {
   DEFAULT_BRANCH_COLOR_SETTINGS,
   DEFAULT_BRANCH_COLORS_BY_ID,
@@ -50,6 +51,61 @@ function updateBranchSettings(s: UiSlice, partialGlobal: Partial<BranchColorSett
   };
 }
 
+function switchThemeWithBranchSettings(s: UiSlice, theme: string) {
+  if (s.theme === theme) return s;
+  const currentThemeSettings = {
+    global: {
+      intensity: s.branchColorIntensity,
+      fill: s.branchColorSpread,
+      opacity: s.branchColorOpacity,
+      gradient: s.branchColorGradient,
+      solid: s.branchColorSolid,
+      tone: s.branchColorTone,
+      borderWidth: s.branchColorBorderWidth,
+      borderBrightness: s.branchColorBorderBrightness,
+    },
+    byId: s.branchColorSettingsById,
+  };
+  const nextThemeSettings = s.themeBranchSettings[theme] || {
+    global: THEME_DEFAULT_GLOBAL_SETTINGS[theme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
+    byId: THEME_DEFAULT_BRANCH_COLORS[theme] || {},
+  };
+  return {
+    theme,
+    themeBranchSettings: {
+      ...s.themeBranchSettings,
+      [s.theme]: currentThemeSettings,
+    },
+    branchColorIntensity: nextThemeSettings.global.intensity,
+    branchColorSpread: nextThemeSettings.global.fill,
+    branchColorOpacity: nextThemeSettings.global.opacity,
+    branchColorGradient: nextThemeSettings.global.gradient,
+    branchColorSolid: nextThemeSettings.global.solid,
+    branchColorTone: nextThemeSettings.global.tone,
+    branchColorBorderWidth: nextThemeSettings.global.borderWidth,
+    branchColorBorderBrightness: nextThemeSettings.global.borderBrightness,
+    branchColorSettingsById: nextThemeSettings.byId,
+  };
+}
+
+const updateSingleBranchSetting = (
+  s: UiSlice,
+  stateKey: keyof UiSlice,
+  settingKey: keyof BranchColorSettings,
+  value: any
+) => {
+  if (s[stateKey] === value) return s;
+  const branchColorSettingsById = { ...s.branchColorSettingsById };
+  for (const key in branchColorSettingsById) {
+    const id = key as keyof typeof branchColorSettingsById;
+    if (branchColorSettingsById[id]) {
+      branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
+      delete branchColorSettingsById[id]![settingKey];
+    }
+  }
+  return updateBranchSettings(s, { [settingKey]: value }, branchColorSettingsById);
+};
+
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   fileMenuOpen: false,
   theme: "dark",
@@ -62,7 +118,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   pasteSplitMode: "separator",
   settingsOpen: false,
   pluginsOpen: false,
-  disabledPlugins: JSON.parse(localStorage.getItem('PUU_DISABLED_PLUGINS') || '[]'),
+  disabledPlugins: [],
   timelineOpen: false,
   colWidth: 320,
   branchColorIntensity: DEFAULT_BRANCH_COLOR_SETTINGS.intensity,
@@ -81,7 +137,6 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   commandPaletteOpen: false,
   uiMode: "normal",
   saveStatus: "saved",
-  layoutAlignTrigger: 0,
   confirmDialog: { isOpen: false, message: "" },
   floatingActionsVisible: false,
 
@@ -94,91 +149,21 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
       confirmDialog: { isOpen: false, message: "", onConfirm: undefined },
     }),
 
-  triggerLayoutAlign: () =>
-    set((state) => ({ layoutAlignTrigger: state.layoutAlignTrigger + 1 })),
   setCommandPaletteOpen: (commandPaletteOpen) =>
     set((s) =>
       s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen },
     ),
-  setTheme: (theme) => set((s) => {
-    if (s.theme === theme) return s;
-    const currentThemeSettings = {
-      global: {
-        intensity: s.branchColorIntensity,
-        fill: s.branchColorSpread,
-        opacity: s.branchColorOpacity,
-        gradient: s.branchColorGradient,
-        solid: s.branchColorSolid,
-        tone: s.branchColorTone,
-        borderWidth: s.branchColorBorderWidth,
-        borderBrightness: s.branchColorBorderBrightness,
-      },
-      byId: s.branchColorSettingsById,
-    };
-    const nextThemeSettings = s.themeBranchSettings[theme] || {
-      global: THEME_DEFAULT_GLOBAL_SETTINGS[theme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
-      byId: THEME_DEFAULT_BRANCH_COLORS[theme] || {},
-    };
-    return {
-      theme,
-      themeBranchSettings: {
-        ...s.themeBranchSettings,
-        [s.theme]: currentThemeSettings,
-      },
-      branchColorIntensity: nextThemeSettings.global.intensity,
-      branchColorSpread: nextThemeSettings.global.fill,
-      branchColorOpacity: nextThemeSettings.global.opacity,
-      branchColorGradient: nextThemeSettings.global.gradient,
-      branchColorSolid: nextThemeSettings.global.solid,
-      branchColorTone: nextThemeSettings.global.tone,
-      branchColorBorderWidth: nextThemeSettings.global.borderWidth,
-      branchColorBorderBrightness: nextThemeSettings.global.borderBrightness,
-      branchColorSettingsById: nextThemeSettings.byId,
-    };
-  }),
+  setTheme: (theme) => set((s) => switchThemeWithBranchSettings(s, theme)),
   toggleTheme: () =>
     set((s) => {
-      const themes = ["mono", "light", "light-cool", "dark", "blue", "brown"];
-      const currentIndex = themes.indexOf(s.theme);
+      const themes = [...THEMES];
+      const currentIndex = themes.indexOf(s.theme as any);
       const theme =
         currentIndex === -1
           ? "light"
           : themes[(currentIndex + 1) % themes.length];
       
-      const currentThemeSettings = {
-        global: {
-          intensity: s.branchColorIntensity,
-          fill: s.branchColorSpread,
-          opacity: s.branchColorOpacity,
-          gradient: s.branchColorGradient,
-          solid: s.branchColorSolid,
-          tone: s.branchColorTone,
-          borderWidth: s.branchColorBorderWidth,
-          borderBrightness: s.branchColorBorderBrightness,
-        },
-        byId: s.branchColorSettingsById,
-      };
-      const nextThemeSettings = s.themeBranchSettings[theme] || {
-        global: THEME_DEFAULT_GLOBAL_SETTINGS[theme] || THEME_DEFAULT_GLOBAL_SETTINGS["light"],
-        byId: THEME_DEFAULT_BRANCH_COLORS[theme] || {},
-      };
-      
-      return {
-        theme,
-        themeBranchSettings: {
-          ...s.themeBranchSettings,
-          [s.theme]: currentThemeSettings,
-        },
-        branchColorIntensity: nextThemeSettings.global.intensity,
-        branchColorSpread: nextThemeSettings.global.fill,
-        branchColorOpacity: nextThemeSettings.global.opacity,
-        branchColorGradient: nextThemeSettings.global.gradient,
-        branchColorSolid: nextThemeSettings.global.solid,
-        branchColorTone: nextThemeSettings.global.tone,
-        branchColorBorderWidth: nextThemeSettings.global.borderWidth,
-        branchColorBorderBrightness: nextThemeSettings.global.borderBrightness,
-        branchColorSettingsById: nextThemeSettings.byId,
-      };
+      return switchThemeWithBranchSettings(s, theme);
     }),
   setCardsCollapsed: (cardsCollapsed) =>
     set((s) => (s.cardsCollapsed === cardsCollapsed ? s : { cardsCollapsed })),
@@ -213,110 +198,14 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.timelineOpen === timelineOpen ? s : { timelineOpen })),
   setColWidth: (colWidth) =>
     set((s) => (s.colWidth === colWidth ? s : { colWidth })),
-  setBranchColorIntensity: (branchColorIntensity) =>
-    set((s) => {
-      if (s.branchColorIntensity === branchColorIntensity) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.intensity;
-        }
-      }
-      return updateBranchSettings(s, { intensity: branchColorIntensity }, branchColorSettingsById);
-    }),
-  setBranchColorSpread: (branchColorSpread) =>
-    set((s) => {
-      if (s.branchColorSpread === branchColorSpread) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.fill;
-        }
-      }
-      return updateBranchSettings(s, { fill: branchColorSpread }, branchColorSettingsById);
-    }),
-  setBranchColorTone: (branchColorTone) =>
-    set((s) => {
-      if (s.branchColorTone === branchColorTone) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.tone;
-        }
-      }
-      return updateBranchSettings(s, { tone: branchColorTone }, branchColorSettingsById);
-    }),
-  setBranchColorOpacity: (branchColorOpacity) =>
-    set((s) => {
-      if (s.branchColorOpacity === branchColorOpacity) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.opacity;
-        }
-      }
-      return updateBranchSettings(s, { opacity: branchColorOpacity }, branchColorSettingsById);
-    }),
-  setBranchColorGradient: (branchColorGradient) =>
-    set((s) => {
-      if (s.branchColorGradient === branchColorGradient) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.gradient;
-        }
-      }
-      return updateBranchSettings(s, { gradient: branchColorGradient }, branchColorSettingsById);
-    }),
-  setBranchColorSolid: (branchColorSolid) =>
-    set((s) => {
-      if (s.branchColorSolid === branchColorSolid) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.solid;
-        }
-      }
-      return updateBranchSettings(s, { solid: branchColorSolid }, branchColorSettingsById);
-    }),
-  setBranchColorBorderWidth: (branchColorBorderWidth) =>
-    set((s) => {
-      if (s.branchColorBorderWidth === branchColorBorderWidth) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.borderWidth;
-        }
-      }
-      return updateBranchSettings(s, { borderWidth: branchColorBorderWidth }, branchColorSettingsById);
-    }),
-  setBranchColorBorderBrightness: (branchColorBorderBrightness) =>
-    set((s) => {
-      if (s.branchColorBorderBrightness === branchColorBorderBrightness) return s;
-      const branchColorSettingsById = { ...s.branchColorSettingsById };
-      for (const key in branchColorSettingsById) {
-        const id = key as keyof typeof branchColorSettingsById;
-        if (branchColorSettingsById[id]) {
-          branchColorSettingsById[id] = { ...branchColorSettingsById[id] };
-          delete branchColorSettingsById[id]!.borderBrightness;
-        }
-      }
-      return updateBranchSettings(s, { borderBrightness: branchColorBorderBrightness }, branchColorSettingsById);
-    }),
+  setBranchColorIntensity: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorIntensity', 'intensity', val)),
+  setBranchColorSpread: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorSpread', 'fill', val)),
+  setBranchColorTone: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorTone', 'tone', val)),
+  setBranchColorOpacity: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorOpacity', 'opacity', val)),
+  setBranchColorGradient: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorGradient', 'gradient', val)),
+  setBranchColorSolid: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorSolid', 'solid', val)),
+  setBranchColorBorderWidth: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorBorderWidth', 'borderWidth', val)),
+  setBranchColorBorderBrightness: (val) => set((s) => updateSingleBranchSetting(s, 'branchColorBorderBrightness', 'borderBrightness', val)),
   setBranchColorSettingsForId: (colorId, settings) =>
     set((s) => {
       const current = normalizeBranchColorSettings(

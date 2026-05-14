@@ -247,20 +247,14 @@ export const adjustBranchColorRgb = (rgb: string, tone: number) => {
 
 const palettes: Record<string, ThemePalette> = {
   light: makePalette(basePaletteValues),
+  "light-cool": makePalette(basePaletteValues),
+  mono: makePalette(basePaletteValues),
   dark: makePalette(basePaletteValues),
   blue: makePalette(basePaletteValues),
   brown: makePalette(basePaletteValues),
 };
 
-export const normalizeThemeForBranchPalette = (theme: string) => {
-  if (theme.includes("blue")) return "blue";
-  if (theme.includes("brown")) return "brown";
-  if (theme.startsWith("dark")) return "dark";
-  return "light";
-};
-
-export const getBranchPalette = (theme: string) =>
-  palettes[normalizeThemeForBranchPalette(theme)];
+export const getBranchPalette = (theme: string) => palettes[theme] || palettes.light;
 
 export const getBranchColor = (
   theme: string,

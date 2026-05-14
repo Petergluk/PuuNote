@@ -8,6 +8,7 @@ import { WysiwygEditor } from "./WysiwygEditor";
 import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PROSE_FULL } from "../utils/proseClasses";
+import { COPY_SUCCESS_TIMEOUT_MS, FULLSCREEN_IDLE_TIMEOUT_MS } from "../constants";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -35,7 +36,7 @@ export const FullScreenModal = ({
   const handleUserActivity = () => {
     setIsIdle(false);
     if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setIsIdle(true), 3000);
+    idleTimer.current = setTimeout(() => setIsIdle(true), FULLSCREEN_IDLE_TIMEOUT_MS);
   };
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export const FullScreenModal = ({
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPY_SUCCESS_TIMEOUT_MS);
     } catch (e) {
       console.error("Failed to copy:", e);
     }

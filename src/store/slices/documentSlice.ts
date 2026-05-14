@@ -16,13 +16,10 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
   const applyAndCapture = <T>(
     operation: (prev: PuuNode[]) => { nextNodes: PuuNode[]; capture: T },
   ): T => {
-    let captured: T | undefined;
-    get().setNodes((prev) => {
-      const { nextNodes, capture } = operation(prev);
-      captured = capture;
-      return nextNodes;
-    });
-    return captured as T;
+    const currentState = get();
+    const { nextNodes, capture } = operation(currentState.nodes);
+    currentState.setNodes(nextNodes);
+    return capture;
   };
 
   return {

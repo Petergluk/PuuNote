@@ -189,6 +189,14 @@ export function usePreferencesInit() {
       savedTheme = "mono";
     }
 
+    const savedDisabledPlugins = (() => {
+      try {
+        return JSON.parse(safeLocalStorage.getItem("PUU_DISABLED_PLUGINS") || "[]");
+      } catch {
+        return [];
+      }
+    })();
+
     const savedThemeBranchSettingsStr = safeLocalStorage.getItem("puu_themeBranchSettings");
     let savedThemeBranchSettings = savedThemeBranchSettingsStr ? JSON.parse(savedThemeBranchSettingsStr) : null;
 
@@ -246,6 +254,7 @@ export function usePreferencesInit() {
       editorEnterMode: savedEditorEnterMode,
       pasteSplitMode: savedPasteSplitMode,
       theme: savedTheme,
+      disabledPlugins: savedDisabledPlugins,
     });
     applyTheme(savedTheme, savedThemeTuning);
   }, []); /* Sync to LocalStorage & DOM */
