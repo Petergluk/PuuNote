@@ -4,7 +4,7 @@ import { PluginRegistry } from "../../plugins/registry";
 import type { PuuNode } from "../../types";
 
 const HISTORY_LIMIT = 50;
-const DEFAULT_HISTORY_GROUP_DELAY_MS = 1500;
+const DEFAULT_HISTORY_GROUP_DELAY_MS = 5000;
 
 let activeHistoryGroup: { key: string; updatedAt: number } | null = null;
 
@@ -32,7 +32,7 @@ const diffAndEmit = (prevNodes: PuuNode[], nextNodes: PuuNode[]) => {
       prev.content !== next.content ||
       prev.parentId !== next.parentId ||
       prev.order !== next.order ||
-      prev.metadata !== next.metadata
+      JSON.stringify(prev.metadata) !== JSON.stringify(next.metadata)
     ) {
       PluginRegistry.emitNodeUpdated(next);
     }
@@ -44,6 +44,11 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
   past: [],
   future: [],
 
+  /**
+   * ⚠️ Полностью сбрасывает undo/redo историю.
+   * Используется ТОЛЬКО при загрузке/переключении файлов (hydration).
+   * Не вызывать из пользовательских действий или плагинов.
+   */
   setNodesRaw: (nodes) => {
     activeHistoryGroup = null;
     set({ nodes: uniqueById(nodes), past: [], future: [] });
