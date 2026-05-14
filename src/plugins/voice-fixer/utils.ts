@@ -47,9 +47,11 @@ export const processAudio = async (
       const isAIStudioPreview = window.location.hostname.includes('run.app');
       const env = typeof import.meta !== 'undefined' && (import.meta as any).env ? (import.meta as any).env : {};
 
-      let apiKey = env.VITE_GLOBAL_GEMINI_API_KEY || env.VITE_GEMINI_PLUGIN_API_KEY || env.VITE_GEMINI_API_KEY || localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY');
+      const apiKeyString = env.VITE_GLOBAL_GEMINI_API_KEY || env.VITE_GEMINI_PLUGIN_API_KEY || env.VITE_GEMINI_API_KEY || localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY');
 
-      if (!apiKey && (isAIStudioPreview || env.DEV)) {
+      const apiKeys = (apiKeyString || '').split(',').map((k: string) => k.trim()).filter(Boolean);
+
+      if (apiKeys.length === 0 && (isAIStudioPreview || env.DEV)) {
         // Use a stub if no API key is set and we're in AI Studio or local dev environment
         pluginApi.updateJobProgress(jobId, 60, "Используется заглушка...");
         setTimeout(() => {
@@ -81,7 +83,7 @@ export const processAudio = async (
         return;
       }
 
-      if (!apiKey) {
+      if (apiKeys.length === 0) {
         pluginApi.failJob(jobId, "API ключ для Gemini не предоставлен. Добавьте его в панели плагинов или в .env файл.");
         return;
       }
@@ -96,62 +98,81 @@ export const processAudio = async (
       let responseData = null;
       let lastError = null;
 
-      for (let i = 0; i < fallbackChain.length; i++) {
-        const modelName = fallbackChain[i];
-        try {
-          if (i > 0) {
-            pluginApi.updateJobProgress(jobId, 30 + (i * 10), `Используем ${modelName} (fallback)...`);
-          }
-          const response = await xhrFetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                role: "user",
-                parts: [
-                  { text: "Пожалуйста, транскрибируй эту аудиозапись и примени все инструкции по корректуре, указанные в системном промпте." },
-                  { inlineData: { data: base64Data, mimeType: mimeType } }
-                ]
-              }],
-              systemInstruction: {
-                parts: [{ text: promptToUse }]
-              }
-            })
-          });
+      outerLoop: for (let k = 0; k < apiKeys.length; k++) {
+        const apiKey = apiKeys[k];
 
-          if (!response.ok) {
-            let errorDetails = '';
-            try {
-              const errData = await response.json();
-              errorDetails = errData.error?.message || JSON.stringify(errData);
-            } catch(e) {
-              errorDetails = response.statusText;
+        for (let i = 0; i < fallbackChain.length; i++) {
+          const modelName = fallbackChain[i];
+          try {
+            if (i > 0 || k > 0) {
+              const msg = apiKeys.length > 1 
+                ? `Ключ ${k+1}/${apiKeys.length}, применяем ${modelName}...` 
+                : `Используем ${modelName} (fallback)...`;
+              pluginApi.updateJobProgress(jobId, 30 + (i * 10), msg);
+            }
+            const response = await xhrFetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{
+                  role: "user",
+                  parts: [
+                    { text: "Пожалуйста, транскрибируй эту аудиозапись и примени все инструкции по корректуре, указанные в системном промпте." },
+                    { inlineData: { data: base64Data, mimeType: mimeType } }
+                  ]
+                }],
+                systemInstruction: {
+                  parts: [{ text: promptToUse }]
+                }
+              })
+            });
+
+            if (!response.ok) {
+              let errorDetails = '';
+              try {
+                const errData = await response.json();
+                errorDetails = errData.error?.message || JSON.stringify(errData);
+              } catch(e) {
+                errorDetails = response.statusText;
+              }
+              
+              if (response.status === 400) {
+                // 400 Bad Request обычно не исправить сменой ключа или модели
+                throw new Error(`Ошибка HTTP 400: ${errorDetails}`);
+              } else if (response.status === 401 || response.status === 403 || response.status === 429) {
+                const err = new Error(`Ошибка ключа HTTP ${response.status}: ${errorDetails}`);
+                err.name = 'KeyError';
+                throw err;
+              }
+
+              throw new Error(`Модель ${modelName} не справилась (${response.status}): ${errorDetails}`);
             }
             
-            const isUnrecoverable = response.status === 400 || response.status === 401 || response.status === 403;
-            // Sometimes an invalid parameter can be returned as 400, but let's assume auth/bad request is unrecoverable
-            if (isUnrecoverable) {
-              throw new Error(`Ошибка HTTP ${response.status}: ${errorDetails}`);
+            pluginApi.updateJobProgress(jobId, 80, "Обработка отклика...");
+            responseData = await response.json();
+            
+            if (i > 0) {
+              localStorage.setItem('VOICE_FIXER_MODEL', modelName);
+              pluginApi.toast(`Авто-переключение на доступную модель: ${modelName}`, "info");
             }
-
-            throw new Error(`Модель ${modelName} не справилась (${response.status}): ${errorDetails}`);
-          }
-          
-          pluginApi.updateJobProgress(jobId, 80, "Обработка отклика...");
-          responseData = await response.json();
-          
-          if (i > 0) {
-            localStorage.setItem('VOICE_FIXER_MODEL', modelName);
-            pluginApi.toast(`Авто-переключение на доступную модель: ${modelName}`, "info");
-          }
-          
-          break; // Успешно, выходим из цикла
-        } catch (e: any) {
-          console.warn(`Ошибка при использовании ${modelName}:`, e);
-          lastError = e;
-          // Если это невосстановимая ошибка (400, 401, 403), прерываем перебор
-          if (e.message && (e.message.includes('Ошибка HTTP 400') || e.message.includes('Ошибка HTTP 401') || e.message.includes('Ошибка HTTP 403'))) {
-             throw e;
+            if (k > 0 && apiKeys.length > 1) {
+              pluginApi.toast(`Запрос прошел успешно на ключе №${k+1}`, "success");
+            }
+            
+            break outerLoop; // Успешно, выходим из обоих циклов
+          } catch (e: any) {
+            console.warn(`Ошибка (ключ #${k+1}, модель ${modelName}):`, e);
+            lastError = e;
+            
+            if (e.name === 'KeyError') {
+              // Ошибка авторизации или лимитов (401/403/429) - переходим к следующему ключу
+              break; 
+            }
+            
+            if (e.message && e.message.includes('Ошибка HTTP 400')) {
+               throw e; // Прерываем полностью, запрос невалидный
+            }
+            // Иначе (например, 500) переходим к следующей модели
           }
         }
       }
