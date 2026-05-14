@@ -6,14 +6,14 @@
   @font-face {
     font-family: 'Yanone Kaffeesatz';
     src: url('/fonts/YanoneKaffeesatz-VariableFont_wght.ttf') format('truetype');
-    font-weight: 100 900;
+    font-weight: 200 700;
     font-style: normal;
     font-display: swap;
   }
 }
 
 @theme {
-  --font-yanone: "Yanone Kaffeesatz", sans-serif;
+  --font-yanone: "Yanone Kaffeesatz", "Fira Sans Condensed", "Roboto Condensed", "Arial Narrow", "PT Sans Narrow", ui-sans-serif, system-ui, sans-serif;
   --color-app-bg: var(--app-bg);
   --color-app-panel: var(--app-panel);
   --color-app-card: var(--app-card);

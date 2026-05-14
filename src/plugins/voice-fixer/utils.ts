@@ -47,9 +47,16 @@ export const processAudio = async (
       const isAIStudioPreview = window.location.hostname.includes('run.app');
       const env = typeof import.meta !== 'undefined' && (import.meta as any).env ? (import.meta as any).env : {};
 
-      const apiKeyString = env.VITE_GLOBAL_GEMINI_API_KEY || env.VITE_GEMINI_PLUGIN_API_KEY || env.VITE_GEMINI_API_KEY || localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY');
+      // INTENTIONAL DECISION: Browser local keys (personal) prioritize over public keys from env.
+      // We explicitly allow fallback to public keys. The user has several public MVP accounts 
+      // where the leakage risks are acceptable. This is by design, not a vulnerability.
+      const localKeyString = localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY');
+      const envKeyString = env.VITE_GLOBAL_GEMINI_API_KEY || env.VITE_GEMINI_PLUGIN_API_KEY || env.VITE_GEMINI_API_KEY;
 
-      const apiKeys = (apiKeyString || '').split(',').map((k: string) => k.trim()).filter(Boolean);
+      const apiKeys = [
+        ...(localKeyString ? localKeyString.split(',') : []),
+        ...(envKeyString ? envKeyString.split(',') : [])
+      ].map(k => k.trim()).filter(Boolean);
 
       if (apiKeys.length === 0 && (isAIStudioPreview || env.DEV)) {
         // Use a stub if no API key is set and we're in AI Studio or local dev environment
