@@ -1,8 +1,7 @@
 import type { PluginDefinition, PluginAPI, CardActionHook } from "../registry";
 import { documentApi } from "../../domain/documentTree";
 import { manifest } from "./manifest";
-import { icons } from "lucide-react";
-import { SettingsComponent } from "./SettingsModal";
+import { SettingsComponent, getIconComponent } from "./SettingsModal";
 import { generateContentFallback } from '../../utils/aiModels';
 
 export interface PromptConfig {
@@ -57,8 +56,8 @@ function updateCardActions() {
     cardActionsList.length = 0; // clear
     currentPrompts.forEach(p => {
         if (p.isActive === false) return; // Skip inactive prompts
-        const iconName = (p.iconName || '').trim();
-        const IconComponent = (icons as any)[iconName] || icons.Sparkles;
+        const iconName = p.iconName || '';
+        const IconComponent = getIconComponent(iconName);
         cardActionsList.push({
             id: `prompt-${p.id}`,
             label: p.label,

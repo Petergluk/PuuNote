@@ -11,9 +11,21 @@ const ICONS = [
     'Briefcase', 'Glasses', 'Coffee'
 ];
 
-function getIconComponent(name: string) {
-    const cleanName = (name || '').trim();
-    return (icons as any)[cleanName] || icons.Sparkles;
+let iconMap: Record<string, string> | null = null;
+export function getIconComponent(name: string) {
+    if (!name) return icons.Sparkles;
+    const cleanName = name.trim();
+    if ((icons as any)[cleanName]) return (icons as any)[cleanName];
+    
+    if (!iconMap) {
+        iconMap = {};
+        for (const key of Object.keys(icons)) {
+            iconMap[key.toLowerCase()] = key;
+        }
+    }
+    const normalizedName = cleanName.toLowerCase().replace(/-/g, '');
+    const realKey = iconMap[normalizedName];
+    return realKey ? (icons as any)[realKey] : icons.Sparkles;
 }
 
 function IconPicker({ value, onChange }: { value: string, onChange: (val: string) => void }) {
