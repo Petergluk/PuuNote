@@ -53,7 +53,7 @@ export function useGlobalHotkeys() {
       for (const [cmdId, hotkey] of Object.entries(hotkeysRef.current)) {
         if (hotkey === pressedStr) {
           const commands = PluginRegistry.getCommands();
-          const cmd = commands.find((c: any) => c.id === cmdId);
+          const cmd = commands.find((c) => c.id === cmdId);
           if (cmd) {
             e.preventDefault();
             e.stopPropagation();

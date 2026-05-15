@@ -10,6 +10,7 @@ A plugin can:
 - Execute logic on initialization (`init`) or teardown (`unload`).
 - Register custom Commands for the Command Palette (`commands`).
 - Register context actions on Cards (`cardActions`).
+- Provide an inline Settings UI in the Plugins Panel (`settingsComponent`).
 - Hook into node lifecycle events (`hooks.onNodeCreated`, `hooks.onNodeUpdated`, `hooks.onNodeDeleted`).
 - Provide long-running background tasks via the **Job Panel**.
 - Integrate with API Keys from `.env` (locally/hosting) or local storage (through the UI).
@@ -54,8 +55,14 @@ import { myPluginManifest } from "./manifest";
 
 let pluginApi: PluginAPI | null = null;
 
+// Optional: A React component to render in the user's Plugin Settings tab
+function MyPluginSettings() {
+  return <div className="p-4 text-white">My settings UI here</div>;
+}
+
 export const myAwesomePlugin: PluginDefinition = {
   ...myPluginManifest,
+  settingsComponent: MyPluginSettings,
 
   async init(api: PluginAPI) {
     pluginApi = api;

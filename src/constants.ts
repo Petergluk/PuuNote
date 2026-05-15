@@ -5,7 +5,7 @@ import helpMd from "./assets/help.md?raw";
 export const INITIAL_NODES: PuuNode[] = parseMarkdownToNodes(helpMd);
 
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-export const MAX_HISTORY_STATES = 50;
+export const MAX_HISTORY_STATES = 500;
 export const THEMES = ["mono", "light", "light-cool", "dark", "blue", "brown"] as const;
 
 export const AUTOSIZE_DEBOUNCE_MS = 150;

@@ -38,7 +38,7 @@ describe("history slice", () => {
     const store = useAppStore.getState();
 
     store.updateContent("a", "A1");
-    vi.advanceTimersByTime(1600);
+    vi.advanceTimersByTime(5100);
     store.updateContent("a", "A12");
 
     expect(useAppStore.getState().past).toHaveLength(2);

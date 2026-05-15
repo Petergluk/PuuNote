@@ -31,6 +31,7 @@ export interface PluginDefinition {
   hooks?: PluginHooks;
   cardActions?: CardActionHook[];
   commands?: CommandHook[];
+  settingsComponent?: ComponentType;
   init?: (api: PluginAPI) => void | Promise<void>;
   unload?: () => void | Promise<void>;
 }

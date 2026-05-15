@@ -85,7 +85,7 @@ export const processAudio = async (
          if (!fallbackChain.includes(m)) fallbackChain.push(m);
       }
 
-      let responseData: any = null;
+      let responseData: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
       let lastError: Error | null = null;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout

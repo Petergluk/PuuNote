@@ -17,6 +17,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@google/genai": "^2.2.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/core": "^3.22.5",
     "@tiptap/extension-bubble-menu": "^3.22.5",
@@ -27,9 +28,11 @@
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
     "dexie": "^4.4.2",
+    "fast-json-patch": "^3.1.1",
     "fuse.js": "^7.3.0",
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
+    "immer": "^11.1.8",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
@@ -45,6 +48,7 @@
     "tesseract.js": "^7.0.0",
     "tiptap-markdown": "^0.9.0",
     "zod": "^4.3.6",
+    "zundo": "^2.3.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

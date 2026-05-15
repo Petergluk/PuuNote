@@ -1,5 +1,6 @@
 import type { StoreApi } from "zustand";
 import type { PuuDocument, PuuNode } from "../types";
+import type { Operation } from "fast-json-patch";
 import type {
   BranchColorId,
   BranchColorSettings,
@@ -115,10 +116,16 @@ export interface SelectionSlice {
   setFullScreenId: (id: string | null) => void;
 }
 
+export interface HistoryStep {
+  patch: Operation[];
+  inversePatch: Operation[];
+  timestamp: number;
+}
+
 export interface HistorySlice {
   nodes: PuuNode[];
-  past: PuuNode[][];
-  future: PuuNode[][];
+  past: HistoryStep[];
+  future: HistoryStep[];
   setNodesRaw: (nodes: PuuNode[]) => void;
   setNodes: (
     updater: PuuNode[] | ((prev: PuuNode[]) => PuuNode[]),

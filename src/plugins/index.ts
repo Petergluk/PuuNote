@@ -1,6 +1,23 @@
 import type { PluginDefinition } from './registry';
-import { voiceFixerPlugin } from './voice-fixer/index';
 
-export const CUSTOM_PLUGINS: PluginDefinition[] = [
-  voiceFixerPlugin
-];
+// Автоматически находим все плагины в подпапках, у которых есть index.ts или index.tsx
+const pluginModules = import.meta.glob('./*/index.{tsx,ts}', { eager: true });
+
+export const CUSTOM_PLUGINS: PluginDefinition[] = [];
+
+for (const path in pluginModules) {
+  const mod = pluginModules[path] as Record<string, unknown>;
+  // Перебираем все экспорты в найденном файле
+  for (const key in mod) {
+    const exported = mod[key];
+    // Проверяем, похож ли экспорт на PluginDefinition
+    if (
+      exported &&
+      typeof exported === 'object' &&
+      'id' in exported &&
+      'name' in exported
+    ) {
+      CUSTOM_PLUGINS.push(exported as PluginDefinition);
+    }
+  }
+}

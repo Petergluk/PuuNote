@@ -266,49 +266,57 @@ export function PluginsPanel() {
                         </div>
                       </div>
 
-                      {selectedPluginId === plugin.id && plugin.id === 'voice-fixer-plugin' && (
+                      {selectedPluginId === plugin.id && (
                         <div className="mt-4 rounded-lg bg-app-card p-4 border border-app-border animate-in fade-in slide-in-from-top-2 flex flex-col gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-app-text-primary mb-1">
-                              Модель Gemini
-                            </label>
-                            <select
-                              className="w-full max-w-md rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow border-r-8 border-transparent"
-                              defaultValue={localStorage.getItem('VOICE_FIXER_MODEL') || 'gemini-3-flash-preview'}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val) {
-                                  localStorage.setItem('VOICE_FIXER_MODEL', val);
-                                } else {
-                                  localStorage.removeItem('VOICE_FIXER_MODEL');
-                                }
-                              }}
-                            >
-                              <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (Рекомендуется)</option>
-                              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                            </select>
-                          </div>
+                          {plugin.settingsComponent ? (
+                            <plugin.settingsComponent />
+                          ) : plugin.id === 'voice-fixer-plugin' ? (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-app-text-primary mb-1">
+                                  Модель Gemini
+                                </label>
+                                <select
+                                  className="w-full max-w-md rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow border-r-8 border-transparent"
+                                  defaultValue={localStorage.getItem('VOICE_FIXER_MODEL') || 'gemini-3-flash-preview'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val) {
+                                      localStorage.setItem('VOICE_FIXER_MODEL', val);
+                                    } else {
+                                      localStorage.removeItem('VOICE_FIXER_MODEL');
+                                    }
+                                  }}
+                                >
+                                  <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (Рекомендуется)</option>
+                                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                  <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                                </select>
+                              </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-app-text-primary mb-1">
-                              Системный Промпт (Инструкции)
-                            </label>
-                            <textarea
-                              className="w-full rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow min-h-[160px] resize-y font-mono"
-                              placeholder={DEFAULT_PROMPT}
-                              defaultValue={localStorage.getItem('VOICE_FIXER_PROMPT') || DEFAULT_PROMPT}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val && val !== DEFAULT_PROMPT) {
-                                  localStorage.setItem('VOICE_FIXER_PROMPT', val);
-                                } else {
-                                  localStorage.removeItem('VOICE_FIXER_PROMPT');
-                                }
-                              }}
-                            />
-                            <p className="text-sm text-app-text-muted mt-1">Оставьте пустым для использования промпта по умолчанию.</p>
-                          </div>
+                              <div>
+                                <label className="block text-sm font-medium text-app-text-primary mb-1">
+                                  Системный Промпт (Инструкции)
+                                </label>
+                                <textarea
+                                  className="w-full rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow min-h-[160px] resize-y font-mono"
+                                  placeholder={DEFAULT_PROMPT}
+                                  defaultValue={localStorage.getItem('VOICE_FIXER_PROMPT') || DEFAULT_PROMPT}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val && val !== DEFAULT_PROMPT) {
+                                      localStorage.setItem('VOICE_FIXER_PROMPT', val);
+                                    } else {
+                                      localStorage.removeItem('VOICE_FIXER_PROMPT');
+                                    }
+                                  }}
+                                />
+                                <p className="text-sm text-app-text-muted mt-1">Оставьте пустым для использования промпта по умолчанию.</p>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-sm text-app-text-muted">У этого плагина нет настроек.</div>
+                          )}
                         </div>
                       )}
                     </div>

@@ -92,7 +92,7 @@ const updateSingleBranchSetting = (
   s: UiSlice,
   stateKey: keyof UiSlice,
   settingKey: keyof BranchColorSettings,
-  value: any
+  value: BranchColorSettings[keyof BranchColorSettings]
 ) => {
   if (s[stateKey] === value) return s;
   const branchColorSettingsById = { ...s.branchColorSettingsById };
@@ -157,7 +157,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   toggleTheme: () =>
     set((s) => {
       const themes = [...THEMES];
-      const currentIndex = themes.indexOf(s.theme as any);
+      const currentIndex = themes.findIndex((t) => t === s.theme);
       const theme =
         currentIndex === -1
           ? "light"

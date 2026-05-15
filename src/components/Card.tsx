@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { Maximize2, Scissors } from "lucide-react";
+import { toast } from "sonner";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
@@ -130,6 +131,28 @@ export const Card = React.memo(
     const handleSplitNode = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      const isSafeToSplit = (text: string, index: number) => {
+        const before = text.substring(0, index);
+        // Code blocks / inline code
+        if ((before.match(/`/g) || []).length % 2 !== 0) return false;
+        // Bold
+        if ((before.match(/\*\*/g) || []).length % 2 !== 0) return false;
+        if ((before.match(/__/g) || []).length % 2 !== 0) return false;
+        // Links / Images
+        const openBracket = (before.match(/\[/g) || []).length;
+        const closeBracket = (before.match(/\]/g) || []).length;
+        if (openBracket > closeBracket) return false;
+        return true;
+      };
+
+      if (editorMode !== "visual" && textareaRef.current) {
+        if (!isSafeToSplit(textareaRef.current.value, textareaRef.current.selectionStart)) {
+          toast.error("Cannot split node here: inside markdown formatting.");
+          return;
+        }
+      }
+
       const split =
         editorMode === "visual"
           ? wysiwygRef.current?.getSplitMarkdown()
