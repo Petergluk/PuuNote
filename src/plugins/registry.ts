@@ -1,7 +1,10 @@
 import type { ReactNode, ComponentType } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PuuNode } from "../types";
+import { useAppStore } from "../store/useAppStore";
 
 export interface PluginHooks {
+
   onNodeCreated?: (node: PuuNode) => void;
   onNodeUpdated?: (node: PuuNode) => void;
   onNodeDeleted?: (nodeId: string) => void;
@@ -83,6 +86,7 @@ class PluginRegistryClass {
         console.error(`[PluginRegistry] ${plugin.id}.init failed`, err);
       }
     }
+    window.dispatchEvent(new CustomEvent('plugin-actions-updated'));
   }
 
   async unregister(pluginId: string) {
@@ -95,6 +99,7 @@ class PluginRegistryClass {
       }
     }
     this.plugins.delete(pluginId);
+    window.dispatchEvent(new CustomEvent('plugin-actions-updated'));
   }
 
   getPlugins() {
@@ -143,3 +148,21 @@ class PluginRegistryClass {
 }
 
 export const PluginRegistry = new PluginRegistryClass();
+
+export function usePluginCardActions(nodeId: string) {
+  const storeDisabledPlugins = useAppStore(state => state.disabledPlugins);
+  const [stamp, setStamp] = useState(0);
+
+  useEffect(() => {
+    const update = () => setStamp(s => s + 1);
+    window.addEventListener('plugin-actions-updated', update);
+    return () => window.removeEventListener('plugin-actions-updated', update);
+  }, []);
+
+  return useMemo(() => {
+    void stamp;
+    const disabledPlugins = storeDisabledPlugins || [];
+    void disabledPlugins;
+    return PluginRegistry.getCardActions(nodeId);
+  }, [nodeId, storeDisabledPlugins, stamp]);
+}

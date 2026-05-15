@@ -15,7 +15,7 @@ import {
 } from "../utils/proseClasses";
 import { cn } from "../utils/cn";
 import type { BranchColor } from "../utils/branchColors";
-import { PluginRegistry } from "../plugins/registry";
+import { usePluginCardActions } from "../plugins/registry";
 
 type DropZone = "none" | "top" | "bottom" | "right";
 
@@ -122,6 +122,7 @@ export const Card = React.memo(
     );
 
     const toggleCheckbox = useToggleCheckbox();
+    const pluginActions = usePluginCardActions(node.id);
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -311,7 +312,7 @@ export const Card = React.memo(
              a large permanent blank header. */}
           {isEditing && (
             <div className="absolute right-0 top-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
-              {PluginRegistry.getCardActions(node.id).map(action => (
+              {pluginActions.map(action => (
                 <button
                   key={action.id}
                   onMouseDown={(e) => {

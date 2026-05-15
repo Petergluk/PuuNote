@@ -19,7 +19,6 @@ export interface PromptConfig {
     iconName: keyof typeof ICONS;
     template: string;
     parseAsMultiple: boolean;
-    multipleBlockFormat?: 'json' | 'markdown-headings';
     isActive?: boolean;
 }
 
@@ -40,9 +39,8 @@ function loadPrompts() {
                     id: 'default-1',
                     label: 'Сгенерировать шутки',
                     iconName: 'Sparkles',
-                    template: 'Напиши 5 вариантов шуток на основе этой ситуации: {{text}}. \n\nВерни в формате JSON массива строк.',
+                    template: 'Напиши 5 вариантов шуток на основе этой ситуации: {{text}}.',
                     parseAsMultiple: true,
-                    multipleBlockFormat: 'json',
                     isActive: true
                 }
             ];
@@ -101,7 +99,7 @@ async function runPrompt(prompt: PromptConfig, nodeId: string) {
         pluginApi.updateJobProgress(jobId, 20, "Отправка запроса...");
         
         let finalText = prompt.template.replace(/\{\{text\}\}/g, node.content);
-        if (prompt.parseAsMultiple && prompt.multipleBlockFormat === 'json') {
+        if (prompt.parseAsMultiple) {
              finalText += "\n\nCRITICAL DIRECTIVE: You MUST return a strictly valid JSON array of strings ONLY. No other markdown, no explanations. Example: [\"Item 1\", \"Item 2\"]";
         }
         
@@ -116,19 +114,15 @@ async function runPrompt(prompt: PromptConfig, nodeId: string) {
         
         if (prompt.parseAsMultiple) {
             let parsed: string[] = [];
-            if (prompt.multipleBlockFormat === 'json') {
-                try {
-                    const match = textOutput.match(/\[.*\]/s);
-                    const jsonStr = match ? match[0] : textOutput;
-                    parsed = JSON.parse(jsonStr);
-                    if (!Array.isArray(parsed)) throw new Error("JSON is not an array");
-                    parsed = parsed.map(p => typeof p === 'string' ? p : JSON.stringify(p, null, 2));
-                } catch {
-                    parsed = [textOutput];
-                    pluginApi.toast("Не удалось распарсить JSON, добавлен как единый текст", "warning");
-                }
-            } else {
-                 parsed = textOutput.split(/\n\n+/).filter((x:string) => x.trim().length > 0);
+            try {
+                const match = textOutput.match(/\[.*\]/s);
+                const jsonStr = match ? match[0] : textOutput;
+                parsed = JSON.parse(jsonStr);
+                if (!Array.isArray(parsed)) throw new Error("JSON is not an array");
+                parsed = parsed.map(p => typeof p === 'string' ? p : JSON.stringify(p, null, 2));
+            } catch {
+                parsed = textOutput.split(/\n\n+/).filter((x:string) => x.trim().length > 0);
+                pluginApi.toast("Не удалось распарсить JSON, текст разбит по абзацам", "warning");
             }
             
             let currentNodes = store.nodes;

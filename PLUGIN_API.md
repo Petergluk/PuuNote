@@ -50,6 +50,7 @@ export const myPluginManifest = {
 
 ```tsx
 import type { PluginDefinition, PluginAPI } from "../../registry";
+// Best Practice: Use lucide-react for all your plugin icons to match the app's standard icon library.
 import { Sparkles, Replace } from "lucide-react";
 import { myPluginManifest } from "./manifest";
 
@@ -152,28 +153,34 @@ export interface PluginAPI {
 }
 ```
 
-### 3.1 Manipulating the Tree (via Zustand Store)
+### 3.1 Manipulating the Tree (via Zustand Store & Document API)
 
 You can get the current cards (nodes) via `api.getState().nodes`. 
-You can modify the tree using functions in the store:
+You can modify the tree using basic store functions (which run basic insertions) or use domain logic from `documentApi`.
 
 ```typescript
+import { documentApi } from "../../domain/documentTree";
+
 const store = api.getState();
 
-// Add a new sibling or child
-store.addChild(parentNodeId);
-store.addSibling(siblingNodeId);
+// Method 1: Using store helpers for simple actions
+store.addChild(parentNodeId, "Optional initial content");
+store.addSibling(siblingNodeId, "Optional initial content");
 
-// You can manually push state updates doing:
-store.setNodes((prevNodes) => {
-  return [...prevNodes, {
-    id: "new-id",
-    parentId: "parent-id",
-    content: "My new content text",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  }];
+// Method 2: Handling multiple generated cards cleanly via documentApi
+// E.g., splitting AI output into multiple cards
+let currentNodes = store.nodes;
+const results = ["Card 1", "Card 2"];
+
+results.forEach(text => {
+    // Generate new node object structure below parent
+    const res = documentApi.addChild(currentNodes, parentNodeId);
+    // Safely update its content
+    currentNodes = documentApi.updateContent(res.nextNodes, res.newId, text);
 });
+
+// Commit the changes to the store in one go, mapping to a single history/undo step
+store.setNodes(currentNodes, { historyGroupKey: "my-plugin-job-" + Date.now() });
 ```
 
 ### 3.2 Using the Job Panel
@@ -203,9 +210,12 @@ To ensure the best UX across Local, Cloud hosting (like Render), and Google Stud
 2. Environment Key fallback: `import.meta.env.VITE_GLOBAL_GEMINI_API_KEY` or `import.meta.env.VITE_GEMINI_API_KEY`
 3. Optional Stubbing (e.g., if rendering in AI Studio without a key, you may fallback to simulated processing to show the UI working)
 
-You can advise users to configure these keys in the **Plugins Panel**.
+### 3.4 Import and Export Customization
 
-Example snippet for plugins accessing Gemini:
+Currently, the Plugin API does not natively inject custom formats into the core "File > Import" or "File > Export" dropdowns. However, if your plugin offers custom import or extended export formats (e.g., PDF export, CSV import), you can provide this functionality by:
+1. Registering an entry in the `commands` array (which appears in the Command Palette).
+2. Tying that command to a custom UI modal or native browser file picker.
+3. Once the file is processed by your plugin, using `api.getState().setNodes()` to update the document tree structure.
 
 ```typescript
 const localKeyString = localStorage.getItem('GLOBAL_GEMINI_API_KEY');

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PromptConfig } from './index';
+import { PromptConfig, savePrompts } from './index';
 import { Plus, Trash2, Save, Sparkles, Wand2, Zap, BrainCircuit, Lightbulb, MessageSquare, Smile, PenTool, Hash, Star, Edit3, Type, List, FileText, CheckSquare, Search, Flame, Cpu, Code, Target, Rocket, Scissors, Compass, Ghost, Gem, MessageCircle, Mic, Image as ImageIcon, Briefcase, Glasses, Coffee } from 'lucide-react';
 
 const ICONS = {
@@ -83,8 +83,7 @@ export function SettingsComponent() {
     }
 
     const handleSave = () => {
-        localStorage.setItem('ai_prompt_configs', JSON.stringify(prompts));
-        window.dispatchEvent(new CustomEvent('plugin-actions-updated'));
+        savePrompts(prompts);
         alert('Настройки сохранены');
     }
 
@@ -136,13 +135,6 @@ export function SettingsComponent() {
                                 <input type="checkbox" checked={prompt.parseAsMultiple} onChange={e => handleUpdate(prompt.id, { parseAsMultiple: e.target.checked })} className="rounded text-app-accent focus:ring-app-accent" />
                                 Разбивать ответ на дочерние карточки
                             </label>
-                            
-                            {prompt.parseAsMultiple && (
-                                <select value={prompt.multipleBlockFormat || 'json'} onChange={e => handleUpdate(prompt.id, { multipleBlockFormat: e.target.value as 'json' | 'markdown-headings' })} className="px-2 py-1 text-sm rounded border border-app-border bg-app-card text-app-text-primary focus:outline-app-accent">
-                                    <option value="json">Строгий JSON массив</option>
-                                    <option value="markdown-headings">Текст (разделение пустыми строками)</option>
-                                </select>
-                            )}
                         </div>
                     </div>
                 ))}
