@@ -1,9 +1,9 @@
 import type { PluginDefinition, PluginAPI, CardActionHook } from "../registry";
 import { documentApi } from "../../domain/documentTree";
 import { manifest } from "./manifest";
-import * as LucideIcons from "lucide-react";
+import { icons } from "lucide-react";
 import { SettingsComponent } from "./SettingsModal";
-import { GoogleGenAI } from '@google/genai';
+import { generateContentFallback } from '../../utils/aiModels';
 
 export interface PromptConfig {
     id: string;
@@ -57,7 +57,8 @@ function updateCardActions() {
     cardActionsList.length = 0; // clear
     currentPrompts.forEach(p => {
         if (p.isActive === false) return; // Skip inactive prompts
-        const IconComponent = (LucideIcons as any)[p.iconName] || LucideIcons.Sparkles;
+        const iconName = (p.iconName || '').trim();
+        const IconComponent = (icons as any)[iconName] || icons.Sparkles;
         cardActionsList.push({
             id: `prompt-${p.id}`,
             label: p.label,
@@ -74,17 +75,6 @@ async function runPrompt(prompt: PromptConfig, nodeId: string) {
     const node = store.nodes.find(n => n.id === nodeId);
     if (!node) return;
 
-    // Use Vite env variables or process.env depending on setup
-    const viteEnv = (import.meta as unknown as { env?: Record<string, string> }).env;
-    const apiKey = viteEnv?.VITE_GLOBAL_GEMINI_API_KEY || viteEnv?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || localStorage.getItem('GLOBAL_GEMINI_API_KEY');
-    
-    if (!apiKey) {
-        pluginApi.toast("API-ключ Gemini не найден. Добавьте его в .env файл.", "error");
-        return;
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    
     const jobId = pluginApi.addJob(`AI: ${prompt.label}`);
     
     try {
@@ -95,14 +85,10 @@ async function runPrompt(prompt: PromptConfig, nodeId: string) {
              finalText += "\n\nCRITICAL DIRECTIVE: You MUST return a strictly valid JSON array of strings ONLY. No other markdown, no explanations. Example: [\"Item 1\", \"Item 2\"]";
         }
         
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: finalText,
-        });
-
+        const response = await generateContentFallback(finalText);
         const textOutput = response.text || '';
         
-        pluginApi.updateJobProgress(jobId, 80, "Обработка ответа...");
+        pluginApi.updateJobProgress(jobId, 80, "Обработка отклика...");
         
         if (prompt.parseAsMultiple) {
             let parsed: string[] = [];

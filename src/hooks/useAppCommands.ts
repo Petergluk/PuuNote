@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { Palette, FileText, Search, Plus, Trash2, Combine, Sparkles } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useFileSystemActions } from "./useFileSystemActions";
-import { runMockExpandSelectedCard } from "../domain/aiOperations";
 import { getMergeSelectionState } from "../utils/mergeSelection";
 import { PluginRegistry } from "../plugins/registry";
 import { toast } from "sonner";
@@ -44,22 +43,6 @@ export function useAppCommands(): CommandItem[] {
       label: t("New Document"),
       icon: Plus,
       run: () => createNewFile(),
-    },
-    {
-      id: "ai-draft-child-cards",
-      label: t("AI Draft Child Cards"),
-      icon: Sparkles,
-      run: () => {
-        const store = useAppStore.getState();
-        runMockExpandSelectedCard({
-          targetNodeId: store.activeId,
-          getNodes: () => useAppStore.getState().nodes,
-          setNodes: store.setNodes,
-          setActiveIds: (activeId, selectedIds) => {
-            useAppStore.setState({ activeId, selectedIds });
-          },
-        });
-      },
     },
     {
       id: "merge-selected-cards",

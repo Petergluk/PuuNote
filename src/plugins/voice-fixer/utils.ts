@@ -3,7 +3,7 @@ import type { PluginAPI } from '../registry';
 
 import type { PuuNode } from '../../../src/types';
 
-const DEFAULT_FALLBACK_CHAIN = ['gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+import { getGlobalApiKeys, getGlobalModels } from '../../utils/aiModels';
 
 export const processAudio = async (
   blob: Blob, 
@@ -30,13 +30,7 @@ export const processAudio = async (
       // INTENTIONAL DECISION: Browser local keys (personal) prioritize over public keys from env.
       // We explicitly allow fallback to public keys. The user has several public MVP accounts 
       // where the leakage risks are acceptable. This is by design, not a vulnerability.
-      const localKeyString = localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY');
-      const envKeyString = (env.VITE_GLOBAL_GEMINI_API_KEY as string) || (env.VITE_GEMINI_PLUGIN_API_KEY as string) || (env.VITE_GEMINI_API_KEY as string);
-
-      const apiKeys = [
-        ...(localKeyString ? localKeyString.split(',') : []),
-        ...(envKeyString ? envKeyString.split(',') : [])
-      ].map(k => k.trim()).filter(Boolean);
+      const apiKeys = getGlobalApiKeys();
 
       if (apiKeys.length === 0 && (isAIStudioPreview || env.DEV)) {
         // Use a stub if no API key is set and we're in AI Studio or local dev environment
@@ -75,15 +69,8 @@ export const processAudio = async (
         return;
       }
 
-      const preferredModel = localStorage.getItem('VOICE_FIXER_MODEL') || 'gemini-3-flash-preview';
+      const fallbackChain = getGlobalModels();
       const promptToUse = localStorage.getItem('VOICE_FIXER_PROMPT') || DEFAULT_PROMPT;
-      const customFallback = localStorage.getItem('VOICE_FIXER_FALLBACK_CHAIN');
-
-      const fallbackChain = [preferredModel];
-      const parsedFallback = customFallback ? JSON.parse(customFallback) : DEFAULT_FALLBACK_CHAIN;
-      for (const m of parsedFallback) {
-         if (!fallbackChain.includes(m)) fallbackChain.push(m);
-      }
 
       let responseData: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
       let lastError: Error | null = null;

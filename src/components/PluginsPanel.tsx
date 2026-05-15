@@ -1,4 +1,4 @@
-import { X, Blocks, Settings, Keyboard, Plug } from "lucide-react";
+import { X, Blocks, Settings, Keyboard, Plug, ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -6,6 +6,7 @@ import { CUSTOM_PLUGINS } from "../plugins/index";
 import { useState } from "react";
 import { DEFAULT_PROMPT } from "../plugins/voice-fixer/prompts";
 import { useAppCommands } from "../hooks/useAppCommands";
+import { DEFAULT_MODELS } from "../utils/aiModels";
 
 function HotkeysList() {
   const [hotkeys, setHotkeys] = useState<Record<string, string>>(() => {
@@ -77,7 +78,7 @@ function HotkeysList() {
             onKeyDown={(e) => handleKeyDown(e, cmd.id)}
             data-hotkey-input="true"
             readOnly
-            className="w-48 rounded bg-app-panel border border-app-border px-2 py-1 text-sm text-center font-mono focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent"
+            className="w-48 rounded bg-app-input-bg border border-app-border px-2 py-1 text-sm text-center font-mono focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent"
           />
         </div>
       ))}
@@ -119,7 +120,7 @@ export function PluginsPanel() {
         aria-modal="true"
         aria-labelledby="plugins-panel-title"
         tabIndex={-1}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex max-h-[85vh] w-[min(900px,calc(100vw-2rem))] flex-col rounded-xl border border-app-border bg-app-panel shadow-2xl overflow-hidden"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex max-h-[85vh] w-[min(1100px,calc(100vw-2rem))] flex-col rounded-xl border border-app-border bg-app-panel shadow-2xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between border-b border-app-border px-6 py-4 bg-app-card">
@@ -142,39 +143,39 @@ export function PluginsPanel() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar Navigation */}
-          <div className="w-56 shrink-0 border-r border-app-border bg-app-panel overflow-y-auto p-4 flex flex-col gap-2">
+          <div className="w-16 shrink-0 border-r border-app-border bg-app-panel overflow-y-auto px-2 py-4 flex flex-col gap-3 items-center">
             <button
               onClick={() => setActiveTab("plugins")}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                 activeTab === "plugins"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
               }`}
+              title="Плагины"
             >
-              <Plug size={18} />
-              Плагины
+              <Plug size={20} />
             </button>
             <button
               onClick={() => setActiveTab("ai_settings")}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                 activeTab === "ai_settings"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
               }`}
+              title="Настройки"
             >
-              <Settings size={18} />
-              Настройки
+              <Settings size={20} />
             </button>
             <button
               onClick={() => setActiveTab("hotkeys")}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                 activeTab === "hotkeys"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
               }`}
+              title="Горячие клавиши"
             >
-              <Keyboard size={18} />
-              Горячие клавиши
+              <Keyboard size={20} />
             </button>
           </div>
 
@@ -190,116 +191,139 @@ export function PluginsPanel() {
                 </div>
                 
                 <div className="flex flex-col gap-4">
-                  <div className="rounded-xl border border-app-border bg-app-panel p-4 shadow-sm">
-                    <label className="block text-sm font-medium text-app-text-primary mb-1">
-                      Gemini API Key
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full max-w-md rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow"
-                      placeholder={((typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as unknown as { env: Record<string, string> }).env : {}).VITE_GLOBAL_GEMINI_API_KEY) ? "Установлен из .env" : "AIzaSy..."}
-                      defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY') || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.trim();
-                        if (val) {
-                          localStorage.setItem('GLOBAL_GEMINI_API_KEY', val);
-                        } else {
-                          localStorage.removeItem('GLOBAL_GEMINI_API_KEY');
-                        }
-                      }}
-                    />
-                    <p className="text-sm text-app-text-muted mt-2">
-                       Оставьте пустым для использования ключа окружения (VITE_GLOBAL_GEMINI_API_KEY), локальной заглушки, или введите ваш ключ напрямую для работы всех ИИ-плагинов.
-                    </p>
+                  <div className="rounded-xl border border-app-border bg-app-panel p-4 shadow-sm flex flex-col gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-app-text-primary mb-1">
+                        Gemini API Key (или несколько ключей)
+                      </label>
+                      <textarea
+                        className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                        placeholder={((typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as unknown as { env: Record<string, string> }).env : {}).VITE_GLOBAL_GEMINI_API_KEY) ? "Установлен из .env" : "AIzaSy...\nAIzaSy..."}
+                        defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY') || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val) {
+                            localStorage.setItem('GLOBAL_GEMINI_API_KEY', val);
+                          } else {
+                            localStorage.removeItem('GLOBAL_GEMINI_API_KEY');
+                          }
+                        }}
+                      />
+                      <p className="text-sm text-app-text-muted mt-2">
+                        Оставьте пустым для использования ключа окружения, или введите ваш ключ (кликните Enter для ввода нескольких ключей, они будут использоваться по очереди при ошибках).
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-app-border">
+                      <label className="block text-sm font-medium text-app-text-primary mb-1">
+                        Предпочитаемые модели (в порядке приоритета)
+                      </label>
+                      <textarea
+                        className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                        placeholder="gemini-2.5-pro, gemini-2.5-flash, gemini-3-flash-preview"
+                        defaultValue={localStorage.getItem('GLOBAL_GEMINI_MODELS') || DEFAULT_MODELS}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val) {
+                            localStorage.setItem('GLOBAL_GEMINI_MODELS', val);
+                          } else {
+                            localStorage.removeItem('GLOBAL_GEMINI_MODELS');
+                          }
+                        }}
+                      />
+                      <p className="text-sm text-app-text-muted mt-2">
+                        Укажите список моделей через запятую, например: <code className="bg-app-card px-1 rounded">gemini-2.5-pro, gemini-2.5-flash</code>. Если первая модель недоступна (лимиты или перегрузка), плагины автоматически перейдут к следующей.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {activeTab === "plugins" && (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-app-text-primary mb-1">Ваши плагины</h3>
-                  <p className="text-sm text-app-text-muted">
-                    Управляйте включенными плагинами и их специфичными настройками.
-                  </p>
-                </div>
+              <div className="flex flex-col gap-6 h-full">
+                {!selectedPluginId ? (
+                  <>
+                    <div className="shrink-0">
+                      <h3 className="text-lg font-medium text-app-text-primary mb-1">Ваши плагины</h3>
+                      <p className="text-sm text-app-text-muted">
+                        Управляйте включенными плагинами и их специфичными настройками.
+                      </p>
+                    </div>
 
-                <div className="flex flex-col gap-4">
-                  {CUSTOM_PLUGINS.map((plugin) => (
-                    <div key={plugin.id} className="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-4 shadow-sm transition-shadow hover:shadow-md">
-                      <div className="flex items-start justify-between">
+                    <div className="flex flex-col gap-4 overflow-y-auto">
+                      {CUSTOM_PLUGINS.map((plugin) => (
+                        <div key={plugin.id} className="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-4 shadow-sm transition-shadow hover:shadow-md">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-3">
+                                  <span className="font-semibold text-app-text-primary text-base">{plugin.name}</span>
+                                  <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent">v{plugin.version}</span>
+                              </div>
+                              <p className="text-sm text-app-text-secondary mt-1 max-w-xl">{plugin.description}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => togglePlugin(plugin.id)}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-panel ${
+                                  !disabledPlugins.includes(plugin.id) ? "bg-app-accent" : "bg-app-border"
+                                }`}
+                                role="switch"
+                                aria-checked={!disabledPlugins.includes(plugin.id)}
+                              >
+                                <span className="sr-only">Включить плагин</span>
+                                <span
+                                  className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                                    !disabledPlugins.includes(plugin.id) ? "translate-x-4" : "translate-x-0"
+                                  }`}
+                                />
+                              </button>
+                              <button 
+                                  onClick={() => setSelectedPluginId(plugin.id)}
+                                  className={`rounded-lg p-2 transition-colors text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary`}
+                                  title="Настройки плагина"
+                              >
+                                  <Settings size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (() => {
+                  const plugin = CUSTOM_PLUGINS.find(p => p.id === selectedPluginId);
+                  if (!plugin) return null;
+                  return (
+                    <div className="flex flex-col gap-6 h-full animate-in fade-in slide-in-from-right-4">
+                      <div className="flex items-center gap-4 shrink-0 pb-4 border-b border-app-border">
+                        <button 
+                          onClick={() => setSelectedPluginId(null)}
+                          className="p-2 rounded-lg hover:bg-app-card transition-colors text-app-text-secondary hover:text-app-text-primary"
+                          title="Назад к списку плагинов"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
                         <div>
                           <div className="flex items-center gap-3">
-                              <span className="font-semibold text-app-text-primary text-base">{plugin.name}</span>
-                              <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent">v{plugin.version}</span>
+                            <h3 className="text-xl font-semibold text-app-text-primary">{plugin.name}</h3>
+                            <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent">v{plugin.version}</span>
                           </div>
-                          <p className="text-sm text-app-text-secondary mt-1 max-w-xl">{plugin.description}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <button
-                            onClick={() => togglePlugin(plugin.id)}
-                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-panel ${
-                              !disabledPlugins.includes(plugin.id) ? "bg-app-accent" : "bg-app-border"
-                            }`}
-                            role="switch"
-                            aria-checked={!disabledPlugins.includes(plugin.id)}
-                          >
-                            <span className="sr-only">Включить плагин</span>
-                            <span
-                              className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${
-                                !disabledPlugins.includes(plugin.id) ? "translate-x-4" : "translate-x-0"
-                              }`}
-                            />
-                          </button>
-                          <button 
-                              onClick={() => setSelectedPluginId(selectedPluginId === plugin.id ? null : plugin.id)}
-                              className={`rounded-lg p-2 transition-colors ${
-                                selectedPluginId === plugin.id 
-                                  ? "bg-app-accent text-white" 
-                                  : "text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
-                              }`}
-                              title="Настройки плагина"
-                          >
-                              <Settings size={18} />
-                          </button>
+                          <p className="text-sm text-app-text-secondary mt-1">{plugin.description}</p>
                         </div>
                       </div>
-
-                      {selectedPluginId === plugin.id && (
-                        <div className="mt-4 rounded-lg bg-app-card p-4 border border-app-border animate-in fade-in slide-in-from-top-2 flex flex-col gap-4">
+                      
+                      <div className="flex-1 overflow-y-auto pr-2 pb-6">
                           {plugin.settingsComponent ? (
                             <plugin.settingsComponent />
                           ) : plugin.id === 'voice-fixer-plugin' ? (
-                            <>
-                              <div>
-                                <label className="block text-sm font-medium text-app-text-primary mb-1">
-                                  Модель Gemini
-                                </label>
-                                <select
-                                  className="w-full max-w-md rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow border-r-8 border-transparent"
-                                  defaultValue={localStorage.getItem('VOICE_FIXER_MODEL') || 'gemini-3-flash-preview'}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val) {
-                                      localStorage.setItem('VOICE_FIXER_MODEL', val);
-                                    } else {
-                                      localStorage.removeItem('VOICE_FIXER_MODEL');
-                                    }
-                                  }}
-                                >
-                                  <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (Рекомендуется)</option>
-                                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                  <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                                </select>
-                              </div>
-
+                            <div className="flex flex-col gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-app-text-primary mb-1">
                                   Системный Промпт (Инструкции)
                                 </label>
                                 <textarea
-                                  className="w-full rounded-md border border-app-border bg-app-panel px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent transition-shadow min-h-[160px] resize-y font-mono"
+                                  className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow min-h-[160px] resize-y font-mono"
                                   placeholder={DEFAULT_PROMPT}
                                   defaultValue={localStorage.getItem('VOICE_FIXER_PROMPT') || DEFAULT_PROMPT}
                                   onChange={(e) => {
@@ -311,25 +335,24 @@ export function PluginsPanel() {
                                     }
                                   }}
                                 />
-                                <p className="text-sm text-app-text-muted mt-1">Оставьте пустым для использования промпта по умолчанию.</p>
+                                <p className="text-sm text-app-text-muted mt-1">Оставьте пустым для использования промпта по умолчанию. Плагин использует глобальные настройки ключей и моделей ИИ.</p>
                               </div>
-                            </>
+                            </div>
                           ) : (
                             <div className="text-sm text-app-text-muted">У этого плагина нет настроек.</div>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {CUSTOM_PLUGINS.length === 0 && (
-                      <div className="text-center p-8 border-2 border-dashed border-app-border rounded-xl">
-                        <Plug className="mx-auto h-8 w-8 text-app-text-muted mb-2" />
-                        <h3 className="text-sm font-medium text-app-text-primary">Нет доступных плагинов</h3>
-                        <p className="text-sm text-app-text-muted mt-1">Здесь появятся установленные плагины.</p>
                       </div>
-                  )}
-                </div>
+                    </div>
+                  );
+                })()}
+                
+                {!selectedPluginId && CUSTOM_PLUGINS.length === 0 && (
+                  <div className="text-center p-8 border-2 border-dashed border-app-border rounded-xl">
+                    <Plug className="mx-auto h-8 w-8 text-app-text-muted mb-2" />
+                    <h3 className="text-sm font-medium text-app-text-primary">Нет доступных плагинов</h3>
+                    <p className="text-sm text-app-text-muted mt-1">Здесь появятся установленные плагины.</p>
+                  </div>
+                )}
               </div>
             )}
 
