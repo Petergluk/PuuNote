@@ -37,14 +37,16 @@ import { useGlobalHotkeys } from "./hooks/useGlobalHotkeys";
 import { useAppStore } from "./store/useAppStore";
 import { useFileImport } from "./hooks/useFileImport";
 import { BoardView } from "./components/BoardView";
+import { useAppCommands } from "./hooks/useAppCommands";
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const appCommands = useAppCommands();
 
   /* Initialize Managers */
   useFileSystemInit();
   usePreferencesInit();
-  useGlobalHotkeys();
+  useGlobalHotkeys(appCommands);
   const { handleKeyDown } = useAppHotkeys(containerRef);
   const uiMode = useAppStore((s) => s.uiMode);
   const timelineOpen = useAppStore((s) => s.timelineOpen);

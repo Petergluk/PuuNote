@@ -1,22 +1,14 @@
 import type { PluginDefinition, PluginAPI, CardActionHook } from "../registry";
 import { documentApi } from "../../domain/documentTree";
 import { manifest } from "./manifest";
-import { Sparkles, Wand2, Zap, BrainCircuit, Lightbulb, MessageSquare, Smile, PenTool, Hash, Star, Edit3, Type, List, FileText, CheckSquare, Search, Flame, Cpu, Code, Target, Rocket, Scissors, Compass, Ghost, Gem, MessageCircle, Mic, Image as ImageIcon, Briefcase, Glasses, Coffee } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { SettingsComponent } from "./SettingsModal";
 import { GoogleGenAI } from '@google/genai';
-
-const ICONS = {
-    Sparkles, Wand2, Zap, BrainCircuit, Lightbulb, MessageSquare, 
-    Smile, PenTool, Hash, Star, Edit3, Type, List, FileText, 
-    CheckSquare, Search, Flame, Cpu, Code, Target, Rocket, 
-    Scissors, Compass, Ghost, Gem, MessageCircle, Mic, ImageIcon, 
-    Briefcase, Glasses, Coffee
-};
 
 export interface PromptConfig {
     id: string;
     label: string;
-    iconName: keyof typeof ICONS;
+    iconName: string;
     template: string;
     parseAsMultiple: boolean;
     isActive?: boolean;
@@ -65,7 +57,7 @@ function updateCardActions() {
     cardActionsList.length = 0; // clear
     currentPrompts.forEach(p => {
         if (p.isActive === false) return; // Skip inactive prompts
-        const IconComponent = ICONS[p.iconName] || Sparkles;
+        const IconComponent = (LucideIcons as any)[p.iconName] || LucideIcons.Sparkles;
         cardActionsList.push({
             id: `prompt-${p.id}`,
             label: p.label,
@@ -125,17 +117,20 @@ async function runPrompt(prompt: PromptConfig, nodeId: string) {
                 pluginApi.toast("Не удалось распарсить JSON, текст разбит по абзацам", "warning");
             }
             
-            let currentNodes = store.nodes;
-            parsed.forEach(content => {
-                const res = documentApi.addChild(currentNodes, nodeId);
-                currentNodes = documentApi.updateContent(res.nextNodes, res.newId, content);
-            });
-            store.setNodes(currentNodes, { historyGroupKey: jobId });
+            store.setNodes((prevNodes) => {
+                let currentNodes = prevNodes;
+                parsed.forEach(content => {
+                    const res = documentApi.addChild(currentNodes, nodeId);
+                    currentNodes = documentApi.updateContent(res.nextNodes, res.newId, content);
+                });
+                return currentNodes;
+            }, { historyGroupKey: jobId });
             
         } else {
-             const res = documentApi.addChild(store.nodes, nodeId);
-             const updatedNodes = documentApi.updateContent(res.nextNodes, res.newId, textOutput);
-             store.setNodes(updatedNodes, { historyGroupKey: jobId });
+            store.setNodes((prevNodes) => {
+                 const res = documentApi.addChild(prevNodes, nodeId);
+                 return documentApi.updateContent(res.nextNodes, res.newId, textOutput);
+            }, { historyGroupKey: jobId });
         }
         
         pluginApi.updateJobProgress(jobId, 100, "Готово");

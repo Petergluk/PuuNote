@@ -1,50 +1,63 @@
 import { useState } from 'react';
 import { PromptConfig, savePrompts } from './index';
-import { Plus, Trash2, Save, Sparkles, Wand2, Zap, BrainCircuit, Lightbulb, MessageSquare, Smile, PenTool, Hash, Star, Edit3, Type, List, FileText, CheckSquare, Search, Flame, Cpu, Code, Target, Rocket, Scissors, Compass, Ghost, Gem, MessageCircle, Mic, Image as ImageIcon, Briefcase, Glasses, Coffee } from 'lucide-react';
+import { Plus, Trash2, Save } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 
-const ICONS = {
-    Sparkles, Wand2, Zap, BrainCircuit, Lightbulb, MessageSquare,
-    Smile, PenTool, Hash, Star, Edit3, Type, List, FileText, 
-    CheckSquare, Search, Flame, Cpu, Code, Target, Rocket, 
-    Scissors, Compass, Ghost, Gem, MessageCircle, Mic, ImageIcon, 
-    Briefcase, Glasses, Coffee
-};
+const ICONS = [
+    'Sparkles', 'Wand2', 'Zap', 'BrainCircuit', 'Lightbulb', 'MessageSquare',
+    'Smile', 'PenTool', 'Hash', 'Star', 'Edit3', 'Type', 'List', 'FileText', 
+    'CheckSquare', 'Search', 'Flame', 'Cpu', 'Code', 'Target', 'Rocket', 
+    'Scissors', 'Compass', 'Ghost', 'Gem', 'MessageCircle', 'Mic', 'ImageIcon', 
+    'Briefcase', 'Glasses', 'Coffee'
+];
 
 function IconPicker({ value, onChange }: { value: string, onChange: (val: string) => void }) {
     const [open, setOpen] = useState(false);
     
     // Find the current icon component
-    const CurrentIcon = ICONS[value as keyof typeof ICONS] || Sparkles;
+    const CurrentIcon = (LucideIcons as any)[value] || LucideIcons.Sparkles;
 
     return (
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
+            <div className="flex-1 relative">
+                <input 
+                    type="text" 
+                    value={value} 
+                    onChange={e => onChange(e.target.value)} 
+                    placeholder="Название иконки (напр. Sparkles)"
+                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-app-border bg-app-card text-app-text-primary focus:outline-app-accent text-sm"
+                />
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-app-text-muted">
+                    <CurrentIcon size={16} />
+                </div>
+            </div>
+            
             <button 
                 onClick={() => setOpen(!open)}
                 type="button"
-                className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-blue-500 focus:ring-2 focus:ring-blue-500/50 flex flex-row items-center justify-between transition-colors"
-                title="Выберите иконку"
+                className="px-3 py-2 rounded-lg border border-app-border bg-app-card text-app-text-primary focus:outline-app-accent hover:bg-app-card-hover transition-colors"
+                title="Библиотека иконок"
             >
-                <div className="flex items-center gap-2">
-                    <CurrentIcon size={16} className="text-blue-500 flex-shrink-0" />
-                    <span className="text-sm truncate pr-2 opacity-80">{value}</span>
-                </div>
-                <div className="text-neutral-400 text-xs text-[10px]">▼</div>
+               ▼
             </button>
             {open && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setOpen(false)}></div>
-                    <div className="absolute top-full right-0 mt-2 w-64 p-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl z-20 grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
-                        {Object.entries(ICONS).map(([key, Icon]) => (
-                            <button 
-                                key={key}
-                                type="button"
-                                onClick={() => { onChange(key); setOpen(false); }}
-                                className={`p-2 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-700 transition ${value === key ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'text-neutral-600 dark:text-neutral-300'}`}
-                                title={key}
-                            >
-                                <Icon size={18} />
-                            </button>
-                        ))}
+                    <div className="absolute top-full right-0 mt-2 w-64 p-2 bg-app-panel border border-app-border shadow-xl rounded-xl z-20 grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+                        {ICONS.map((key) => {
+                            const Icon = (LucideIcons as any)[key] || LucideIcons.HelpCircle;
+                            return (
+                                <button 
+                                    key={key}
+                                    type="button"
+                                    onClick={() => { onChange(key); setOpen(false); }}
+                                    className={`p-2 rounded-lg flex items-center justify-center hover:bg-app-card transition ${value === key ? 'bg-app-accent/20 text-app-accent' : 'text-app-text-secondary'}`}
+                                    title={key}
+                                >
+                                    <Icon size={18} />
+                                </button>
+                            );
+                        })}
                     </div>
                 </>
             )}
@@ -88,8 +101,11 @@ export function SettingsComponent() {
     }
 
     return <div className="flex flex-col gap-4 text-app-text-primary">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start flex-col gap-2">
                 <h3 className="text-lg font-semibold">Настройки промптов</h3>
+                <p className="text-sm text-app-text-muted">
+                    Для иконок используется библиотека <a href="https://lucide.dev/icons/" target="_blank" rel="noreferrer" className="text-app-accent hover:underline">lucide-react</a>. Вы можете скопировать название любой иконки из библиотеки в формате PascalCase.
+                </p>
             </div>
             
             <div className="flex-1 overflow-auto space-y-6">
@@ -116,11 +132,11 @@ export function SettingsComponent() {
                                 <div className="text-xs font-semibold text-app-text-muted mb-1">Название (показать в тултипе)</div>
                                 <input value={prompt.label} onChange={e => handleUpdate(prompt.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-card text-app-text-primary focus:outline-app-accent" />
                             </label>
-                            <div className="w-40 z-10">
+                            <div className="w-64 z-10">
                                 <div className="text-xs font-semibold text-app-text-muted mb-1">Иконка</div>
                                 <IconPicker 
                                     value={prompt.iconName} 
-                                    onChange={(val) => handleUpdate(prompt.id, { iconName: val as keyof typeof ICONS })} 
+                                    onChange={(val) => handleUpdate(prompt.id, { iconName: val })} 
                                 />
                             </div>
                         </div>
@@ -133,7 +149,7 @@ export function SettingsComponent() {
                         <div className="flex items-center gap-4 border-t border-app-border pt-3">
                             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                                 <input type="checkbox" checked={prompt.parseAsMultiple} onChange={e => handleUpdate(prompt.id, { parseAsMultiple: e.target.checked })} className="rounded text-app-accent focus:ring-app-accent" />
-                                Разбивать ответ на дочерние карточки
+                                Разбивать ответ на дочерние карточки (множественный выбор)
                             </label>
                         </div>
                     </div>

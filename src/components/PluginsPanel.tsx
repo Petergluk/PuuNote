@@ -1,18 +1,18 @@
-import { X, Blocks, Settings, Keyboard, Plug, Brain } from "lucide-react";
+import { X, Blocks, Settings, Keyboard, Plug } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { CUSTOM_PLUGINS } from "../plugins/index";
 import { useState } from "react";
 import { DEFAULT_PROMPT } from "../plugins/voice-fixer/prompts";
-import { PluginRegistry } from "../plugins/registry";
+import { useAppCommands } from "../hooks/useAppCommands";
 
 function HotkeysList() {
   const [hotkeys, setHotkeys] = useState<Record<string, string>>(() => {
     return JSON.parse(localStorage.getItem('PUU_COMMAND_HOTKEYS') || '{}');
   });
 
-  const commands = PluginRegistry.getCommands();
+  const commands = useAppCommands();
 
   const handleHotkeyChange = (cmdId: string, newHotkey: string) => {
     const updated = { ...hotkeys, [cmdId]: newHotkey };
@@ -92,7 +92,7 @@ export function PluginsPanel() {
   const setDisabledPlugins = useAppStore((state) => state.setDisabledPlugins);
   const setPluginsOpen = useAppStore((state) => state.setPluginsOpen);
   const [selectedPluginId, setSelectedPluginId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"ai_settings" | "plugins" | "hotkeys">("ai_settings");
+  const [activeTab, setActiveTab] = useState<"ai_settings" | "plugins" | "hotkeys">("plugins");
 
   const togglePlugin = (pluginId: string) => {
     if (disabledPlugins.includes(pluginId)) {
@@ -144,17 +144,6 @@ export function PluginsPanel() {
           {/* Sidebar Navigation */}
           <div className="w-56 shrink-0 border-r border-app-border bg-app-panel overflow-y-auto p-4 flex flex-col gap-2">
             <button
-              onClick={() => setActiveTab("ai_settings")}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === "ai_settings"
-                  ? "bg-app-accent/10 text-app-accent"
-                  : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
-              }`}
-            >
-              <Brain size={18} />
-              ИИ Настройки
-            </button>
-            <button
               onClick={() => setActiveTab("plugins")}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 activeTab === "plugins"
@@ -163,7 +152,18 @@ export function PluginsPanel() {
               }`}
             >
               <Plug size={18} />
-              Установленные плагины
+              Плагины
+            </button>
+            <button
+              onClick={() => setActiveTab("ai_settings")}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                activeTab === "ai_settings"
+                  ? "bg-app-accent/10 text-app-accent"
+                  : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
+              }`}
+            >
+              <Settings size={18} />
+              Настройки
             </button>
             <button
               onClick={() => setActiveTab("hotkeys")}

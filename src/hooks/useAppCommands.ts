@@ -1,0 +1,109 @@
+import { useTranslation } from "react-i18next";
+import { Palette, FileText, Search, Plus, Trash2, Combine, Sparkles } from "lucide-react";
+import { useAppStore } from "../store/useAppStore";
+import { useFileSystemActions } from "./useFileSystemActions";
+import { runMockExpandSelectedCard } from "../domain/aiOperations";
+import { getMergeSelectionState } from "../utils/mergeSelection";
+import { PluginRegistry } from "../plugins/registry";
+import { toast } from "sonner";
+import type { ComponentType } from "react";
+
+export interface CommandItem {
+  id: string;
+  label: string;
+  icon: ComponentType<{ size?: number; className?: string }>;
+  run: () => void | Promise<void>;
+  destructive?: boolean;
+}
+
+export function useAppCommands(): CommandItem[] {
+  const { t } = useTranslation();
+  const { createNewFile, deleteFile } = useFileSystemActions();
+
+  return [
+    {
+      id: "toggle-theme",
+      label: t("Toggle Theme"),
+      icon: Palette,
+      run: () => useAppStore.getState().toggleTheme(),
+    },
+    {
+      id: "toggle-expand",
+      label: t("Toggle Expand"),
+      icon: FileText,
+      run: () => useAppStore.getState().toggleCardsCollapsed(),
+    },
+    {
+      id: "open-timeline",
+      label: t("Open Timeline View"),
+      icon: Search,
+      run: () => useAppStore.getState().setTimelineOpen(true),
+    },
+    {
+      id: "new-document",
+      label: t("New Document"),
+      icon: Plus,
+      run: () => createNewFile(),
+    },
+    {
+      id: "ai-draft-child-cards",
+      label: t("AI Draft Child Cards"),
+      icon: Sparkles,
+      run: () => {
+        const store = useAppStore.getState();
+        runMockExpandSelectedCard({
+          targetNodeId: store.activeId,
+          getNodes: () => useAppStore.getState().nodes,
+          setNodes: store.setNodes,
+          setActiveIds: (activeId, selectedIds) => {
+            useAppStore.setState({ activeId, selectedIds });
+          },
+        });
+      },
+    },
+    {
+      id: "merge-selected-cards",
+      label: t("Merge selected cards"),
+      icon: Combine,
+      run: () => {
+        const store = useAppStore.getState();
+        const mergeSelection = getMergeSelectionState(
+          store.nodes,
+          store.activeId,
+          store.selectedIds,
+        );
+
+        if (!mergeSelection.ok || !mergeSelection.masterId) {
+          toast.warning(mergeSelection.reason || "Selected cards cannot be merged.");
+          return;
+        }
+
+        const { masterId, nodeIdsToMerge, orderedIds } = mergeSelection;
+        store.openConfirm(`Merge ${orderedIds.length} selected cards?`, () => {
+          useAppStore.getState().mergeNodes(masterId, nodeIdsToMerge);
+        });
+      },
+    },
+    {
+      id: "delete-file",
+      label: t("Delete file"),
+      icon: Trash2,
+      destructive: true,
+      run: () => {
+        const activeFileId = useAppStore.getState().activeFileId;
+        if (!activeFileId) return;
+        useAppStore.getState().openConfirm(
+          t("Are you sure you want to delete this document?"),
+          () => deleteFile(activeFileId),
+        );
+      },
+    },
+    ...PluginRegistry.getCommands().map(cmd => ({
+      id: cmd.id,
+      label: cmd.label,
+      icon: cmd.icon || Sparkles,
+      run: cmd.run,
+      destructive: cmd.destructive,
+    }))
+  ];
+}

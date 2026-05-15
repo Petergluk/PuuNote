@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { PluginRegistry } from '../plugins/registry';
+import type { CommandItem } from './useAppCommands';
 
-export function useGlobalHotkeys() {
+export function useGlobalHotkeys(commands: CommandItem[]) {
   const hotkeysRef = useRef<Record<string, string>>({});
 
   const reloadHotkeys = () => {
@@ -52,7 +52,6 @@ export function useGlobalHotkeys() {
 
       for (const [cmdId, hotkey] of Object.entries(hotkeysRef.current)) {
         if (hotkey === pressedStr) {
-          const commands = PluginRegistry.getCommands();
           const cmd = commands.find((c) => c.id === cmdId);
           if (cmd) {
             e.preventDefault();
@@ -70,5 +69,5 @@ export function useGlobalHotkeys() {
       window.removeEventListener('puu-hotkeys-changed', handleHotkeysChanged);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [commands]);
 }

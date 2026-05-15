@@ -1,39 +1,20 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import Fuse from "fuse.js";
 import { useAppStore } from "../store/useAppStore";
-import { useFileSystemActions } from "../hooks/useFileSystem";
-import { PluginRegistry } from "../plugins/registry";
+import { useAppCommands } from "../hooks/useAppCommands";
 import {
   Search,
-  Palette,
-  FileText,
-  Plus,
-  Trash2,
-  Sparkles,
-  Combine,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   DocumentService,
   type ActiveSearchDocument,
   type SearchDocumentNode,
 } from "../domain/documentService";
-import { runMockExpandSelectedCard } from "../domain/aiOperations";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useClickOutside } from "../hooks/useClickOutside";
-import { getMergeSelectionState } from "../utils/mergeSelection";
-
-import type { ComponentType } from "react";
-
-interface CommandItem {
-  id: string;
-  label: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
-  run: () => void | Promise<void>;
-  destructive?: boolean;
-}
+import { useFileSystemActions } from "../hooks/useFileSystemActions";
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -50,11 +31,8 @@ export function CommandPalette() {
   const activeFileId = useAppStore((s) => s.activeFileId);
   const nodes = useAppStore((s) => s.nodes);
   const setActiveId = useAppStore((s) => s.setActiveId);
-  const toggleTheme = useAppStore((s) => s.toggleTheme);
-  const toggleCardsCollapsed = useAppStore((s) => s.toggleCardsCollapsed);
-  const setTimelineOpen = useAppStore((s) => s.setTimelineOpen);
-
-  const { createNewFile, deleteFile, switchFile } = useFileSystemActions();
+  const commandItems = useAppCommands();
+  const { switchFile } = useFileSystemActions();
 
   const closePalette = useCallback(() => {
     setIsOpen(false);
@@ -132,7 +110,7 @@ export function CommandPalette() {
           fuse
             .search(query)
             .slice(0, 15)
-            .map((res) => res.item),
+            .map((res: any) => res.item),
         );
         setIsSearching(false);
       }, 300);
@@ -145,98 +123,6 @@ export function CommandPalette() {
       if (timer) clearTimeout(timer);
     };
   }, [query, fuse]);
-
-  const commandItems: CommandItem[] = [
-      {
-        id: "toggle-theme",
-        label: t("Toggle Theme"),
-        icon: Palette,
-        run: toggleTheme,
-      },
-      {
-        id: "toggle-expand",
-        label: t("Toggle Expand"),
-        icon: FileText,
-        run: toggleCardsCollapsed,
-      },
-      {
-        id: "open-timeline",
-        label: t("Open Timeline View"),
-        icon: Search,
-        run: () => setTimelineOpen(true),
-      },
-      {
-        id: "new-document",
-        label: t("New Document"),
-        icon: Plus,
-        run: createNewFile,
-      },
-      {
-        id: "ai-draft-child-cards",
-        label: t("AI Draft Child Cards"),
-        icon: Sparkles,
-        run: () => {
-          const store = useAppStore.getState();
-          runMockExpandSelectedCard({
-            targetNodeId: store.activeId,
-            getNodes: () => useAppStore.getState().nodes,
-            setNodes: store.setNodes,
-            setActiveIds: (activeId, selectedIds) => {
-              useAppStore.setState({ activeId, selectedIds });
-            },
-          });
-        },
-      },
-      {
-        id: "merge-selected-cards",
-        label: t("Merge selected cards"),
-        icon: Combine,
-        run: () => {
-          const store = useAppStore.getState();
-          const mergeSelection = getMergeSelectionState(
-            store.nodes,
-            store.activeId,
-            store.selectedIds,
-          );
-
-          if (!mergeSelection.ok || !mergeSelection.masterId) {
-            toast.warning(
-              mergeSelection.reason || "Selected cards cannot be merged.",
-            );
-            return;
-          }
-
-          const { masterId, nodeIdsToMerge, orderedIds } = mergeSelection;
-          store.openConfirm(`Merge ${orderedIds.length} selected cards?`, () => {
-            useAppStore.getState().mergeNodes(masterId, nodeIdsToMerge);
-          });
-        },
-      },
-      {
-        id: "delete-file",
-        label: t("Delete file"),
-        icon: Trash2,
-        destructive: true,
-        run: () => {
-          if (!activeFileId) return;
-          useAppStore
-            .getState()
-            .openConfirm(
-              t("Are you sure you want to delete this document?"),
-              () => {
-                deleteFile(activeFileId);
-              },
-            );
-        },
-      },
-      ...PluginRegistry.getCommands().map(cmd => ({
-        id: cmd.id,
-        label: cmd.label,
-        icon: cmd.icon || Sparkles,
-        run: cmd.run,
-        destructive: cmd.destructive,
-      }))
-    ];
 
   const activeListLength = query.trim()
     ? searchResults.length
