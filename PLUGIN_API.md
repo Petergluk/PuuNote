@@ -58,8 +58,20 @@ import { myPluginManifest } from "./manifest";
 let pluginApi: PluginAPI | null = null;
 
 // Optional: A React component to render in the user's Plugin Settings tab
+// UI Guideline: Use standard `bg-app-input-bg` with `focus:ring-1 focus:ring-inset focus:ring-app-accent` for inputs!
 function MyPluginSettings() {
-  return <div className="p-4 text-white">My settings UI here</div>;
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-app-text-primary">API Key</label>
+        <input 
+          type="text" 
+          className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent" 
+          placeholder="Enter key..." 
+        />
+      </div>
+    </div>
+  );
 }
 
 // Optional: A React component to render in the left Sidebar
@@ -223,6 +235,13 @@ To ensure the best UX across Local, Cloud hosting (like Render), and Google Stud
 1. Local Storage user-provided key: `localStorage.getItem('GLOBAL_GEMINI_API_KEY')`
 2. Environment Key fallback: `import.meta.env.VITE_GLOBAL_GEMINI_API_KEY` or `import.meta.env.VITE_GEMINI_API_KEY`
 3. Optional Stubbing (e.g., if rendering in AI Studio without a key, you may fallback to simulated processing to show the UI working)
+
+### 3.5 UI Styling Conventions
+
+When rendering `settingsComponent` or other UI elements inside modals, follow these styling conventions to ensure a consistent experience:
+- **Inputs & Textareas**: Always use the `bg-app-input-bg` for background color, along with border colors and focus rings. 
+- **Example Input Classes**: `w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent`.
+- **Never** use `bg-app-bg` or `bg-app-card` for input fields inside modals. `bg-app-input-bg` guarantees the right contrast in Light and Dark themes.
 
 ### 3.4 Import and Export Customization
 
