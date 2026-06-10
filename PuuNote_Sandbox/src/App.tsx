@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { registry, PuuNode } from './plugins/registry';
 import myPlugin from './plugins/my-plugin'; // The user will edit this
-import { Settings as SettingsIcon, TerminalSquare, X, Cpu } from 'lucide-react';
+import { Settings as SettingsIcon, TerminalSquare, X, Cpu, Plug, Blocks } from 'lucide-react';
 
 function NodeView({ node, plugin }: { node: PuuNode; plugin: any }) {
   return (
@@ -67,6 +67,7 @@ function App() {
   const [nodes, setNodes] = useState<PuuNode[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSandboxSettingsOpen, setIsSandboxSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"plugins" | "ai_settings">("plugins");
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -141,23 +142,16 @@ function App() {
               )}
             </div>
           ))}
-          {/* Settings Button */}
-          {plugin?.settingsComponent && (
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-1.5 rounded hover:bg-app-card-hover border border-app-border flex items-center justify-center w-8 h-8 text-app-text-secondary transition-colors"
-              title="Plugin Settings"
-            >
-              <SettingsIcon size={16} />
-            </button>
-          )}
-          {/* Global Sandbox AI Settings */}
+          {/* Unified Settings Button */}
           <button
-            onClick={() => setIsSandboxSettingsOpen(true)}
+            onClick={() => {
+              setActiveTab("plugins");
+              setIsSettingsOpen(true);
+            }}
             className="p-1.5 rounded hover:bg-app-card-hover border border-app-border flex items-center justify-center w-8 h-8 text-app-text-secondary transition-colors"
-            title="Sandbox Global Server/AI Settings"
+            title="Plugins and Settings"
           >
-            <Cpu size={16} />
+            <Blocks size={16} />
           </button>
         </div>
       </header>
@@ -178,68 +172,138 @@ function App() {
         </div>
       </main>
 
-      {/* Settings Modal */}
-      {isSettingsOpen && plugin?.settingsComponent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-app-card border border-app-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-app-border bg-app-panel">
-              <h4 className="font-semibold text-app-text-primary flex items-center gap-2">
-                <SettingsIcon size={18} className="text-app-text-muted"/>
-                Plugin Settings
-              </h4>
-              <button 
+      {/* Unified Settings Modal */}
+      {isSettingsOpen && (
+        <div
+          className="fixed inset-0 z-[95] bg-black/40 backdrop-blur-sm"
+          onClick={() => setIsSettingsOpen(false)}
+        >
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex max-h-[85vh] h-[600px] w-[min(1100px,calc(100vw-2rem))] flex-col rounded-xl border border-app-border bg-app-panel shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="flex shrink-0 items-center justify-between border-b border-app-border px-6 py-4 bg-app-card">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-app-text-primary">
+                <Blocks className="h-5 w-5" />
+                Плагины и Настройки (Sandbox)
+              </h2>
+              <button
                 onClick={() => setIsSettingsOpen(false)}
-                className="p-1.5 hover:bg-app-card-hover rounded-md text-app-text-muted transition-colors"
+                className="rounded p-1.5 text-app-text-muted hover:bg-app-card-hover transition-colors"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              <plugin.settingsComponent />
-            </div>
-          </div>
-        </div>
-      )}
+            </header>
 
-      {/* Sandbox Global Settings Modal */}
-      {isSandboxSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setIsSandboxSettingsOpen(false); }}>
-          <div className="bg-app-card border border-app-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-app-border bg-app-panel">
-              <h4 className="font-semibold text-app-text-primary flex items-center gap-2">
-                <Cpu size={18} className="text-app-text-muted"/>
-                Глобальные настройки ИИ (Sandbox)
-              </h4>
-              <button 
-                onClick={() => setIsSandboxSettingsOpen(false)}
-                className="p-1.5 hover:bg-app-card-hover rounded-md text-app-text-muted transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-6 flex flex-col gap-5">
-              <div>
-                <label className="block text-sm font-medium text-app-text-secondary mb-1">GLOBAL_GEMINI_MODELS (Fallback Chain)</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-app-input-bg border border-app-border rounded px-3 py-2 text-sm text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent outline-none transition-shadow"
-                  defaultValue={localStorage.getItem('GLOBAL_GEMINI_MODELS') || "gemini-2.5-pro, gemini-3-flash-preview, gemini-2.5-flash, gemini-3.1-flash-lite"}
-                  onChange={(e) => localStorage.setItem('GLOBAL_GEMINI_MODELS', e.target.value)}
-                  placeholder="gemini-2.5-pro, gemini-2.5-flash"
-                />
-                <p className="text-xs text-app-text-muted mt-1">
-                  Список моделей через запятую. Эмулирует <code>GLOBAL_GEMINI_MODELS</code> из основного приложения для утилит вроде <code>generateContentFallback</code>.
-                </p>
+            <div className="flex flex-1 overflow-hidden">
+              {/* Sidebar Navigation */}
+              <div className="w-16 shrink-0 border-r border-app-border bg-app-panel px-2 py-4 flex flex-col gap-3 items-center">
+                <button
+                  onClick={() => setActiveTab("plugins")}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                    activeTab === "plugins"
+                      ? "bg-app-accent/10 text-app-accent"
+                      : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
+                  }`}
+                  title="Плагины"
+                >
+                  <Plug size={20} />
+                </button>
+                <button
+                  onClick={() => setActiveTab("ai_settings")}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                    activeTab === "ai_settings"
+                      ? "bg-app-accent/10 text-app-accent"
+                      : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
+                  }`}
+                  title="Глобальные настройки ИИ"
+                >
+                  <Cpu size={20} />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-app-text-secondary mb-1">API Key (Test)</label>
-                <input 
-                  type="password" 
-                  className="w-full bg-app-input-bg border border-app-border rounded px-3 py-2 text-sm text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent outline-none transition-shadow"
-                  defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || ""}
-                  onChange={(e) => localStorage.setItem('GLOBAL_GEMINI_API_KEY', e.target.value)}
-                  placeholder="AIza..."
-                />
+
+              {/* Main Content Area */}
+              <div className="flex-1 overflow-y-auto bg-app-card p-6">
+                {activeTab === "plugins" && (
+                  <div className="h-full animate-in fade-in slide-in-from-right-4 overflow-y-auto pr-2 pb-6 flex flex-col gap-6">
+                    <div className="flex items-center gap-4 pb-4 border-b border-app-border">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-semibold text-app-text-primary">{plugin?.name || "Sandbox Plugin"}</h3>
+                          <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent">v{plugin?.version || "1.0.0"}</span>
+                        </div>
+                        <p className="text-sm text-app-text-secondary mt-1">{plugin?.description || "Description..."}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1">
+                        {plugin?.settingsComponent ? (
+                          <plugin.settingsComponent />
+                        ) : (
+                          <div className="text-sm text-app-text-muted">У этого плагина нет настроек. В экспортируемом плагине settingsComponent не задан или не возвращает UI.</div>
+                        )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "ai_settings" && (
+                  <div className="flex flex-col gap-6 animate-in fade-in">
+                    <div>
+                      <h3 className="text-lg font-medium text-app-text-primary mb-1">Глобальные настройки ИИ</h3>
+                      <p className="text-sm text-app-text-muted">
+                        Здесь вы можете указать ключ доступа к API Gemini, который будет использоваться плагинами.
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col gap-4">
+                      <div className="rounded-xl border border-app-border bg-app-panel p-4 shadow-sm flex flex-col gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-app-text-primary mb-1">
+                            Gemini API Key (или несколько ключей)
+                          </label>
+                          <textarea
+                            className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                            placeholder="AIzaSy...\nAIzaSy..."
+                            defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || ''}
+                            onChange={(e) => {
+                              const val = e.target.value.trim();
+                              if (val) {
+                                localStorage.setItem('GLOBAL_GEMINI_API_KEY', val);
+                              } else {
+                                localStorage.removeItem('GLOBAL_GEMINI_API_KEY');
+                              }
+                            }}
+                          />
+                          <p className="text-sm text-app-text-muted mt-2">
+                            Оставьте пустым для использования ключа окружения, или введите ваш ключ.
+                          </p>
+                        </div>
+    
+                        <div className="pt-4 border-t border-app-border">
+                          <label className="block text-sm font-medium text-app-text-primary mb-1">
+                            Предпочитаемые модели (в порядке приоритета)
+                          </label>
+                          <textarea
+                            className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                            placeholder="gemini-3.5-flash, gemini-2.5-pro, gemini-3-flash-preview"
+                            defaultValue={localStorage.getItem('GLOBAL_GEMINI_MODELS') || "gemini-2.5-pro, gemini-3-flash-preview, gemini-2.5-flash, gemini-3.1-flash-lite"}
+                            onChange={(e) => {
+                              const val = e.target.value.trim();
+                              if (val) {
+                                localStorage.setItem('GLOBAL_GEMINI_MODELS', val);
+                              } else {
+                                localStorage.removeItem('GLOBAL_GEMINI_MODELS');
+                              }
+                            }}
+                          />
+                          <p className="text-sm text-app-text-muted mt-2">
+                            Список моделей через запятую. Эмулирует 'GLOBAL_GEMINI_MODELS' из основного приложения.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
