@@ -31,6 +31,28 @@ export const ConfirmDialog: React.FC = () => {
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           className="bg-app-panel border border-app-border rounded-xl shadow-2xl p-6 max-w-sm w-full relative"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+              const focusableElements = Array.from(
+                dialogRef.current?.querySelectorAll<HTMLElement>("button:not([disabled])") || []
+              );
+              if (focusableElements.length === 0) return;
+              
+              const currentIndex = focusableElements.findIndex(el => el === document.activeElement);
+              if (currentIndex === -1) {
+                focusableElements[0].focus();
+                return;
+              }
+              
+              const dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+              let nextIndex = currentIndex + dir;
+              if (nextIndex < 0) nextIndex = focusableElements.length - 1;
+              if (nextIndex >= focusableElements.length) nextIndex = 0;
+              
+              focusableElements[nextIndex].focus();
+              e.preventDefault();
+            }
+          }}
         >
           <div className="mb-6">
             <h3

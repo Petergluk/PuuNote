@@ -17,7 +17,10 @@ for (const path in pluginModules) {
       'id' in exported &&
       'name' in exported
     ) {
-      CUSTOM_PLUGINS.push(exported as PluginDefinition);
+      const plugin = exported as PluginDefinition;
+      if (!CUSTOM_PLUGINS.some(p => p.id === plugin.id)) {
+        CUSTOM_PLUGINS.push(plugin);
+      }
     }
   }
 }

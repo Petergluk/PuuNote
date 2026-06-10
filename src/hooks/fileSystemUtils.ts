@@ -1,4 +1,4 @@
-import { INITIAL_NODES } from "../constants";
+import type { PuuNode } from "../types";
 import { useAppStore } from "../store/useAppStore";
 
 const cleanTitle = (value: string) => {
@@ -13,7 +13,7 @@ const cleanTitle = (value: string) => {
 };
 
 export const deriveDocumentTitle = (
-  nodes: typeof INITIAL_NODES,
+  nodes: PuuNode[],
   fallback = "Untitled",
 ) => {
   const roots = nodes
@@ -35,7 +35,7 @@ export const deriveDocumentTitle = (
 
 export const updateDocumentMetadataInStore = (
   fileId: string,
-  nodes: typeof INITIAL_NODES,
+  nodes: PuuNode[],
   options: { fallback?: string; touchUpdatedAt?: boolean } = {},
 ) => {
   const now = Date.now();

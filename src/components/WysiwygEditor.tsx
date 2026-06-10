@@ -9,6 +9,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -33,6 +34,8 @@ import {
   X,
 } from "lucide-react";
 import { normalizeEditorLinkHref } from "../utils/link";
+import { AUTOSIZE_DEBOUNCE_MS } from "../constants";
+import { registerPendingTextareaFlush } from "./textareaFlushRegistry";
 
 interface WysiwygEditorProps {
   initialValue: string;
@@ -40,6 +43,7 @@ interface WysiwygEditorProps {
   onBlur?: () => void;
   autoFocus?: boolean;
   className?: string;
+  "data-node-id"?: string;
 }
 
 export interface WysiwygEditorHandle {
@@ -68,16 +72,49 @@ const serializeMarkdown = (editor: { storage: unknown }, content: unknown) => {
 export const WysiwygEditor = forwardRef<
   WysiwygEditorHandle,
   WysiwygEditorProps
->(({ initialValue, onChange, onBlur, autoFocus, className }, ref) => {
+>(({ initialValue, onChange, onBlur, autoFocus, className, "data-node-id": dataNodeId }, ref) => {
   const isApplyingExternalValueRef = useRef(false);
   const lastEmittedMarkdownRef = useRef(initialValue);
   const linkInputRef = useRef<HTMLInputElement>(null);
   const [linkEditorOpen, setLinkEditorOpen] = useState(false);
   const [linkInput, setLinkInput] = useState("");
+  
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingChangeRef = useRef<string | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const flushPendingChange = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (pendingChangeRef.current !== null) {
+      const val = pendingChangeRef.current;
+      pendingChangeRef.current = null;
+      lastEmittedMarkdownRef.current = val;
+      onChangeRef.current(val);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unregister = registerPendingTextareaFlush(flushPendingChange);
+    return () => {
+      unregister();
+      flushPendingChange();
+    };
+  }, [flushPendingChange]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
+        undoRedo: {
+          newGroupDelay: 2000,
+        },
       }),
       Link.configure({ openOnClick: false }),
       TaskList,
@@ -93,15 +130,26 @@ export const WysiwygEditor = forwardRef<
         class:
           className ||
           "prose prose-sm xl:prose-base dark:prose-invert max-w-none focus:outline-none w-full min-h-[24px]",
+        ...(dataNodeId ? { "data-node-id": dataNodeId } : {}),
       },
     },
     onUpdate: ({ editor }) => {
       if (isApplyingExternalValueRef.current) return;
       const markdown = getMarkdown(editor);
-      lastEmittedMarkdownRef.current = markdown;
-      onChange(markdown);
+      
+      pendingChangeRef.current = markdown;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        if (pendingChangeRef.current !== null) {
+          const val = pendingChangeRef.current;
+          pendingChangeRef.current = null;
+          lastEmittedMarkdownRef.current = val;
+          onChangeRef.current(val);
+        }
+      }, AUTOSIZE_DEBOUNCE_MS);
     },
     onBlur: () => {
+      flushPendingChange();
       if (onBlur) onBlur();
     },
   });

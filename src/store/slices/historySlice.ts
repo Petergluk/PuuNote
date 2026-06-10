@@ -21,6 +21,15 @@ const uniqueById = <T extends { id: string }>(items: T[]) => {
   });
 };
 
+const toDictFormat = (nodes: PuuNode[]) => ({
+  entities: nodes.reduce((acc, n) => { acc[n.id] = n; return acc; }, {} as Record<string, PuuNode>),
+  order: nodes.map(n => n.id)
+});
+
+const fromDictFormat = (data: { entities: Record<string, PuuNode>, order: string[] }): PuuNode[] => {
+  return data.order.map(id => data.entities[id]).filter(Boolean);
+};
+
 const diffAndEmit = (prevNodes: PuuNode[], nextNodes: PuuNode[]) => {
   const prevMap = new Map(prevNodes.map((n) => [n.id, n]));
   const nextMap = new Map(nextNodes.map((n) => [n.id, n]));
@@ -116,22 +125,20 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
         : null;
     }
 
-    const patch = compare(currentNodes, nextNodes);
-    const inversePatch = compare(nextNodes, currentNodes);
+    const currentDict = toDictFormat(currentNodes);
+    const nextDict = toDictFormat(nextNodes);
+
+    const patch = compare(currentDict, nextDict);
+    const inversePatch = compare(nextDict, currentDict);
 
     let newPast = [...state.past];
     
     if (shouldGroup) {
-      // Merge with the last step
       const lastStep = newPast[newPast.length - 1];
-      // To keep inverse intact relative to original, we must apply diff over combined?
-      // Actually, compare(originalNodes, nextNodes). But we don't hold originalNodes cheaply.
-      // Easiest grouping: we just pop the last step, apply its inverse to current to find original, 
-      // then generate patches again.
       newPast.pop();
-      const originalNodes = applyPatch([...currentNodes], lastStep.inversePatch, false, false).newDocument;
-      const combinedPatch = compare(originalNodes, nextNodes);
-      const combinedInverse = compare(nextNodes, originalNodes);
+      const originalDict = applyPatch(currentDict, lastStep.inversePatch, false, false).newDocument;
+      const combinedPatch = compare(originalDict, nextDict);
+      const combinedInverse = compare(nextDict, originalDict);
       newPast.push({
         patch: combinedPatch,
         inversePatch: combinedInverse,
@@ -157,8 +164,9 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     if (past.length === 0) return;
     const step = past[past.length - 1];
     
-    // Applying inverse patch to go back
-    const previous = applyPatch([...nodes], step.inversePatch, false, false).newDocument;
+    const currentDict = toDictFormat(nodes);
+    const previousDict = applyPatch(currentDict, step.inversePatch, false, false).newDocument;
+    const previous = fromDictFormat(previousDict);
     
     set({
       past: past.slice(0, -1),
@@ -174,8 +182,9 @@ export const createHistorySlice: AppSlice<HistorySlice> = (set, get) => ({
     if (future.length === 0) return;
     const step = future[0];
     
-    // Applying patch to go forward
-    const next = applyPatch([...nodes], step.patch, false, false).newDocument;
+    const currentDict = toDictFormat(nodes);
+    const nextDict = applyPatch(currentDict, step.patch, false, false).newDocument;
+    const next = fromDictFormat(nextDict);
     
     set({
       past: [...past, step],

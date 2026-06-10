@@ -4,7 +4,6 @@ import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { CUSTOM_PLUGINS } from "../plugins/index";
 import { useState } from "react";
-import { DEFAULT_PROMPT } from "../plugins/voice-fixer/prompts";
 import { useAppCommands } from "../hooks/useAppCommands";
 import { DEFAULT_MODELS } from "../utils/aiModels";
 
@@ -33,7 +32,7 @@ function HotkeysList() {
     e.stopPropagation();
     e.nativeEvent.stopImmediatePropagation();
 
-    if (e.key === 'Backspace' || e.key === 'Delete') {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
       handleHotkeyChange(cmdId, '');
       return;
     }
@@ -74,7 +73,7 @@ function HotkeysList() {
           <input 
             type="text" 
             placeholder="Нажмите сочетание..."
-            value={hotkeys[cmd.id] || ''}
+            value={hotkeys[cmd.id] !== undefined ? hotkeys[cmd.id] : (cmd.hotkey || '')}
             onKeyDown={(e) => handleKeyDown(e, cmd.id)}
             data-hotkey-input="true"
             readOnly
@@ -145,7 +144,10 @@ export function PluginsPanel() {
           {/* Sidebar Navigation */}
           <div className="w-16 shrink-0 border-r border-app-border bg-app-panel overflow-y-auto px-2 py-4 flex flex-col gap-3 items-center">
             <button
-              onClick={() => setActiveTab("plugins")}
+              onClick={() => {
+                setActiveTab("plugins");
+                setSelectedPluginId(null);
+              }}
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                 activeTab === "plugins"
                   ? "bg-app-accent/10 text-app-accent"
@@ -220,7 +222,7 @@ export function PluginsPanel() {
                       </label>
                       <textarea
                         className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
-                        placeholder="gemini-2.5-pro, gemini-2.5-flash, gemini-3-flash-preview"
+                        placeholder="gemini-3.5-flash, gemini-2.5-pro, gemini-2.5-flash"
                         defaultValue={localStorage.getItem('GLOBAL_GEMINI_MODELS') || DEFAULT_MODELS}
                         onChange={(e) => {
                           const val = e.target.value.trim();
@@ -232,7 +234,7 @@ export function PluginsPanel() {
                         }}
                       />
                       <p className="text-sm text-app-text-muted mt-2">
-                        Укажите список моделей через запятую, например: <code className="bg-app-card px-1 rounded">gemini-2.5-pro, gemini-2.5-flash</code>. Если первая модель недоступна (лимиты или перегрузка), плагины автоматически перейдут к следующей.
+                        Укажите список моделей через запятую, например: <code className="bg-app-card px-1 rounded">gemini-3.5-flash, gemini-2.5-pro</code>. Если первая модель недоступна (лимиты или перегрузка), плагины автоматически перейдут к следующей.
                       </p>
                     </div>
                   </div>
@@ -255,14 +257,14 @@ export function PluginsPanel() {
                       {CUSTOM_PLUGINS.map((plugin) => (
                         <div key={plugin.id} className="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-4 shadow-sm transition-shadow hover:shadow-md">
                           <div className="flex items-start justify-between">
-                            <div>
+                            <div className="cursor-pointer group flex-1 mr-4" onClick={() => setSelectedPluginId(plugin.id)}>
                               <div className="flex items-center gap-3">
-                                  <span className="font-semibold text-app-text-primary text-base">{plugin.name}</span>
-                                  <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent">v{plugin.version}</span>
+                                  <span className="font-semibold text-app-text-primary text-base group-hover:text-app-accent transition-colors">{plugin.name}</span>
+                                  <span className="rounded-full bg-app-accent/10 px-2 py-0.5 text-xs font-medium text-app-accent group-hover:bg-app-accent/20 transition-colors">v{plugin.version}</span>
                               </div>
-                              <p className="text-sm text-app-text-secondary mt-1 max-w-xl">{plugin.description}</p>
+                              <p className="text-sm text-app-text-secondary mt-1 max-w-xl group-hover:text-app-text-primary transition-colors">{plugin.description}</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 shrink-0">
                               <button
                                 onClick={() => togglePlugin(plugin.id)}
                                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-panel ${
@@ -295,8 +297,8 @@ export function PluginsPanel() {
                   const plugin = CUSTOM_PLUGINS.find(p => p.id === selectedPluginId);
                   if (!plugin) return null;
                   return (
-                    <div className="flex flex-col gap-6 h-full animate-in fade-in slide-in-from-right-4">
-                      <div className="flex items-center gap-4 shrink-0 pb-4 border-b border-app-border">
+                    <div className="h-full animate-in fade-in slide-in-from-right-4 overflow-y-auto pr-2 pb-6 flex flex-col gap-6">
+                      <div className="flex items-center gap-4 pb-4 border-b border-app-border">
                         <button 
                           onClick={() => setSelectedPluginId(null)}
                           className="p-2 rounded-lg hover:bg-app-card transition-colors text-app-text-secondary hover:text-app-text-primary"
@@ -313,31 +315,9 @@ export function PluginsPanel() {
                         </div>
                       </div>
                       
-                      <div className="flex-1 overflow-y-auto pr-2 pb-6">
+                      <div className="flex-1">
                           {plugin.settingsComponent ? (
                             <plugin.settingsComponent />
-                          ) : plugin.id === 'voice-fixer-plugin' ? (
-                            <div className="flex flex-col gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-app-text-primary mb-1">
-                                  Системный Промпт (Инструкции)
-                                </label>
-                                <textarea
-                                  className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow min-h-[160px] resize-y font-mono"
-                                  placeholder={DEFAULT_PROMPT}
-                                  defaultValue={localStorage.getItem('VOICE_FIXER_PROMPT') || DEFAULT_PROMPT}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val && val !== DEFAULT_PROMPT) {
-                                      localStorage.setItem('VOICE_FIXER_PROMPT', val);
-                                    } else {
-                                      localStorage.removeItem('VOICE_FIXER_PROMPT');
-                                    }
-                                  }}
-                                />
-                                <p className="text-sm text-app-text-muted mt-1">Оставьте пустым для использования промпта по умолчанию. Плагин использует глобальные настройки ключей и моделей ИИ.</p>
-                              </div>
-                            </div>
                           ) : (
                             <div className="text-sm text-app-text-muted">У этого плагина нет настроек.</div>
                           )}

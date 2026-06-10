@@ -8,11 +8,14 @@ import { WysiwygEditor } from "./WysiwygEditor";
 import { useAppStore } from "../store/useAppStore";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PROSE_FULL } from "../utils/proseClasses";
-import { COPY_SUCCESS_TIMEOUT_MS, FULLSCREEN_IDLE_TIMEOUT_MS } from "../constants";
+import {
+  COPY_SUCCESS_TIMEOUT_MS,
+  FULLSCREEN_IDLE_TIMEOUT_MS,
+} from "../constants";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
 
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { getDepthFirstNodes } from "../utils/tree";
+import { getDepthFirstNodes, buildTreeIndex } from "../utils/tree";
 
 export const FullScreenModal = ({
   nodeId,
@@ -25,10 +28,13 @@ export const FullScreenModal = ({
   const updateContent = useAppStore((s) => s.updateContent);
   const editorMode = useAppStore((s) => s.editorMode);
   const focusModeScope = useAppStore((s) => s.focusModeScope);
+  const addSibling = useAppStore((s) => s.addSibling);
+  const addChild = useAppStore((s) => s.addChild);
+  const setFullScreenId = useAppStore((s) => s.setFullScreenId);
   const [localActiveId, setLocalActiveId] = useState<string | null>(nodeId);
   const activeElRef = useRef<HTMLDivElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
-  
+
   const [copied, setCopied] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
@@ -36,8 +42,16 @@ export const FullScreenModal = ({
   const handleUserActivity = () => {
     setIsIdle(false);
     if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setIsIdle(true), FULLSCREEN_IDLE_TIMEOUT_MS);
+    idleTimer.current = setTimeout(
+      () => setIsIdle(true),
+      FULLSCREEN_IDLE_TIMEOUT_MS,
+    );
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocalActiveId(nodeId);
+  }, [nodeId]);
 
   useEffect(() => {
     if (activeElRef.current && localActiveId === nodeId) {
@@ -46,17 +60,59 @@ export const FullScreenModal = ({
         block: "center",
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nodeId, localActiveId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+
+      const target = e.target as HTMLElement;
+
+      // Ctrl+Shift+Down to create a sibling (card below)
+      if (e.key === "ArrowDown" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        target?.blur();
+        addSibling(nodeId);
+        const newId = useAppStore.getState().activeId;
+        if (newId) setFullScreenId(newId);
+      }
+
+      // Shift+Command+Right to create a child
+      if (e.key === "ArrowRight" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        target?.blur();
+        addChild(nodeId);
+        const newId = useAppStore.getState().activeId;
+        if (newId) setFullScreenId(newId);
+      }
+
+      // Command+Right to move to child
+      if (e.key === "ArrowRight" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        const treeIndex = buildTreeIndex(nodes);
+        const children = treeIndex.childrenMap.get(nodeId);
+        if (children && children.length > 0) {
+          const firstChild = children.sort(
+            (a, b) => (a.order || 0) - (b.order || 0),
+          )[0];
+          setFullScreenId(firstChild.id);
+        }
+      }
+
+      // Command+Left to move to parent
+      if (e.key === "ArrowLeft" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        const current = nodes.find((n) => n.id === nodeId);
+        if (current?.parentId) {
+          setFullScreenId(current.parentId);
+        }
+      }
+
       handleUserActivity();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, addSibling, addChild, nodeId, setFullScreenId, nodes]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -92,6 +148,7 @@ export const FullScreenModal = ({
   }, [nodes, targetNode, focusModeScope]);
 
   const toggleCheckbox = useToggleCheckbox();
+  const treeIndex = useMemo(() => buildTreeIndex(nodes), [nodes]);
 
   if (!targetNode) return null;
 
@@ -123,6 +180,13 @@ export const FullScreenModal = ({
     URL.revokeObjectURL(url);
   };
 
+  const parentId = targetNode.parentId;
+  const children = treeIndex.childrenMap.get(targetNode.id);
+  const firstChildId =
+    children && children.length > 0
+      ? children.sort((a, b) => (a.order || 0) - (b.order || 0))[0].id
+      : null;
+
   return (
     <motion.div
       ref={dialogRef}
@@ -135,21 +199,89 @@ export const FullScreenModal = ({
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.15 }}
       className="fixed inset-0 z-[100] bg-app-bg flex flex-col outline-none"
-      onClick={() => setLocalActiveId(null)}
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget) {
+          setLocalActiveId(null);
+        }
+      }}
       onMouseMove={handleUserActivity}
       onTouchStart={handleUserActivity}
     >
-      <div className={`absolute top-6 right-6 z-10 flex items-center gap-2 transition-opacity duration-1000 ${isIdle ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+      {/* Left Navigation Hotspot */}
+      {parentId && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setFullScreenId(parentId);
+          }}
+          className="absolute left-0 top-0 bottom-0 w-12 sm:w-20 group flex items-center justify-center cursor-pointer z-20"
+        >
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-app-text-muted hover:text-app-text-primary">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Right Navigation Hotspot */}
+      {firstChildId && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setFullScreenId(firstChildId);
+          }}
+          className="absolute right-0 top-0 bottom-0 w-12 sm:w-20 group flex items-center justify-center cursor-pointer z-20"
+        >
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-app-text-muted hover:text-app-text-primary">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`absolute top-6 right-6 z-30 flex items-center gap-2 transition-opacity duration-1000 ${isIdle ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+      >
         <button
-          onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopy();
+          }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
           title="Copy Markdown"
           aria-label="Copy Markdown"
         >
-          {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+          {copied ? (
+            <Check size={20} className="text-green-500" />
+          ) : (
+            <Copy size={20} />
+          )}
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); handleExport(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleExport();
+          }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
           title="Export as Markdown"
           aria-label="Export as Markdown"
@@ -157,7 +289,10 @@ export const FullScreenModal = ({
           <Download size={20} />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
           title="Close Focus Mode (Esc)"
           aria-label="Close Focus Mode"
@@ -166,7 +301,14 @@ export const FullScreenModal = ({
         </button>
       </div>
 
-      <div className="hide-scrollbar flex-1 overflow-auto px-6 py-14 sm:px-10 lg:px-16 lg:py-20 max-w-4xl mx-auto w-full flex flex-col gap-5 relative pb-[35vh]">
+      <div
+        className="hide-scrollbar flex-1 overflow-auto px-6 py-14 sm:px-10 lg:px-16 lg:py-20 max-w-4xl mx-auto w-full flex flex-col gap-5 relative pb-[35vh]"
+        onPointerDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setLocalActiveId(null);
+          }
+        }}
+      >
         {visibleNodes.map((n: PuuNode) => {
           const isLocalActive = n.id === localActiveId;
           const isGlobalUnfocused = localActiveId === null;
@@ -174,7 +316,10 @@ export const FullScreenModal = ({
             <div
               key={n.id}
               ref={n.id === nodeId ? activeElRef : null}
-              onClick={(e) => { e.stopPropagation(); setLocalActiveId(n.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalActiveId(n.id);
+              }}
               className={`rounded border px-6 py-4 transition-all duration-200 cursor-text ${
                 isLocalActive || isGlobalUnfocused
                   ? "border-transparent bg-transparent opacity-100"
@@ -226,4 +371,3 @@ export const FullScreenModal = ({
     </motion.div>
   );
 };
-

@@ -11,6 +11,7 @@ export interface CommandItem {
   id: string;
   label: string;
   icon: ComponentType<{ size?: number; className?: string }>;
+  hotkey?: string;
   run: () => void | Promise<void>;
   destructive?: boolean;
 }
@@ -68,6 +69,81 @@ export function useAppCommands(): CommandItem[] {
       },
     },
     {
+      id: "add-child-card",
+      label: t("Add Child Card (Right)"),
+      icon: Plus,
+      run: () => {
+        const store = useAppStore.getState();
+        const targetId = store.activeId;
+        if (!targetId) return;
+        store.addChild(targetId);
+        
+        // If zen mode is active, update fullScreenId to track the newly created node
+        const newlyAddedId = useAppStore.getState().activeId;
+        if (store.fullScreenId && newlyAddedId) {
+            useAppStore.getState().setFullScreenId(newlyAddedId);
+        }
+      }
+    },
+    {
+      id: "add-sibling-card",
+      label: t("Add Sibling Card (Below)"),
+      icon: Plus,
+      run: () => {
+        const store = useAppStore.getState();
+        const targetId = store.activeId;
+        if (!targetId) return;
+        store.addSibling(targetId);
+        
+        const newlyAddedId = useAppStore.getState().activeId;
+        if (store.fullScreenId && newlyAddedId) {
+            useAppStore.getState().setFullScreenId(newlyAddedId);
+        }
+      }
+    },
+    {
+      id: "delete-card",
+      label: t("Delete Card"),
+      icon: Trash2,
+      destructive: true,
+      run: () => {
+        const state = useAppStore.getState();
+        const activeId = state.activeId;
+        
+        if (state.selectedIds.length > 1) {
+          state.openConfirm(
+            `Delete ${state.selectedIds.length} selected cards and their descendants?`,
+            () => {
+              state.deleteNodes(state.selectedIds);
+              state.clearSelection();
+            },
+          );
+        } else if (activeId) {
+          // If we are in zen mode and deleting the active card, we need to clear zen mode
+          const willClearZen = state.uiMode === "zen" && state.fullScreenId === activeId;
+          
+          const doDelete = () => {
+              if (willClearZen) {
+                state.setUiMode("normal");
+                state.setFullScreenId(null);
+              }
+              state.deleteNode(activeId);
+          };
+
+          const hasChildren = state.nodes.some(n => n.parentId === activeId);
+          
+          if (hasChildren) {
+             state.openConfirm(
+              t("Delete this card and all its descendants?"),
+              () => doDelete()
+            );
+          } else {
+             doDelete();
+          }
+        }
+      }
+    },
+    {
       id: "delete-file",
       label: t("Delete file"),
       icon: Trash2,
@@ -85,7 +161,8 @@ export function useAppCommands(): CommandItem[] {
       id: cmd.id,
       label: cmd.label,
       icon: cmd.icon || Sparkles,
-      run: cmd.run,
+      hotkey: cmd.hotkey,
+      run: cmd.run || cmd.execute || (() => {}),
       destructive: cmd.destructive,
     }))
   ];

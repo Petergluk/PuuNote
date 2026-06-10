@@ -140,9 +140,11 @@ export const TimelineView = () => {
             onClick={() => {
               blockScrollRef.current = true;
               setActiveId(n.id);
-              setTimeout(() => {
-                blockScrollRef.current = false;
-              }, 50);
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  blockScrollRef.current = false;
+                });
+              });
             }}
             className={`cursor-text rounded px-0 py-0.5 transition-opacity duration-200 ${
               !hasActiveNode || isLocalActive
@@ -201,7 +203,7 @@ export const TimelineView = () => {
   return (
     <div
       className="w-full relative flex justify-center p-6 lg:p-12 col-spacer"
-      onClick={(e) => {
+      onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           clearSelection();
           setActiveId(null);

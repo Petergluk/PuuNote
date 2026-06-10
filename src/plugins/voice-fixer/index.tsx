@@ -1,30 +1,492 @@
-import { Mic } from 'lucide-react';
-import type { PluginAPI, PluginDefinition } from '../registry';
-import { voiceFixerManifest } from './manifest';
-import { openRecordingModal, unmountModal } from './modalManager';
+/* eslint-disable react-refresh/only-export-components */
+import { useState, useEffect } from "react";
+import type { PluginDefinition, PluginAPI } from "../registry";
+import { Mic, Square, X } from "lucide-react";
+import { generateContentFallback } from "../../utils/aiModels";
 
 let pluginApi: PluginAPI | null = null;
+let activeRecordingNodeId: string | null = null;
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+let recordingStartTime: number | null = null;
 
-export const voiceFixerPlugin: PluginDefinition = {
-  ...voiceFixerManifest,
+function notifyUpdate() {
+  window.dispatchEvent(new CustomEvent('plugin-actions-updated'));
+  renderOverlay();
+}
 
-  async init(api: PluginAPI) {
+function AudioVisualizer({ stream }: { stream: MediaStream | null }) {
+  const [volumes, setVolumes] = useState<number[]>([0,0,0,0,0]);
+
+  useEffect(() => {
+    if (!stream) return;
+    const audioContext = new window.AudioContext();
+    const analyser = audioContext.createAnalyser();
+    const microphone = audioContext.createMediaStreamSource(stream);
+    microphone.connect(analyser);
+    analyser.fftSize = 256;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    let animationFrame: number;
+    let lastUpdate = 0;
+
+    const update = (time: number) => {
+      if (time - lastUpdate > 50) {
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Human voice energy is concentrated in lower frequencies.
+        // With fftSize=256 and ~48kHz sample rate, each bin is ~180Hz.
+        // Bins 1-20 cover roughly 180Hz - 3600Hz, which is perfect for speech.
+        const startBin = 1;
+        const usefulBins = 20;
+        const bands = 5;
+        const binSize = Math.floor(usefulBins / bands);
+        const newVols = [];
+        
+        for (let i = 0; i < bands; i++) {
+          let sum = 0;
+          for (let j = 0; j < binSize; j++) {
+            sum += dataArray[startBin + (i * binSize) + j];
+          }
+          let avg = sum / binSize;
+          
+          // Boost higher bands to compensate for natural energy drop-off in speech
+          avg = avg * (1 + (i * 0.3)); 
+          // Add general gain so it's more reactive
+          newVols.push(Math.min(255, avg * 1.5));
+        }
+        setVolumes(newVols);
+        lastUpdate = time;
+      }
+      animationFrame = requestAnimationFrame(update);
+    };
+    animationFrame = requestAnimationFrame(update);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      audioContext.close();
+    };
+  }, [stream]);
+
+  return (
+    <div className="flex items-center gap-1 h-6 px-2">
+      {volumes.map((vol, i) => {
+        const height = Math.max(4, (vol / 255) * 20); // max 20px
+        return (
+          <div 
+            key={i} 
+            className="w-1.5 bg-red-500 rounded-full transition-all duration-75"
+            style={{ height: `${height}px` }} 
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function RecordingOverlayComponent({ 
+  onStop, 
+  onCancel,
+  startTime,
+  stream
+}: { 
+  onStop: () => void, 
+  onCancel: () => void,
+  startTime: number,
+  stream: MediaStream | null
+}) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const secs = (elapsed % 60).toString().padStart(2, '0');
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-app-card border border-app-border rounded-2xl shadow-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-5 pointer-events-auto">
+      <div className="flex items-center gap-3">
+        <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+        <span className="font-mono text-lg font-medium text-app-text-primary">
+          {mins}:{secs}
+        </span>
+      </div>
+      
+      <AudioVisualizer stream={stream} />
+      
+      <div className="w-px h-8 bg-app-border mx-2" />
+      
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onStop}
+          className="px-4 py-2 bg-app-accent hover:bg-app-accent/90 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all active:scale-95"
+        >
+          <Square size={16} className="fill-white" />
+          <span>Готово</span>
+        </button>
+        <button
+          onClick={onCancel}
+          className="p-2 rounded-xl bg-app-card-hover text-app-text-secondary hover:bg-red-500 hover:text-black dark:hover:text-black transition-colors"
+          title="Сброс"
+        >
+          <X size={20} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OverlayWrapper() {
+  if (!activeRecordingNodeId || !recordingStartTime) return null;
+  return (
+    <RecordingOverlayComponent 
+      startTime={recordingStartTime} 
+      onStop={stopRecording} 
+      onCancel={cancelRecording}
+      stream={mediaRecorder?.stream || null}
+    />
+  );
+}
+
+function renderOverlay() {
+  if (activeRecordingNodeId && recordingStartTime) {
+    pluginApi?.ui?.renderOverlay("vf-recording", OverlayWrapper, undefined);
+  } else {
+    unmountOverlay();
+  }
+}
+
+function unmountOverlay() {
+  pluginApi?.ui?.closeOverlay("vf-recording");
+}
+
+async function startRecording(nodeId: string) {
+  if (activeRecordingNodeId) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const defaultPrompt = `Ты расшифровщик и корректор текста. Твоя специализация - транскрипт аудиофайлов, вычитка, очистка, оптимизация расшифровок разговорной речи. 
+Задачи:
+- исправить ошибки распознавания по смыслу.
+- расставить знаки препинания, орфографию.
+- убрать слова-паразиты (как бы, ну, эээ, собственно).
+- разбить длинные предложения и абзацы для читабельности.
+
+!IMPORTANT! Ты сохраняешь полное содержание и структуру исходного текста. Ты никогда не редактируешь и не корректируешь смыслы, лишь слегка оптимизируешь их изложение.
+
+!IMPORTANT! При оптимизации текста сохраняй оригинальный тон и стиль.  Например, при расшифровке аудио-практик, избегай замены  разрешающих формулировок, таких как «можно», «и может быть» - конструкциями в повелительном наклонении. Например, не надо заменять "И можно начать мягко раскачивать дыхание" на повелительное "Начните раскачивать дыхание". Сохраняй предполагаемый уровень взаимодействия говорящего с аудиторией. Не надо смягчать, меняя «бабы»  на «женщины», не надо ужесточать меняя «нахер» на «нахуй», твоя задача очистить мусор, не меняя стиль и тон.
+
+Выведи ТОЛЬКО конечный чистый текст. Никаких префиксов вроде "Вот текст:" не нужно.`;
+    
+    let bitrate = parseInt(localStorage.getItem("VOICE_FIXER_BITRATE") || "32000", 10);
+    if (isNaN(bitrate)) bitrate = 32000;
+    
+    const options = { mimeType: "audio/webm", audioBitsPerSecond: bitrate };
+    mediaRecorder = new MediaRecorder(stream, options);
+    audioChunks = [];
+    recordingStartTime = Date.now();
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      stream.getTracks().forEach(track => track.stop());
+      
+      if (audioChunks.length === 0) {
+         unmountOverlay();
+         return; // User cancelled
+      }
+
+      const base64Audio = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+
+      const currentTargetNode = activeRecordingNodeId;
+      activeRecordingNodeId = null;
+      recordingStartTime = null;
+      notifyUpdate();
+
+      if (!currentTargetNode) return;
+
+      const abortController = new AbortController();
+
+      const jobId = pluginApi?.addJob?.("Voice Fixer: Расшифровка", () => {
+        abortController.abort();
+      }) || "job-vf";
+
+      pluginApi?.updateJobProgress?.(jobId, 25, "Подготовка к отправке...");
+
+      try {
+        const sysPrompt = localStorage.getItem("VOICE_FIXER_PROMPT") || defaultPrompt;
+        const customModels = localStorage.getItem("VOICE_FIXER_MODELS") || undefined;
+        let tOut = parseInt(localStorage.getItem("VOICE_FIXER_TIMEOUT") || "180", 10);
+        if (isNaN(tOut)) tOut = 180;
+        
+        const parts = [
+          { text: sysPrompt },
+          { inlineData: { mimeType: 'audio/webm', data: base64Audio } }
+        ];
+
+        const { text, usedModel } = await generateContentFallback(parts, customModels, {
+           timeoutMs: tOut * 1000,
+           signal: abortController.signal,
+           onStatusChange: (msg) => {
+             pluginApi?.updateJobProgress?.(jobId, 50, msg);
+           }
+        });
+        
+        pluginApi?.updateJobProgress?.(jobId, 100, `Успешно (${usedModel})`);
+        pluginApi?.completeJob?.(jobId, `Успешно (${usedModel})`);
+        
+        if (pluginApi?.document?.getNode && pluginApi?.document?.updateNodeContent) {
+          const target = localStorage.getItem("VOICE_FIXER_SAVE_TARGET") || "current";
+          const mode = localStorage.getItem("VOICE_FIXER_STRUCTURE_MODE") || "single";
+          const node = pluginApi.document.getNode(currentTargetNode);
+          
+          if (node) {
+            const chunks = mode === "split" ? text.split(/\n\s*\n/).filter((c: string) => c.trim().length > 0) : [text];
+            
+            if (target === "current" || !pluginApi.document.addNode) {
+               const joinedText = chunks.join("\n\n");
+               const separator = node.content.trim() ? "\n\n" : "";
+               const newContent = node.content + separator + joinedText;
+               pluginApi.document.updateNodeContent(currentTargetNode, newContent);
+            } else {
+               const parentForNewNodes = target === "child" ? currentTargetNode : node.parentId;
+               for (const chunk of chunks) {
+                 pluginApi.document.addNode(chunk, parentForNewNodes);
+               }
+            }
+          }
+        }
+        
+      } catch (err: any) {
+        console.error("Voice fixer error:", err);
+        pluginApi?.failJob?.(jobId, err.message || "Unknown error");
+        pluginApi?.toast?.(`Ошибка Voice Fixer: ${err.message}`, "error");
+      }
+    };
+
+    activeRecordingNodeId = nodeId;
+    notifyUpdate();
+    mediaRecorder.start();
+    
+  } catch (err: any) {
+    console.error("Mic access error", err);
+    pluginApi?.toast?.(`Ошибка микрофона: ${err.message}`, "error");
+  }
+}
+
+async function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  } else {
+    cancelRecording();
+  }
+}
+
+function cancelRecording() {
+  audioChunks = []; // Clear to signify cancellation
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+  activeRecordingNodeId = null;
+  recordingStartTime = null;
+  notifyUpdate();
+}
+
+
+function VoiceFixerSettings() {
+  const [prompt, setPrompt] = useState(() => localStorage.getItem("VOICE_FIXER_PROMPT") || "");
+  const [models, setModels] = useState(() => localStorage.getItem("VOICE_FIXER_MODELS") || "");
+  const [timeoutSec, setTimeoutSec] = useState(() => localStorage.getItem("VOICE_FIXER_TIMEOUT") || "180");
+  const [bitrate, setBitrate] = useState(() => localStorage.getItem("VOICE_FIXER_BITRATE") || "32000");
+  const [saveTarget, setSaveTarget] = useState(() => localStorage.getItem("VOICE_FIXER_SAVE_TARGET") || "current");
+  const [structureMode, setStructureMode] = useState(() => localStorage.getItem("VOICE_FIXER_STRUCTURE_MODE") || "single");
+
+  useEffect(() => {
+    // Initialized from above
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem("VOICE_FIXER_PROMPT", prompt);
+    localStorage.setItem("VOICE_FIXER_MODELS", models);
+    localStorage.setItem("VOICE_FIXER_TIMEOUT", timeoutSec);
+    localStorage.setItem("VOICE_FIXER_BITRATE", bitrate);
+    localStorage.setItem("VOICE_FIXER_SAVE_TARGET", saveTarget);
+    localStorage.setItem("VOICE_FIXER_STRUCTURE_MODE", structureMode);
+    pluginApi?.toast?.("Настройки Voice Fixer сохранены", "success");
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-app-text-secondary">
+        Плагин для диктовки аудио прямо в карточки с автоматическим исправлением текста нейросетью. Поддерживает отмену и тайм-аут.
+      </p>
+
+      <label className="flex flex-col gap-1 text-sm text-app-text-primary">
+        <span className="font-medium">Системный промпт</span>
+        <textarea 
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Системный промпт транскрибации..." 
+          className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-input-bg text-app-text-primary h-32 resize-y focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none text-sm font-mono"
+        />
+        <span className="text-xs text-app-text-secondary opacity-70">
+          Оставьте пустым для использования встроенного системного промпта по умолчанию.
+        </span>
+      </label>
+      
+      <label className="flex flex-col gap-1 text-sm text-app-text-primary">
+        <span className="font-medium">Переопределение моделей (через запятую)</span>
+        <input 
+          type="text" 
+          value={models}
+          onChange={(e) => setModels(e.target.value)}
+          placeholder="Например: gemini-3.1-flash-lite, gemini-2.5-flash" 
+          className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-input-bg text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none text-sm"
+        />
+        <span className="text-xs text-app-text-secondary opacity-70">
+          Если пусто, используется глобальный список моделей.
+        </span>
+      </label>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <label className="flex flex-col gap-1 text-sm text-app-text-primary">
+          <span className="font-medium">Тайм-аут (сек)</span>
+          <input 
+            type="number" 
+            value={timeoutSec}
+            onChange={(e) => setTimeoutSec(e.target.value)}
+            placeholder="180" 
+            className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-input-bg text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none text-sm"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-app-text-primary">
+          <span className="font-medium">Битрейт (kbps)</span>
+          <select 
+            value={bitrate}
+            onChange={(e) => setBitrate(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-input-bg text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none text-sm"
+          >
+            <option value="32000">32 kbps (Меньше размер)</option>
+            <option value="64000">64 kbps</option>
+            <option value="96000">96 kbps</option>
+            <option value="128000">128 kbps (Лучше качество)</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-app-text-primary">
+          <span className="font-medium">Расположение</span>
+          <select 
+            value={saveTarget}
+            onChange={(e) => setSaveTarget(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-input-bg text-app-text-primary focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none text-sm"
+          >
+            <option value="current">В текущую карточку</option>
+            <option value="child">В дочерние карточки</option>
+            <option value="sibling">В соседние карточки (сиблинги)</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="flex items-center gap-2 text-sm text-app-text-primary cursor-pointer w-fit">
+          <input 
+            type="checkbox"
+            checked={structureMode === "split"}
+            onChange={(e) => setStructureMode(e.target.checked ? "split" : "single")}
+            className="rounded border border-app-border text-app-accent focus:ring-1 focus:ring-inset focus:ring-app-accent focus:outline-none w-4 h-4 cursor-pointer"
+          />
+          <span className="font-medium">Разбивать текст на карточки (по абзацам)</span>
+        </label>
+        <span className="text-xs text-app-text-secondary opacity-70 ml-6">
+          При выборе «В текущую карточку» эта опция игнорируется.
+        </span>
+      </div>
+
+      <div className="pt-2">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-app-accent text-white rounded-lg hover:bg-app-accent/90 self-start text-sm transition-colors"
+        >
+          Сохранить настройки
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const voiceFixerPlugin: PluginDefinition = {
+  id: "voice-fixer",
+  name: "Voice Fixer",
+  version: "1.0.0",
+  description: "Диктуйте текст прямо в карточки (Voice-to-Text) с умным исправлением ошибок через Gemini.",
+  
+  settingsComponent: VoiceFixerSettings,
+
+  init: (api) => {
     pluginApi = api;
-    console.log("Voice Fixer plugin initialized!");
+    console.log("🎙️ Voice Fixer Plugin Initialized");
+    
+    // Глобально слушаем Cmd/Ctrl+Shift+X
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "KeyX") {
+        e.preventDefault();
+        if (activeRecordingNodeId) {
+          stopRecording();
+        } else {
+          const actNodeId = pluginApi?.document?.getActiveNodeId?.();
+          if (actNodeId) {
+            startRecording(actNodeId);
+          } else {
+            pluginApi?.toast?.("Сначала выберите карточку для записи", "error");
+          }
+        }
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    (window as any).__vf_keydown = handleKeyDown;
   },
 
-  async unload() {
-    unmountModal();
+  unload: () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    unmountOverlay();
+    if ((window as any).__vf_keydown) {
+      window.removeEventListener("keydown", (window as any).__vf_keydown);
+    }
   },
 
   commands: [
     {
-      id: "voice-fixer-record",
-      label: "Start Voice Recording (Root Node)",
-      icon: Mic,
-      run: async () => {
-        if (pluginApi) {
-          openRecordingModal(null, pluginApi);
+      id: "vf-start-command",
+      label: "Начать/остановить диктовку (Voice Fixer)",
+      hotkey: "Cmd+Shift+X",
+      execute: () => {
+        if (activeRecordingNodeId) {
+          stopRecording();
+        } else {
+          const actNodeId = pluginApi?.document?.getActiveNodeId?.();
+          if (actNodeId) {
+            startRecording(actNodeId);
+          } else {
+            pluginApi?.toast?.("Сначала выберите карточку для записи", "error");
+          }
         }
       }
     }
@@ -32,15 +494,15 @@ export const voiceFixerPlugin: PluginDefinition = {
 
   cardActions: [
     {
-      id: "voice-fixer-card-record",
-      label: "Записать аудио в карточку (Voice Fixer)",
-      icon: <Mic size={14} />,
-      isVisible: (_nodeId: string) => true,
-      onClick: (nodeId: string) => {
-        if (pluginApi) {
-          openRecordingModal(nodeId, pluginApi);
-        }
+      id: "vf-start",
+      icon: <Mic size={16} />,
+      label: "Диктовать (Voice Fixer)",
+      isVisible: (_nodeId, _node) => !activeRecordingNodeId,
+      onClick: async (nodeId) => {
+        await startRecording(nodeId);
       }
     }
   ]
 };
+
+export default voiceFixerPlugin;

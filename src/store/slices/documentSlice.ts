@@ -5,6 +5,7 @@ import {
   createDocumentFilename,
 } from "../../domain/documentExport";
 import { canMergeNodes, documentApi } from "../../domain/documentTree";
+import { PluginRegistry } from "../../plugins/registry";
 import { downloadTextFile } from "../../services/browserDownload";
 import type { AppSlice, DocumentSlice } from "../appStoreTypes";
 import { toast } from "sonner";
@@ -72,9 +73,30 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
     },
 
     updateContent: (id, content) => {
-      get().setNodes((prev) => documentApi.updateContent(prev, id, content), {
+      const finalContent = PluginRegistry.invokeBeforeContentChange(id, content);
+      get().setNodes((prev) => documentApi.updateContent(prev, id, finalContent), {
         historyGroupKey: `content:${id}`,
       });
+      window.dispatchEvent(new CustomEvent('sandbox:nodeChanged', { detail: { id, content: finalContent } }));
+    },
+
+    updateNodeMetadata: (id, metadata) => {
+      get().setNodes(
+        (prev) =>
+          prev.map((node) => {
+            if (node.id !== id) return node;
+            return {
+              ...node,
+              metadata: {
+                ...node.metadata,
+                ...metadata,
+              },
+            };
+          }),
+        {
+          historyGroupKey: `metadata:${id}`,
+        }
+      );
     },
 
     setActiveBranchColor: (colorId) => {
@@ -176,9 +198,9 @@ export const createDocumentSlice: AppSlice<DocumentSlice> = (set, get) => {
       });
     },
 
-    addChild: (parentId) => {
+    addChild: (parentId, content) => {
       const newId = applyAndCapture((prev) => {
-        const { nextNodes, newId } = documentApi.addChild(prev, parentId);
+        const { nextNodes, newId } = documentApi.addChild(prev, parentId, content);
         return { nextNodes, capture: newId };
       });
       if (newId) {

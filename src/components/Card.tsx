@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from "react";
-import { Maximize2, Scissors } from "lucide-react";
+import { Maximize2, Scissors, ChevronsLeft } from "lucide-react";
 import { toast } from "sonner";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { SafeMarkdown } from "./SafeMarkdown";
 import { PuuNode } from "../types";
 import { useToggleCheckbox } from "../hooks/useToggleCheckbox";
@@ -16,6 +17,7 @@ import {
 import { cn } from "../utils/cn";
 import type { BranchColor } from "../utils/branchColors";
 import { usePluginCardActions } from "../plugins/registry";
+import { usePluginUiStore } from "../plugins/uiRegistry";
 
 type DropZone = "none" | "top" | "bottom" | "right";
 
@@ -60,7 +62,7 @@ function buildCardClasses(state: {
       "inactive-card bg-app-panel border border-app-border hover:bg-app-bg";
   }
 
-  return cn(base, variant, isDragged && "!opacity-10 scale-95");
+  return cn(base, variant, isDragged && "opacity-50 scale-95");
 }
 
 export const Card = React.memo(
@@ -123,6 +125,19 @@ export const Card = React.memo(
 
     const toggleCheckbox = useToggleCheckbox();
     const pluginActions = usePluginCardActions(node.id);
+    const cardWidgets = usePluginUiStore((s) => s.cardWidgets);
+    const storeDisabledPlugins = useAppStore((s) => s.disabledPlugins);
+    
+    const activeWidgets = useMemo(() => {
+       const disabledList = storeDisabledPlugins || [];
+       return Object.values(cardWidgets).filter(w => !w.pluginId || !disabledList.includes(w.pluginId));
+    }, [cardWidgets, storeDisabledPlugins]);
+
+    const topWidgets = useMemo(() => activeWidgets.filter(w => w.position === "top"), [activeWidgets]);
+    const bottomWidgets = useMemo(() => activeWidgets.filter(w => w.position === "bottom"), [activeWidgets]);
+    const replaceWidgets = useMemo(() => activeWidgets.filter(w => w.position === "replace"), [activeWidgets]);
+
+    const [showMoreActions, setShowMoreActions] = useState(false);
 
     const cardRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -232,7 +247,10 @@ export const Card = React.memo(
           onDragStart={(e) => {
             e.stopPropagation();
             e.dataTransfer.setData("nodeId", node.id);
-            setDraggedId(node.id);
+            // Delay setting the state so browser can capture the ghost image properly
+            requestAnimationFrame(() => {
+              setDraggedId(node.id);
+            });
           }}
           onDragEnd={() => setDraggedId(null)}
           onDragOver={(e) => {
@@ -311,42 +329,103 @@ export const Card = React.memo(
              the hover toolbar without making every editing card look like it has
              a large permanent blank header. */}
           {isEditing && (
-            <div className="absolute right-0 top-0 flex items-center divide-x divide-app-border opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-10 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden">
-              {pluginActions.map(action => (
+            <div 
+              className="absolute right-0 top-0 flex flex-col items-end gap-1 p-0.5 opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-20"
+              onMouseLeave={() => setShowMoreActions(false)}
+            >
+              <div className="flex gap-0.5 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden p-0.5">
+                {pluginActions.slice(0, 1).map(action => (
+                  <button
+                    key={action.id}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      action.onClick(node.id, node);
+                    }}
+                    className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
+                    title={action.label}
+                  >
+                    {action.icon}
+                  </button>
+                ))}
+                {pluginActions.length > 1 && (
+                  <button
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowMoreActions((prev) => !prev);
+                    }}
+                    className={cn(
+                      "w-6 h-6 shrink-0 cursor-pointer transition-colors flex items-center justify-center rounded-sm",
+                      showMoreActions 
+                        ? "bg-app-text-primary text-app-card" 
+                        : "text-app-text-secondary hover:bg-app-text-primary hover:text-app-card"
+                    )}
+                    title="More actions"
+                  >
+                    <ChevronsLeft size={14} />
+                  </button>
+                )}
+                <div className="w-[1px] h-4 shrink-0 bg-app-border self-center mx-0.5" />
                 <button
-                  key={action.id}
+                  onMouseDown={handleSplitNode}
+                  className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
+                  title="Split node at cursor"
+                >
+                  <Scissors size={14} />
+                </button>
+                <button
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    action.onClick(node.id);
+                    setFullScreenId(node.id);
                   }}
-                  className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
-                  title={action.label}
+                  className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
+                  title="Expand to full screen"
                 >
-                  {action.icon}
+                  <Maximize2 size={14} />
                 </button>
-              ))}
-              <button
-                onMouseDown={handleSplitNode}
-                className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
-                title="Split node at cursor"
-              >
-                <Scissors size={14} />
-              </button>
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setFullScreenId(node.id);
-                }}
-                className="w-6 h-6 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center"
-                title="Expand to full screen"
-              >
-                <Maximize2 size={14} />
-              </button>
+              </div>
+
+              {showMoreActions && pluginActions.length > 1 && (
+                <div className="flex flex-col gap-0.5 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden p-0.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                  {pluginActions.slice(1).map(action => (
+                    <button
+                      key={action.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        action.onClick(node.id, node);
+                        setShowMoreActions(false);
+                      }}
+                      className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
+                      title={action.label}
+                    >
+                      {action.icon}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          {isEditing ? (
+          {/* Top Widgets */}
+          {topWidgets.map((widget) => (
+            <div key={widget.id} className="w-full mb-2">
+              <ErrorBoundary fallback={<div className="text-red-500 text-xs p-1 bg-red-500/10 rounded">Widget Error</div>}>
+                <widget.component node={node} />
+              </ErrorBoundary>
+            </div>
+          ))}
+
+          {replaceWidgets.length > 0 ? (
+            <div className="w-full pt-3">
+              {replaceWidgets.map(widget => (
+                <ErrorBoundary key={widget.id} fallback={<div className="text-red-500 text-xs p-1 bg-red-500/10 rounded">Widget Error</div>}>
+                  <widget.component node={node} />
+                </ErrorBoundary>
+              ))}
+            </div>
+          ) : isEditing ? (
             <div className="w-full pt-3">
               {/* 
                  The application deliberately supports both "visual" (WysiwygEditor) 
@@ -375,6 +454,7 @@ export const Card = React.memo(
                     onChange={(val: string) => updateContent(node.id, val)}
                     onBlur={() => setEditingId(null)}
                     autoFocus
+                    data-node-id={node.id}
                     className={cn(
                       PROSE_CARD,
                       isBright ? PROSE_CARD_BRIGHT : PROSE_CARD_DIM,
@@ -389,6 +469,7 @@ export const Card = React.memo(
                   onChange={(val: string) => updateContent(node.id, val)}
                   onBlur={() => setEditingId(null)}
                   autoFocus
+                  data-node-id={node.id}
                   className="w-full resize-none outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 bg-transparent font-sans text-sm text-app-text-primary leading-relaxed min-h-[24px] py-0 m-0"
                 />
               )}
@@ -421,6 +502,15 @@ export const Card = React.memo(
               </div>
             </div>
           )}
+
+          {/* Bottom Widgets */}
+          {bottomWidgets.map((widget) => (
+            <div key={widget.id} className="w-full mt-2">
+              <ErrorBoundary fallback={<div className="text-red-500 text-xs p-1 bg-red-500/10 rounded">Widget Error</div>}>
+                <widget.component node={node} />
+              </ErrorBoundary>
+            </div>
+          ))}
         </div>
 
         {/* DnD drop-zone overlay indicators — rendered outside the card body

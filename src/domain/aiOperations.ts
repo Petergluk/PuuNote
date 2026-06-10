@@ -4,6 +4,7 @@ import type { PuuNode } from "../types";
 import { generateId } from "../utils/id";
 import { JobRunner } from "./jobRunner";
 import { AiProviderRegistry, type GeneratedNodeDraft } from "./aiProvider";
+import { useAppStore } from "../store/useAppStore";
 
 export interface ApplyGeneratedDraftsResult {
   nextNodes: PuuNode[];
@@ -101,6 +102,10 @@ export async function runMockExpandSelectedCard(context: AiExpandContext) {
 
       if (createdNodes[0]) {
         setActiveIds(createdNodes[0].id, [createdNodes[0].id]);
+        const state = useAppStore.getState();
+        if (state.fullScreenId) {
+            state.setFullScreenId(createdNodes[0].id);
+        }
       }
 
       updateProgress(

@@ -1,6 +1,8 @@
 {
-  "name": "PuuNote",
+  "name": "Remix: PuuNote",
   "description": "A horizontal-tree, card-based text Editor",
-  "requestFramePermissions": ["microphone"],
+  "requestFramePermissions": [
+    "microphone"
+  ],
   "majorCapabilities": []
 }

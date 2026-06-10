@@ -1,19 +1,19 @@
 import { useTranslation } from "react-i18next";
 import {
-  INITIAL_NODES,
+  getLocalizedInitialNodes,
   TUTORIAL_DOCUMENT_TITLE,
   withTutorialMetadata,
 } from "../constants";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import type { PuuDocumentMetadata } from "../types";
+import type { PuuDocumentMetadata, PuuNode } from "../types";
 
 interface TutorialModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingTutorialId: string | null;
   createNewFile: (
-    nodes: typeof INITIAL_NODES,
+    nodes: PuuNode[],
     title: string,
     metadata?: PuuDocumentMetadata,
   ) => void;
@@ -29,7 +29,7 @@ export function TutorialModal({
   markTutorialDocument,
   switchFile,
 }: TutorialModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -69,7 +69,7 @@ export function TutorialModal({
           <button
             onClick={() => {
               createNewFile(
-                INITIAL_NODES,
+                getLocalizedInitialNodes(i18n.language),
                 `${TUTORIAL_DOCUMENT_TITLE} (New)`,
                 withTutorialMetadata(),
               );
@@ -86,7 +86,7 @@ export function TutorialModal({
               useAppStore
                 .getState()
                 .openConfirm(t("Reset Tutorial Confirm"), async () => {
-                  const tutorialNodes = INITIAL_NODES.map((n, i) => ({
+                  const tutorialNodes = getLocalizedInitialNodes(i18n.language).map((n, i) => ({
                     ...n,
                     order: n.order ?? i,
                     id: n.id,

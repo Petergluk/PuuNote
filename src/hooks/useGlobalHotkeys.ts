@@ -25,11 +25,20 @@ export function useGlobalHotkeys(commands: CommandItem[]) {
       }
 
       // Don't trigger hotkeys if user is focused on an input/textarea
-      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      const isInput = activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' || 
+        activeElement.getAttribute('contenteditable') === 'true' ||
+        activeElement.closest('[contenteditable="true"]') !== null
+      );
+      
+      if (isInput) {
         // Exception: if it's explicitly readOnly, we might allow commands unless it was caught above
         if (!(activeElement as HTMLInputElement).readOnly) {
            // We ONLY allow modifiers (ctrl, cmd) through textareas so we don't steal single letter typing
-           if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+           // But if it's Shift+Delete, we should allow it
+           const isShiftDelete = e.shiftKey && e.key === 'Delete';
+           if (!e.metaKey && !e.ctrlKey && !e.altKey && !isShiftDelete) {
              return;
            }
         }
@@ -50,15 +59,14 @@ export function useGlobalHotkeys(commands: CommandItem[]) {
 
       const pressedStr = keys.join('+');
 
-      for (const [cmdId, hotkey] of Object.entries(hotkeysRef.current)) {
-        if (hotkey === pressedStr) {
-          const cmd = commands.find((c) => c.id === cmdId);
-          if (cmd) {
-            e.preventDefault();
-            e.stopPropagation();
-            cmd.run();
-            return;
-          }
+      for (const cmd of commands) {
+        const userOverride = hotkeysRef.current[cmd.id];
+        const activeHotkey = userOverride !== undefined ? userOverride : (cmd.hotkey?.toLowerCase() || "");
+        if (activeHotkey === pressedStr) {
+          e.preventDefault();
+          e.stopPropagation();
+          cmd.run();
+          return;
         }
       }
     };

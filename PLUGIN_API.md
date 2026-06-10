@@ -14,6 +14,7 @@ A plugin can:
 - Hook into node lifecycle events (`hooks.onNodeCreated`, `hooks.onNodeUpdated`, `hooks.onNodeDeleted`).
 - Provide long-running background tasks via the **Job Panel**.
 - Integrate with API Keys from `.env` (locally/hosting) or local storage (through the UI).
+- Render applications or chat interfaces in a resizable left Sidebar (`sidebarComponent` and `api.ui.openSidebar`).
 - Read and modify the Document Tree (the application's data structure).
 
 ---
@@ -61,9 +62,15 @@ function MyPluginSettings() {
   return <div className="p-4 text-white">My settings UI here</div>;
 }
 
+// Optional: A React component to render in the left Sidebar
+function MySidebar() {
+  return <div className="p-4 bg-app-card h-full">Sidebar Chat/Tools</div>;
+}
+
 export const myAwesomePlugin: PluginDefinition = {
   ...myPluginManifest,
   settingsComponent: MyPluginSettings,
+  sidebarComponent: MySidebar,
 
   async init(api: PluginAPI) {
     pluginApi = api;
@@ -150,6 +157,13 @@ export interface PluginAPI {
   
   // 3. UI Toasts
   toast: (msg: string, type?: "success" | "error" | "warning" | "info") => void;
+
+  // 4. Advanced UI Controls
+  ui?: {
+    openSidebar: (pluginId?: string) => void;
+    closeSidebar: () => void;
+    // ...other UI methods
+  };
 }
 ```
 

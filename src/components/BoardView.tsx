@@ -14,7 +14,10 @@ import {
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Card } from "./Card";
 
+import { useDragAutoScroll } from "../hooks/useDragAutoScroll";
+
 export function BoardView() {
+  useDragAutoScroll();
   const activeFileId = useAppStore((s) => s.activeFileId);
   const activeId = useAppStore((s) => s.activeId);
   const editingId = useAppStore((s) => s.editingId);

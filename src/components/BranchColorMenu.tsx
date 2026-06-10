@@ -221,9 +221,9 @@ export function BranchColorMenu({
     <div ref={menuRef} className="relative hidden sm:block">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${
+        className={`hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors items-center justify-center ${
           open
-            ? "text-app-text-primary bg-app-card-hover"
+            ? "text-app-text-primary bg-app-card-hover border-app-border"
             : "text-app-text-secondary"
         }`}
         title="Branch color"

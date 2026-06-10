@@ -31,6 +31,9 @@ export interface UiSlice {
   editorMode: EditorMode;
   settingsOpen: boolean;
   pluginsOpen: boolean;
+  isSidebarOpen: boolean;
+  activeSidebarPluginId: string | null;
+  sidebarWidth: number;
   disabledPlugins: string[];
   timelineOpen: boolean;
   colWidth: number;
@@ -68,6 +71,9 @@ export interface UiSlice {
   setEditorMode: (mode: EditorMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setPluginsOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
+  setActiveSidebarPluginId: (id: string | null) => void;
+  setSidebarWidth: (width: number) => void;
   setDisabledPlugins: (plugins: string[]) => void;
   setTimelineOpen: (open: boolean) => void;
   setColWidth: (width: number) => void;
@@ -145,10 +151,11 @@ export interface DocumentSlice {
   exportToStructuredMarkdown: () => void;
   exportToJson: () => void;
   updateContent: (id: string, content: string) => void;
+  updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
   setActiveBranchColor: (colorId: string | null) => void;
   clearAllBranchColors: () => void;
   autoColorRootBranches: () => void;
-  addChild: (parentId: string | null) => void;
+  addChild: (parentId: string | null, content?: string) => void;
   addSibling: (siblingId: string | null) => void;
   deleteNode: (id: string) => void;
   deleteNodes: (ids: string[]) => void;

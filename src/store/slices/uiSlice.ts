@@ -118,6 +118,9 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   pasteSplitMode: "separator",
   settingsOpen: false,
   pluginsOpen: false,
+  isSidebarOpen: false,
+  activeSidebarPluginId: null,
+  sidebarWidth: 350,
   disabledPlugins: [],
   timelineOpen: false,
   colWidth: 320,
@@ -190,6 +193,12 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) => (s.settingsOpen === settingsOpen ? s : { settingsOpen })),
   setPluginsOpen: (pluginsOpen) =>
     set((s) => (s.pluginsOpen === pluginsOpen ? s : { pluginsOpen })),
+  setSidebarOpen: (isSidebarOpen) =>
+    set((s) => (s.isSidebarOpen === isSidebarOpen ? s : { isSidebarOpen })),
+  setActiveSidebarPluginId: (activeSidebarPluginId) =>
+    set((s) => (s.activeSidebarPluginId === activeSidebarPluginId ? s : { activeSidebarPluginId })),
+  setSidebarWidth: (sidebarWidth) =>
+    set((s) => (s.sidebarWidth === sidebarWidth ? s : { sidebarWidth })),
   setDisabledPlugins: (disabledPlugins) => {
     localStorage.setItem('PUU_DISABLED_PLUGINS', JSON.stringify(disabledPlugins));
     set(() => ({ disabledPlugins }));

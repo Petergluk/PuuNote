@@ -94,6 +94,7 @@ export const documentApi = {
   addChild: (
     nodes: PuuNode[],
     parentId: string | null,
+    content: string = "",
   ): { nextNodes: PuuNode[]; newId: string } => {
     const newId = generateId();
     const index = buildTreeIndex(nodes);
@@ -103,7 +104,7 @@ export const documentApi = {
 
     const nextNodes = [
       ...nodes,
-      { id: newId, content: "", parentId, order: maxOrder + 1 },
+      { id: newId, content, parentId, order: maxOrder + 1 },
     ];
     return { nextNodes, newId };
   },

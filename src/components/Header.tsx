@@ -26,6 +26,8 @@ import { ExportMenu } from "./ExportMenu";
 import { MobileMenu } from "./MobileMenu";
 import { ThemeTuneMenu } from "./ThemeTuneMenu";
 import { BranchColorMenu } from "./BranchColorMenu";
+import { usePluginHeaderActions } from "../plugins/registry";
+import { PluginDropdownAction } from "./PluginDropdownAction";
 
 interface HeaderProps {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -219,7 +221,7 @@ export function Header({ handleImport }: HeaderProps) {
         </span>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-4 text-xs">
-        <div className="hidden items-center gap-0 border-r border-app-border pr-2 sm:flex sm:gap-1 sm:pr-4">
+        <div className="hidden items-center gap-0 border-r border-app-border pr-2 sm:flex sm:gap-1 sm:pr-2">
           <button
             onClick={handleUndo}
             disabled={!canUndo}
@@ -242,7 +244,7 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={toggleFullscreen}
           onDoubleClick={handleFullscreenDoubleClick}
-          className="hidden sm:flex bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2"
+          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
           title="Toggle Fullscreen"
           aria-label="Toggle fullscreen"
           aria-pressed={uiMode !== "normal"}
@@ -256,21 +258,21 @@ export function Header({ handleImport }: HeaderProps) {
         {!timelineOpen && (
           <button
             onClick={toggleCardsCollapsed}
-            className="hidden sm:flex bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2"
+            className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
             title="Toggle Expand/Collapse"
             aria-label="Toggle card collapse"
             aria-pressed={cardsCollapsed}
           >
-            {cardsCollapsed ? (
-              <UnfoldVertical size={14} />
+             {cardsCollapsed ? (
+              <UnfoldVertical size={16} />
             ) : (
-              <FoldVertical size={14} />
+              <FoldVertical size={16} />
             )}
           </button>
         )}
         <button
           onClick={toggleTheme}
-          className="hidden sm:flex bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2"
+          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
           title="Toggle theme"
           aria-label="Toggle theme"
         >
@@ -282,7 +284,7 @@ export function Header({ handleImport }: HeaderProps) {
           onBeautifulClick={handleBeautifulClick}
         />
         <label
-          className="hidden sm:flex cursor-pointer bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center gap-2"
+          className="hidden sm:flex cursor-pointer bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
           title="Import"
           aria-label="Import"
         >
@@ -295,17 +297,35 @@ export function Header({ handleImport }: HeaderProps) {
           />
         </label>
         <ExportMenu />
+        
+        {/* Dynamic Plugin Header Actions */}
+        {usePluginHeaderActions().map(action => (
+          action.dropdownItems && action.dropdownItems.length > 0 ? (
+            <PluginDropdownAction key={action.id} action={action} />
+          ) : (
+            <button
+              key={action.id}
+              onClick={action.onClick}
+              className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
+              title={action.label}
+              aria-label={action.label}
+            >
+              <action.icon size={16} />
+            </button>
+          )
+        ))}
+
         <button
           onClick={enterMobileZen}
-          className="flex h-8 w-8 items-center justify-center rounded border border-app-border bg-app-card text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary sm:hidden"
+          className="flex w-8 h-8 items-center justify-center rounded border border-app-border/50 bg-app-card text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary hover:border-app-border sm:hidden"
           title={t("Fullscreen")}
           aria-label={t("Fullscreen")}
         >
-          <Maximize size={15} />
+          <Maximize size={16} />
         </button>
         <button
           onClick={() => { useAppStore.getState().setPluginsOpen(!useAppStore.getState().pluginsOpen) }}
-          className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium hidden sm:flex items-center gap-2 ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover" : "text-app-text-secondary"}`}
+          className={`bg-app-card border w-8 h-8 rounded transition-colors hidden sm:flex items-center justify-center ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
           title="Plugins"
           aria-label="Plugins"
           aria-pressed={useAppStore.getState().pluginsOpen}
@@ -314,7 +334,7 @@ export function Header({ handleImport }: HeaderProps) {
         </button>
         <button
           onClick={() => setSettingsOpen(!settingsOpen)}
-          className={`bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 sm:px-3 sm:py-1.5 rounded transition-colors font-medium flex items-center gap-2 ${settingsOpen ? "text-app-text-primary bg-app-card-hover" : "text-app-text-secondary"}`}
+          className={`bg-app-card border w-8 h-8 rounded transition-colors flex items-center justify-center ${settingsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
           title="Settings"
           aria-label="Settings"
           aria-pressed={settingsOpen}

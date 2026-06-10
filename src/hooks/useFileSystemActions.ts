@@ -1,6 +1,7 @@
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
-import { INITIAL_NODES } from "../constants";
+import { getLocalizedInitialNodes } from "../constants";
+import i18n from "../i18n";
 import { toast } from "sonner";
 import { DocumentService, normalizeNodes } from "../domain/documentService";
 import type { PuuDocument, PuuDocumentMetadata } from "../types";
@@ -16,14 +17,15 @@ export function useFileSystemActions() {
       return;
     }
 
+    await flushPendingSave();
+
     fsManager.switchController?.abort();
     fsManager.switchController = new AbortController();
     const signal = fsManager.switchController.signal;
 
-    await flushPendingSave();
     if (signal.aborted) return;
 
-    let newNodes = INITIAL_NODES;
+    let newNodes = getLocalizedInitialNodes(i18n.language);
     let didFail = false;
     try {
       const saved = await DocumentService.loadNodes(fileId);
@@ -69,15 +71,16 @@ export function useFileSystemActions() {
   };
 
   const createNewFile = async (
-    initialNodes?: typeof INITIAL_NODES,
+    initialNodes?: import("../types").PuuNode[],
     title?: string,
     metadata?: PuuDocumentMetadata,
   ) => {
+    await flushPendingSave();
+
     fsManager.switchController?.abort();
     fsManager.switchController = new AbortController();
     const signal = fsManager.switchController.signal;
 
-    await flushPendingSave();
     if (signal.aborted) return;
 
     const nodesToUse = initialNodes || [

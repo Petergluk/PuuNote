@@ -110,7 +110,7 @@ export function CommandPalette() {
           fuse
             .search(query)
             .slice(0, 15)
-            .map((res: any) => res.item),
+            .map((res: { item: SearchDocumentNode }) => res.item),
         );
         setIsSearching(false);
       }, 300);

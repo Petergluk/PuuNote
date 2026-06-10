@@ -11,6 +11,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FloatingCardActions } from "./components/FloatingCardActions";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { PluginsPanel } from "./components/PluginsPanel";
+import { PluginOverlays } from "./components/PluginOverlays";
 
 import { Minimize } from "lucide-react";
 
@@ -37,7 +38,24 @@ import { useGlobalHotkeys } from "./hooks/useGlobalHotkeys";
 import { useAppStore } from "./store/useAppStore";
 import { useFileImport } from "./hooks/useFileImport";
 import { BoardView } from "./components/BoardView";
+import { Sidebar } from "./components/Sidebar";
 import { useAppCommands } from "./hooks/useAppCommands";
+
+const CssVariables = () => {
+  const colWidth = useAppStore((s) => s.colWidth);
+  const inactiveCardDim = useAppStore((s) => s.inactiveCardDim);
+  const inactiveCardOpacity = Math.max(
+    0.08,
+    Math.min(1, (50 + inactiveCardDim) / 100),
+  );
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--col-width", `${colWidth}px`);
+    document.documentElement.style.setProperty("--inactive-card-opacity", `${inactiveCardOpacity}`);
+  }, [colWidth, inactiveCardOpacity]);
+
+  return null;
+};
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,12 +68,6 @@ export default function App() {
   const { handleKeyDown } = useAppHotkeys(containerRef);
   const uiMode = useAppStore((s) => s.uiMode);
   const timelineOpen = useAppStore((s) => s.timelineOpen);
-  const colWidth = useAppStore((s) => s.colWidth);
-  const inactiveCardDim = useAppStore((s) => s.inactiveCardDim);
-  const inactiveCardOpacity = Math.max(
-    0.08,
-    Math.min(1, (50 + inactiveCardDim) / 100),
-  );
   const fullScreenId = useAppStore((s) => s.fullScreenId);
   const setFullScreenId = useAppStore((s) => s.setFullScreenId);
 
@@ -96,7 +108,7 @@ export default function App() {
       className="min-h-screen h-screen bg-app-bg text-app-text-primary font-sans flex flex-col overflow-hidden outline-none transition-colors duration-300"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onClick={(e) => {
+      onPointerDown={(e) => {
         /* If clicked directly on the main background areas (not on cards) */
         if (
           (e.target as HTMLElement).id === "puunote-app-container" ||
@@ -110,29 +122,26 @@ export default function App() {
       }}
     >
       <Toaster theme="system" position="bottom-right" richColors />{" "}
+      <CssVariables />
       {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
-      <main
-        id="main-scroller"
-        style={
-          {
-            "--col-width": `${colWidth}px`,
-            "--inactive-card-opacity": inactiveCardOpacity,
-          } as React.CSSProperties
-        }
-        className={`flex-1 overflow-x-auto w-full flex items-start relative bg-app-bg transition-colors duration-300 snap-x snap-mandatory sm:snap-none ${!timelineOpen ? "overflow-y-hidden" : "overflow-y-auto"}`}
-      >
-        {" "}
-        <BoardView />
-        {timelineOpen && (
-          <Suspense
-            fallback={
-              <div className="p-8 text-app-text-muted">Loading timeline...</div>
-            }
-          >
-            <TimelineView />
-          </Suspense>
-        )}{" "}
-      </main>{" "}
+      <div className="flex-1 flex overflow-hidden min-h-0 relative">
+        <Sidebar />
+        <main
+          id="main-scroller"
+          className={`flex-1 overflow-x-auto h-full w-full flex items-start relative bg-app-bg transition-colors duration-300 snap-x snap-mandatory sm:snap-none ${!timelineOpen ? "overflow-y-hidden" : "overflow-y-auto"}`}
+        >
+          <BoardView />
+          {timelineOpen && (
+            <Suspense
+              fallback={
+                <div className="p-8 text-app-text-muted">Loading timeline...</div>
+              }
+            >
+              <TimelineView />
+            </Suspense>
+          )}
+        </main>
+      </div>
       {!timelineOpen && (
         <ErrorBoundary>
           <FloatingCardActions />
@@ -193,7 +202,12 @@ export default function App() {
         <ErrorBoundary>
           <ConfirmDialog />
         </ErrorBoundary>
+        <ErrorBoundary>
+          <PluginOverlays />
+        </ErrorBoundary>
       </Suspense>
     </div>
   );
 }
+
+// force update 2

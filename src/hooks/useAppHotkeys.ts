@@ -323,7 +323,7 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       if (e.ctrlKey || e.metaKey) {
         const target = e.target as HTMLElement;
-        if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") {
+        if (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable) {
           return;
         }
 
@@ -445,14 +445,14 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
       if (e.key === "ArrowRight" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         const currentState = useAppStore.getState();
-        currentState.setColWidth(Math.min(500, currentState.colWidth + 25));
+        currentState.setColWidth(Math.min(1200, currentState.colWidth + 25));
         return;
       }
 
       if (e.key === "ArrowLeft" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         const currentState = useAppStore.getState();
-        currentState.setColWidth(Math.max(200, currentState.colWidth - 25));
+        currentState.setColWidth(Math.max(220, currentState.colWidth - 25));
         return;
       }
 

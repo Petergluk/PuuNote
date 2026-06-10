@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
-import { INITIAL_NODES } from "../constants";
+import { getLocalizedInitialNodes } from "../constants";
+import i18n from "../i18n";
 import { toast } from "sonner";
 import { DocumentService } from "../domain/documentService";
 import type { PuuDocument } from "../types";
@@ -70,7 +71,7 @@ export function useFileSystemInit() {
           );
         }
 
-        let newNodes = INITIAL_NODES;
+        let newNodes = getLocalizedInitialNodes(i18n.language);
         try {
           await DocumentService.restoreDirtySave();
           if (cancelled) return;

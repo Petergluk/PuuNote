@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Keyboard, Columns, History, Combine } from "lucide-react";
 import { toast } from "sonner";
 import {
-  INITIAL_NODES,
+  getLocalizedInitialNodes,
   TUTORIAL_DOCUMENT_TITLE,
   isTutorialDocument,
   withTutorialMetadata,
@@ -25,9 +25,11 @@ import { ShortcutsModal } from "./ShortcutsModal";
 import { TutorialModal } from "./TutorialModal";
 import { SnapshotPanel } from "./SnapshotPanel";
 import { getMergeSelectionState } from "../utils/mergeSelection";
+import { usePluginFooterActions } from "../plugins/registry";
+import { PluginDropdownAction } from "./PluginDropdownAction";
 
 export function Footer() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const nodes = useAppStore((s) => s.nodes);
   const activeId = useAppStore((s) => s.activeId);
   const colWidth = useAppStore((s) => s.colWidth);
@@ -121,7 +123,7 @@ export function Footer() {
   };
 
   const resetTutorialNodes = (documentId: string | null) => {
-    const tutorialNodes = INITIAL_NODES.map((n, i) => ({
+    const tutorialNodes = getLocalizedInitialNodes(i18n.language).map((n, i) => ({
       ...n,
       order: n.order ?? i,
       id: n.id,
@@ -227,6 +229,29 @@ export function Footer() {
               +
             </button>
           </div>{" "}
+          
+          {/* Dynamic Plugin Footer Actions */}
+          {usePluginFooterActions().map(action => (
+            action.dropdownItems && action.dropdownItems.length > 0 ? (
+              <PluginDropdownAction
+                key={action.id}
+                action={action}
+                dropup={true}
+                buttonClassName="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
+              />
+            ) : (
+              <button
+                key={action.id}
+                onClick={action.onClick}
+                className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
+                title={action.label}
+                aria-label={action.label}
+              >
+                <action.icon size={16} />
+              </button>
+            )
+          ))}
+
           <button
             onClick={() => setIsSnapshotsOpen(true)}
             className="flex items-center gap-2 text-app-text-secondary hover:text-app-text-primary transition-colors bg-app-card py-1 px-3 rounded border border-app-border hover:bg-app-card-hover cursor-pointer"
@@ -262,7 +287,7 @@ export function Footer() {
               } else {
                 // Does not exist, create silently
                 createNewFile(
-                  INITIAL_NODES,
+                  getLocalizedInitialNodes(i18n.language),
                   TUTORIAL_DOCUMENT_TITLE,
                   withTutorialMetadata(),
                 );

@@ -1,7 +1,6 @@
 import React, {
   useRef,
   useEffect,
-  useState,
   forwardRef,
   useImperativeHandle,
   useCallback,
@@ -25,6 +24,7 @@ export const AutoSizeTextarea = forwardRef<
     className?: string;
     placeholder?: string;
     style?: AutosizeStyle;
+    "data-node-id"?: string;
   }
 >(
   (
@@ -37,6 +37,7 @@ export const AutoSizeTextarea = forwardRef<
       className,
       placeholder,
       style,
+      "data-node-id": dataNodeId,
     },
     forwardedRef,
   ) => {
@@ -45,7 +46,6 @@ export const AutoSizeTextarea = forwardRef<
       forwardedRef,
       () => internalRef.current as HTMLTextAreaElement,
     );
-    const [localValue, setLocalValue] = useState(value);
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingChangeRef = useRef<string | null>(null);
@@ -69,12 +69,14 @@ export const AutoSizeTextarea = forwardRef<
 
     // Sync external value initially, or when it changes outside
     useEffect(() => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      if (internalRef.current && internalRef.current.value !== value) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        pendingChangeRef.current = null;
+        internalRef.current.value = value;
       }
-      pendingChangeRef.current = null;
-      setLocalValue(value);
     }, [value]);
 
     useEffect(() => {
@@ -87,7 +89,6 @@ export const AutoSizeTextarea = forwardRef<
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const val = e.target.value;
-      setLocalValue(val);
       pendingChangeRef.current = val;
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -113,11 +114,12 @@ export const AutoSizeTextarea = forwardRef<
     return (
       <ReactTextareaAutosize
         ref={internalRef}
-        value={localValue}
+        defaultValue={value}
         onChange={handleChange}
         onBlur={handleBlur}
         autoFocus={autoFocus}
         data-autofocus={dataAutoFocus || undefined}
+        data-node-id={dataNodeId}
         placeholder={placeholder || "Type something... (Markdown supported)"}
         className={
           className ||
