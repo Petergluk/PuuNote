@@ -236,6 +236,13 @@ To ensure the best UX across Local, Cloud hosting (like Render), and Google Stud
 2. Environment Key fallback: `import.meta.env.VITE_GLOBAL_GEMINI_API_KEY` or `import.meta.env.VITE_GEMINI_API_KEY`
 3. Optional Stubbing (e.g., if rendering in AI Studio without a key, you may fallback to simulated processing to show the UI working)
 
+### 3.4 Using AI Models (Gemini Fallback Chain)
+
+If your plugin interacts with the Gemini API, it MUST respect the user's configured fallback chain for models, rather than hardcoding a single model.
+- Users configure their preferred models in the Global settings (stored as `GLOBAL_GEMINI_MODELS` in localStorage).
+- The default priority is: `gemini-3.5-flash, gemini-2.5-pro, gemini-3-flash-preview, gemini-2.5-flash, gemini-3.1-flash-lite`.
+- When making calls, parse this string into an array and iterate through it until a request succeeds, thereby bypassing Quota/Rate Limits on individual models. (See the host app's `generateContentFallback` for a reference implementation).
+
 ### 3.5 UI Styling Conventions
 
 When rendering `settingsComponent` or other UI elements inside modals, follow these styling conventions to ensure a consistent experience:
@@ -243,7 +250,7 @@ When rendering `settingsComponent` or other UI elements inside modals, follow th
 - **Example Input Classes**: `w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent`.
 - **Never** use `bg-app-bg` or `bg-app-card` for input fields inside modals. `bg-app-input-bg` guarantees the right contrast in Light and Dark themes.
 
-### 3.4 Import and Export Customization
+### 3.6 Import and Export Customization
 
 Currently, the Plugin API does not natively inject custom formats into the core "File > Import" or "File > Export" dropdowns. However, if your plugin offers custom import or extended export formats (e.g., PDF export, CSV import), you can provide this functionality by:
 1. Registering an entry in the `commands` array (which appears in the Command Palette).
