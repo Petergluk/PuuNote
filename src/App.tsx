@@ -1,6 +1,6 @@
 import { useEffect, useRef, Suspense, lazy } from "react";
 import { AnimatePresence } from "motion/react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { isFullscreen, exitFullscreen } from "./utils/fullscreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
@@ -40,6 +40,7 @@ import { useFileImport } from "./hooks/useFileImport";
 import { BoardView } from "./components/BoardView";
 import { Sidebar } from "./components/Sidebar";
 import { useAppCommands } from "./hooks/useAppCommands";
+import { useFileSystemActions } from "./hooks/useFileSystemActions";
 
 const CssVariables = () => {
   const colWidth = useAppStore((s) => s.colWidth);
@@ -60,6 +61,7 @@ const CssVariables = () => {
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const appCommands = useAppCommands();
+  const { switchFile } = useFileSystemActions();
 
   /* Initialize Managers */
   useFileSystemInit();
@@ -85,12 +87,30 @@ export default function App() {
     const onDragEnd = () => {
       useAppStore.getState().setDraggedId(null);
     };
+    const onNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { title, id } = customEvent.detail || {};
+      const { documents } = useAppStore.getState();
+      let targetDoc = null;
+      if (id) {
+         targetDoc = documents.find(d => d.id === id);
+      }
+      if (!targetDoc && title) {
+         targetDoc = documents.find(d => d.title.toLowerCase() === decodeURIComponent(title).toLowerCase());
+      }
+      if (targetDoc) {
+         switchFile(targetDoc.id);
+      } else {
+         toast.error("Document not found");
+      }
+    };
 
     document.addEventListener("fullscreenchange", onFullscreenChange);
     window.addEventListener("blur", onBlur);
     document.addEventListener("blur", onBlur);
     document.addEventListener("mouseleave", onBlur);
     window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("puunote-navigate", onNavigate);
 
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
@@ -98,8 +118,9 @@ export default function App() {
       document.removeEventListener("blur", onBlur);
       document.removeEventListener("mouseleave", onBlur);
       window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("puunote-navigate", onNavigate);
     };
-  }, []);
+  }, [switchFile]);
 
   return (
     <div

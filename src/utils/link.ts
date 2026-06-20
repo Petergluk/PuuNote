@@ -2,7 +2,7 @@ export const normalizeEditorLinkHref = (rawHref: string): string | null => {
   const href = rawHref.trim();
   if (!href) return null;
 
-  if (/^(https?:|mailto:|tel:)/i.test(href)) {
+  if (/^(https?:|mailto:|tel:|puunote:)/i.test(href)) {
     return href;
   }
 
