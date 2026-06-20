@@ -98,6 +98,7 @@ export function useActivePathScroll(
 ) {
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initializedCols = useRef<Set<number>>(new Set());
+  const isScrollingRef = useRef<boolean[]>([]);
 
   useEffect(() => {
     initializedCols.current.clear();
@@ -108,11 +109,43 @@ export function useActivePathScroll(
     return () => {
       initCols.clear();
       colRefs.current = [];
+      isScrollingRef.current = [];
     };
   }, []);
 
   useEffect(() => {
     colRefs.current = colRefs.current.slice(0, columnsLength);
+    isScrollingRef.current = isScrollingRef.current.slice(0, columnsLength);
+
+    const handleScroll = (index: number) => {
+      isScrollingRef.current[index] = true;
+      const col = colRefs.current[index];
+      if (!col) return;
+      if ((col as any)._scrollTimer) {
+        clearTimeout((col as any)._scrollTimer);
+      }
+      (col as any)._scrollTimer = setTimeout(() => {
+        isScrollingRef.current[index] = false;
+      }, 400); // 400ms after last scroll event, it's safe to align again
+    };
+
+    const listeners = colRefs.current.map((col, idx) => {
+      if (!col) return null;
+      const fn = () => handleScroll(idx);
+      col.addEventListener('scroll', fn, { passive: true });
+      return { col, fn };
+    });
+
+    return () => {
+      listeners.forEach((listener) => {
+        if (listener) {
+          listener.col.removeEventListener('scroll', listener.fn);
+          if ((listener.col as any)._scrollTimer) {
+            clearTimeout((listener.col as any)._scrollTimer);
+          }
+        }
+      });
+    };
   }, [columnsLength]);
 
   const ancestorStr = activeAncestorPath.join(",");
@@ -151,7 +184,7 @@ export function useActivePathScroll(
         );
       };
 
-      colRefs.current.forEach((col) => {
+      colRefs.current.forEach((col, index) => {
         if (!col) return;
 
         let activeNodeInCol: HTMLElement | null = null;
@@ -167,7 +200,7 @@ export function useActivePathScroll(
           }
         }
 
-        if (activeNodeInCol && activeRect && activeId) {
+        if (activeNodeInCol && activeRect && activeId && !isScrollingRef.current[index]) {
           const elRect = activeNodeInCol.getBoundingClientRect();
           const colRect = col.getBoundingClientRect();
 

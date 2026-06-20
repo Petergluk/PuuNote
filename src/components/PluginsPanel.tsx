@@ -317,7 +317,9 @@ export function PluginsPanel() {
                       
                       <div className="flex-1">
                           {plugin.settingsComponent ? (
-                            <plugin.settingsComponent />
+                            <div className="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm flex flex-col gap-4">
+                              <plugin.settingsComponent />
+                            </div>
                           ) : (
                             <div className="text-sm text-app-text-muted">У этого плагина нет настроек.</div>
                           )}
