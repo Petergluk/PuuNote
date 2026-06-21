@@ -110,6 +110,7 @@ export interface PluginAPI {
     registerCardWidget?: (widgetId: string, Component: React.ComponentType<{node: PuuNode}>, position?: "top" | "bottom" | "replace", pluginId?: string) => void;
     openSidebar: (pluginId?: string) => void;
     closeSidebar: () => void;
+    toggleSidebar?: (pluginId?: string) => void;
   };
 }
 
@@ -150,11 +151,12 @@ class PluginRegistryClass {
         if (apiProxy.ui) {
           apiProxy.ui = {
             ...apiProxy.ui,
-            renderOverlay: (id, Component, position) => this.api.ui?.renderOverlay(id, Component, position, plugin.id),
-            renderInlineWidget: (id, Component) => this.api.ui?.renderInlineWidget?.(id, Component, plugin.id),
-            registerCardWidget: (widgetId, Component, position) => this.api.ui?.registerCardWidget?.(widgetId, Component, position, plugin.id),
-            openSidebar: () => this.api.ui?.openSidebar(plugin.id),
-            closeSidebar: () => this.api.ui?.closeSidebar()
+            renderOverlay: (id, Component, position) => this.api?.ui?.renderOverlay(id, Component, position, plugin.id),
+            renderInlineWidget: (id, Component) => this.api?.ui?.renderInlineWidget?.(id, Component, plugin.id),
+            registerCardWidget: (widgetId, Component, position) => this.api?.ui?.registerCardWidget?.(widgetId, Component, position, plugin.id),
+            openSidebar: () => this.api?.ui?.openSidebar(plugin.id),
+            closeSidebar: () => this.api?.ui?.closeSidebar(),
+            toggleSidebar: () => this.api?.ui?.toggleSidebar?.(plugin.id)
           };
         }
         await plugin.init(apiProxy);

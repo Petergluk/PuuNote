@@ -40,9 +40,6 @@ export async function generateContentFallback(
     options?: { signal?: AbortSignal, timeoutMs?: number, onStatusChange?: (msg: string) => void, systemInstruction?: string | { parts: { text: string }[] } }
 ) {
     const keys = Array.from(new Set(getGlobalApiKeys()));
-    if (keys.length === 0) {
-        throw new Error("API-ключ Gemini не найден. Добавьте его в настройках или .env файл.");
-    }
 
     let customModel = customModelOverride ? customModelOverride.trim() : "";
     if (customModel.startsWith("models/")) customModel = customModel.substring(7);
@@ -53,71 +50,61 @@ export async function generateContentFallback(
     }
 
     let lastError: Error | unknown = null;
-    const bannedKeys = new Set<string>();
 
     for (const model of models) {
-        for (const apiKey of keys) {
-            if (bannedKeys.has(apiKey)) continue;
+        if (options?.onStatusChange) {
+            options.onStatusChange(`Пробуем через ${model}...`);
+        }
+
+        if (options?.signal?.aborted) {
+            throw new Error('AbortError');
+        }
+
+        try {
+            const controller = new AbortController();
+            let timer: ReturnType<typeof setTimeout> | null = null;
             
-            if (options?.onStatusChange) {
-                options.onStatusChange(`Пробуем через ${model}...`);
+            const onAbort = () => controller.abort();
+            if (options?.signal) {
+               options.signal.addEventListener('abort', onAbort);
+            }
+            if (options?.timeoutMs) {
+                timer = setTimeout(() => controller.abort(), options.timeoutMs);
             }
 
-            if (options?.signal?.aborted) {
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    promptText,
+                    customModelOverride: model,
+                    options: options,
+                    passedKeys: keys
+                }),
+                signal: controller.signal
+            });
+
+            if (options?.signal) {
+               options.signal.removeEventListener('abort', onAbort);
+            }
+            if (timer) clearTimeout(timer);
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.error && (data.error.toLowerCase().includes('key not valid') || data.error.toLowerCase().includes('api key not valid'))) {
+                    throw new Error(`API Key Invalid for model ${model}`);
+                }
+                throw new Error(data.error || 'Server error');
+            }
+
+            return { text: data.text || '', usedModel: data.usedModel || model };
+        } catch (err: unknown) {
+            lastError = err;
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.warn(`Error with model ${model}: ${errMsg}`);
+            if (errMsg === 'AbortError' || (err as any)?.name === 'AbortError') {
                 throw new Error('AbortError');
-            }
-
-            try {
-                const ai = new GoogleGenAI({ apiKey });
-                
-                let finalContents = promptText;
-                if (Array.isArray(promptText)) {
-                    // Check if it's an array of Parts (e.g. {text: "..."}) 
-                    // and not already an array of Content objects (which have {role, parts})
-                    if (promptText.length > 0 && !('parts' in promptText[0]) && !('role' in promptText[0])) {
-                        finalContents = [{ role: "user", parts: promptText }];
-                    }
-                }
-                
-                const reqObj: any = {
-                    model: model,
-                    contents: finalContents,
-                };
-                if (options?.systemInstruction) {
-                    reqObj.config = { systemInstruction: options.systemInstruction };
-                }
-                const requestPromise = ai.models.generateContent(reqObj);
-                
-                let timer: ReturnType<typeof setTimeout>;
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    timer = setTimeout(() => reject(new Error('RequestTimeout')), options?.timeoutMs || 25000);
-                    if (options?.signal) {
-                        options.signal.addEventListener('abort', () => {
-                            clearTimeout(timer);
-                            reject(new Error('AbortError'));
-                        });
-                    }
-                });
-
-                let response;
-                try {
-                    response = await (Promise.race([requestPromise, timeoutPromise]) as Promise<any>);
-                } finally {
-                    clearTimeout(timer!);
-                }
-                
-                return { text: response.text || '', usedModel: model };
-            } catch (err: unknown) {
-                lastError = err;
-                const errMsg = err instanceof Error ? err.message : String(err);
-                console.warn(`Error with model ${model}: ${errMsg}`);
-                // If it's an AbortError, break out completely
-                if (errMsg === 'AbortError') {
-                    throw err;
-                }
-                if (errMsg.toLowerCase().includes('key not valid') || errMsg.toLowerCase().includes('api key not valid')) {
-                    bannedKeys.add(apiKey);
-                }
             }
         }
     }

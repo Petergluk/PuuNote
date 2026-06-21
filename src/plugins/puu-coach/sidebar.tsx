@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { PuuNode } from "../../types";
 import { Send, Bot, User, Play, Paperclip, Trash2 } from "lucide-react";
+import { pluginApi as api } from "./api";
 import {
   getSysPrompt,
   getArchPrompt,
@@ -11,7 +12,7 @@ import {
   getArchModel
 } from "./config";
 
-export function ChatSidebar({ api }: { api: any }) {
+export function ChatSidebar() {
   const [messages, setMessages] = useState<{role: 'user'|'model', text: string}[]>([
     { role: 'model', text: 'Привет! Я твой стратегический коуч. О чем поговорим сегодня? Какая у тебя основная цель или вызов?' }
   ]);
@@ -42,7 +43,7 @@ export function ChatSidebar({ api }: { api: any }) {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !api.llm) return;
+    if (!input.trim() || !api?.llm) return;
     
     const userMsg = input.trim();
     setInput('');
@@ -52,16 +53,18 @@ export function ChatSidebar({ api }: { api: any }) {
 
     try {
       // 1. Chat Response
-      const state = api.getState?.();
-      const activeNodeId = api.document?.getActiveNodeId?.();
+      const state = api?.getState?.();
+      const activeNodeId = api?.document?.getActiveNodeId?.();
       const selectedNode = activeNodeId ? state?.nodes?.find((n: PuuNode) => n.id === activeNodeId) : null;
       const selectedNodeText = selectedNode ? `\n[Контекст: Пользователь в данный момент сфокусирован на карточке с текстом: "${selectedNode.content}"]` : '';
 
       const chatPrompt = `${getSysPrompt()}${selectedNodeText}\n\nИстория диалога:\n` + newMessages.map(m => `${m.role}: ${m.text}`).join('\n') + '\nУчитывая этот разговор, дай следующий коучинговый ответ.';
       
       const coachModel = getCoachModel();
-      const response = await api.llm.generateText(chatPrompt, coachModel ? { model: coachModel } : undefined);
-      setMessages(prev => [...prev, { role: 'model', text: response.text }]);
+      const response = await api?.llm?.generateText(chatPrompt, coachModel ? { model: coachModel } : undefined);
+      if (response) {
+         setMessages(prev => [...prev, { role: 'model', text: response.text }]);
+      }
       setIsLoading(false); // Enable chat interaction again
 
       // 2. Architect Background Call (Fire and forget async)
@@ -77,7 +80,7 @@ export function ChatSidebar({ api }: { api: any }) {
         
         const archModel = getArchModel();
         // Fire asynchronously to avoid blocking the user
-        api.llm.generateText(architectPrompt, archModel ? { model: archModel } : undefined)
+        api?.llm?.generateText(architectPrompt, archModel ? { model: archModel } : undefined)
           .then((archResponse: {text: string}) => {
             let parsed: any = null;
             try {
@@ -91,12 +94,12 @@ export function ChatSidebar({ api }: { api: any }) {
               let addedCount = 0;
               parsed.nodes.forEach((node: any) => {
                 if (node.content && (!maxCards || addedCount < maxCards)) {
-                  api.document?.addNode?.(node.content, node.parentId || activeNodeId || null);
+                  api?.document?.addNode?.(node.content, node.parentId || activeNodeId || null);
                   addedCount++;
                 }
               });
               if (addedCount > 0) {
-                 api.toast?.(`Архитектор добавил ${addedCount} новых карточек.`, "success");
+                 api?.toast?.(`Архитектор добавил ${addedCount} новых карточек.`, "success");
               }
             }
           })
@@ -105,7 +108,7 @@ export function ChatSidebar({ api }: { api: any }) {
 
     } catch (err) {
       console.error(err);
-      api.toast?.("Ошибка связи с ИИ", "error");
+      api?.toast?.("Ошибка связи с ИИ", "error");
       setIsLoading(false);
     }
   };
@@ -127,7 +130,7 @@ export function ChatSidebar({ api }: { api: any }) {
           <button onClick={handleClear} className="p-1.5 hover:bg-app-card-hover rounded text-app-text-muted hover:text-red-400 transition-colors" title="Очистить чат">
             <Trash2 size={16} />
           </button>
-          <button onClick={() => api.ui?.closeSidebar?.()} className="p-1 hover:bg-app-card-hover rounded text-app-text-muted" title="Закрыть">
+          <button onClick={() => api?.ui?.closeSidebar?.()} className="p-1 hover:bg-app-card-hover rounded text-app-text-muted" title="Закрыть">
             <Play size={16} className="rotate-180" />
           </button>
         </div>

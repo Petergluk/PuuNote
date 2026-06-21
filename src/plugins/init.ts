@@ -347,6 +347,15 @@ export const pluginApi: PluginAPI = {
     },
     closeSidebar: () => {
        useAppStore.getState().setSidebarOpen(false);
+    },
+    toggleSidebar: (pluginId) => {
+       const store = useAppStore.getState();
+       if (store.isSidebarOpen && (!pluginId || store.activeSidebarPluginId === pluginId)) {
+          store.setSidebarOpen(false);
+       } else {
+          if (pluginId) store.setActiveSidebarPluginId(pluginId);
+          store.setSidebarOpen(true);
+       }
     }
   }
 };

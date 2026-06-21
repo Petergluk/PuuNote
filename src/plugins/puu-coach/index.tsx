@@ -24,8 +24,10 @@ const puuCoachPlugin: PluginDefinition = {
       label: "Start Coach Session",
       icon: MessageSquare,
       onClick: () => {
-        if (pluginApi?.ui?.openSidebar) {
-           pluginApi.ui.openSidebar("puu-coach");
+        if (pluginApi?.ui?.toggleSidebar) {
+           pluginApi?.ui?.toggleSidebar("puu-coach");
+        } else if (pluginApi?.ui?.openSidebar) {
+           pluginApi?.ui?.openSidebar("puu-coach");
         }
       }
     }
