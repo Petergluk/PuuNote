@@ -345,7 +345,7 @@ export const Card = React.memo(
                     className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
                     title={action.label}
                   >
-                    {action.icon}
+                    {action.icon && <action.icon size={14} />}
                   </button>
                 ))}
                 {pluginActions.length > 1 && (
@@ -401,7 +401,7 @@ export const Card = React.memo(
                       className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
                       title={action.label}
                     >
-                      {action.icon}
+                      {action.icon && <action.icon size={14} />}
                     </button>
                   ))}
                 </div>

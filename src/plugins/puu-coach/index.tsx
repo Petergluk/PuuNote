@@ -22,7 +22,7 @@ const puuCoachPlugin: PluginDefinition = {
     {
       id: "toggle-coach",
       label: "Start Coach Session",
-      icon: <MessageSquare size={16} />,
+      icon: MessageSquare,
       onClick: () => {
         if (pluginApi?.ui?.toggleSidebar) {
            pluginApi?.ui?.toggleSidebar("puu-coach");

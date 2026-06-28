@@ -2,31 +2,9 @@ import { PuuNode } from "../types";
 import { buildTreeIndex } from "./tree";
 import { trimBlankEdges, normalizeLineEndings } from "./markdownCommon";
 
-const headingLevelForDepth = (depth: number) =>
-  "#".repeat(Math.min(depth + 1, 6));
-
 const toMarkdownCard = (content: string, depth: number): string => {
   const lines = trimBlankEdges(normalizeLineEndings(content).split("\n"));
-  const heading = headingLevelForDepth(depth);
-
-  if (lines.length === 0) return `${heading} Untitled`;
-
-  const firstContentLine = lines.findIndex((line) => line.trim().length > 0);
-  const firstLine = lines[firstContentLine] || "";
-  const headingMatch = firstLine.match(/^\s*#{1,6}\s+(.+?)\s*$/);
-
-  if (headingMatch) {
-    lines[firstContentLine] = `${heading} ${headingMatch[1]}`;
-    return lines.join("\n").trim();
-  }
-
-  if (lines.length === 1) {
-    return `${heading} ${lines[0].trim() || "Untitled"}`;
-  }
-
-  const title = lines[0].trim() || "Untitled";
-  const body = lines.slice(1).join("\n").trim();
-  return body ? `${heading} ${title}\n\n${body}` : `${heading} ${title}`;
+  return lines.join("\n").trim();
 };
 
 export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
@@ -41,7 +19,10 @@ export const exportNodesToMarkdown = (nodes: PuuNode[]): string => {
       const child = children[i];
       if (visited.has(child.id)) continue;
       visited.add(child.id);
-      md += `${toMarkdownCard(child.content, depth)}\n\n`;
+      const cardContent = toMarkdownCard(child.content, depth);
+      if (cardContent) {
+        md += `${cardContent}\n\n`;
+      }
       traverse(child.id, depth + 1);
     }
   };

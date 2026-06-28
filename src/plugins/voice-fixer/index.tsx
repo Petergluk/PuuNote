@@ -495,7 +495,7 @@ const voiceFixerPlugin: PluginDefinition = {
   cardActions: [
     {
       id: "vf-start",
-      icon: <Mic size={16} />,
+      icon: Mic,
       label: "Диктовать (Voice Fixer)",
       isVisible: (_nodeId, _node) => !activeRecordingNodeId,
       onClick: async (nodeId) => {

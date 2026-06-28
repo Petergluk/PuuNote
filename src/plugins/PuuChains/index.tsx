@@ -418,7 +418,7 @@ function updateCardActions() {
     cardActionsList.push({
       id: `puu-chains-${chain.id}`,
       label: chain.name,
-      icon: <IconComponent size={14} />,
+      icon: IconComponent,
       onClick: async (nodeId: string, node: any) => {
         const api = pluginApi;
         if (!api) return;

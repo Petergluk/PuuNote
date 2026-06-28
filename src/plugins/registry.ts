@@ -13,7 +13,7 @@ export interface PluginHooks {
 export interface CardActionHook {
   id: string;
   label: string;
-  icon?: ReactNode;
+  icon?: ComponentType<{ size?: number; className?: string }>;
   onClick: (nodeId: string, node: PuuNode) => void;
   isVisible?: (nodeId: string, node: PuuNode) => boolean;
 }

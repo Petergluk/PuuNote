@@ -56,7 +56,7 @@ function updateCardActions() {
     cardActionsList.push({
       id: `puu-extend-prompt-${p.id}`,
       label: p.name,
-      icon: <IconComponent size={16} />,
+      icon: IconComponent,
       onClick: async (nodeId: string, node: any) => {
         const api = pluginApi;
         if (!api) return;
