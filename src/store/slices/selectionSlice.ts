@@ -15,9 +15,6 @@ export const createSelectionSlice: AppSlice<SelectionSlice> = (set, get) => ({
   setActiveId: (activeId) => {
     const state = get();
     if (state.activeId === activeId) {
-      if (activeId) {
-        state.triggerLayoutAlign();
-      }
       return;
     }
     set({ activeId, selectedIds: activeId ? [activeId] : [] });

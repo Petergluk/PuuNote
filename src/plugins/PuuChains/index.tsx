@@ -5,8 +5,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Play,
-  Settings,
   GripVertical,
   Link,
   X,
@@ -291,7 +289,7 @@ const InteractiveStepDialog = ({
                   <div className="flex-1 whitespace-pre-wrap">{text}</div>
                   <button
                     onClick={() => {
-                      const newLines = lines.filter((_, idx) => idx !== i);
+                      const newLines = lines.filter((_: string, idx: number) => idx !== i);
                       setLines(newLines);
                       setContent(newLines.join("\n"));
                     }}
@@ -379,7 +377,7 @@ function getChains(): TaskChain[] {
                 c.actionType = "json_tree";
             }
             if (c.steps && Array.isArray(c.steps)) {
-               c.steps.forEach(s => {
+               c.steps.forEach((s: any) => {
                   if (s.instruction && s.instruction.includes('ранжированные чеклисты') && typeof s.isInteractive === 'undefined') {
                      s.isInteractive = true;
                   }
@@ -817,7 +815,7 @@ function PuuChainsSettings() {
     setEditChain({ ...editChain, steps: newSteps });
   };
 
-  const updateStep = (index: number, field: keyof ChainStep, val: string) => {
+  const updateStep = (index: number, field: keyof ChainStep, val: any) => {
     if (!editChain) return;
     const newSteps = [...editChain.steps];
     newSteps[index] = { ...newSteps[index], [field]: val };

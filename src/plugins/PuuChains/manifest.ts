@@ -1,5 +1,3 @@
-import { PluginDefinition } from "../registry";
-
 export const manifest = {
   id: "puu-chains",
   name: "PuuChains (Agent)",

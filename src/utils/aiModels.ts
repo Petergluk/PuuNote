@@ -1,5 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
 export const DEFAULT_MODELS = "gemini-3.5-flash, gemini-2.5-pro, gemini-3-flash-preview, gemini-2.5-flash, gemini-3.1-flash-lite";
 
 export function getGlobalModels(): string[] {
@@ -103,8 +101,10 @@ export async function generateContentFallback(
             lastError = err;
             const errMsg = err instanceof Error ? err.message : String(err);
             console.warn(`Error with model ${model}: ${errMsg}`);
-            if (errMsg === 'AbortError' || (err as any)?.name === 'AbortError') {
-                throw new Error('AbortError');
+            if (errMsg === 'AbortError' || (err as Error)?.name === 'AbortError') {
+                const abortErr = new Error('AbortError');
+                abortErr.cause = err;
+                throw abortErr;
             }
         }
     }
