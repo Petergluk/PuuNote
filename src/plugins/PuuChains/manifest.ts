@@ -1,6 +1,6 @@
 import { PluginDefinition } from "../registry";
 
-export const manifest: Partial<PluginDefinition> = {
+export const manifest = {
   id: "puu-chains",
   name: "PuuChains (Agent)",
   version: "1.0.0",
