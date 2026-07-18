@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { usePluginHeaderActions } from "../plugins/registry";
 
 interface MobileMenuProps {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -170,7 +171,7 @@ export function MobileMenu({
           </button>
           <label className="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary">
             <Download size={16} />
-            {t("Import")}
+            {t("Import")} (.md, .json)
             <input
               type="file"
               accept=".md,.markdown,.json"
@@ -181,6 +182,22 @@ export function MobileMenu({
               }}
             />
           </label>
+          
+          {usePluginHeaderActions()
+            .find((a) => a.id === "import-data")
+            ?.dropdownItems?.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  item.onClick();
+                  close();
+                }}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
+              >
+                {item.icon && <item.icon size={16} className="text-app-text-muted" />}
+                {item.label}
+              </button>
+            ))}
           <div className="border-t border-app-border" />
           <button
             onClick={() => {

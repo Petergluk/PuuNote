@@ -23,6 +23,7 @@ import {
   isFullscreen,
 } from "../utils/fullscreen";
 import { ExportMenu } from "./ExportMenu";
+import { ImportMenu } from "./ImportMenu";
 import { MobileMenu } from "./MobileMenu";
 import { ThemeTuneMenu } from "./ThemeTuneMenu";
 import { BranchColorMenu } from "./BranchColorMenu";
@@ -283,23 +284,11 @@ export function Header({ handleImport }: HeaderProps) {
           isSettingsUnlocked={isSettingsUnlocked}
           onBeautifulClick={handleBeautifulClick}
         />
-        <label
-          className="hidden sm:flex cursor-pointer bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
-          title="Import"
-          aria-label="Import"
-        >
-          <Download size={16} />
-          <input
-            type="file"
-            accept=".md,.markdown,.json"
-            className="hidden"
-            onChange={handleImport}
-          />
-        </label>
+        <ImportMenu handleImport={handleImport} />
         <ExportMenu />
         
         {/* Dynamic Plugin Header Actions */}
-        {usePluginHeaderActions().map(action => (
+        {usePluginHeaderActions().filter(a => a.id !== "import-data").map(action => (
           action.dropdownItems && action.dropdownItems.length > 0 ? (
             <PluginDropdownAction key={action.id} action={action} />
           ) : (

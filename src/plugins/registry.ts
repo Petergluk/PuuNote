@@ -84,6 +84,7 @@ export interface PluginAPI {
     addAttachment?: (id: string, file: File | {name: string, type: string, url: string}) => void;
     getAttachments?: (id: string) => {id: string; name: string; type: string; url: string}[];
     removeAttachment?: (nodeId: string, attachmentId: string) => void;
+    createDocument?: (title?: string, initialNodes?: import("../types").PuuNode[]) => Promise<void>;
   };
   editor?: {
     getActiveSelection: () => { nodeId: string; start: number; end: number; text: string } | null;

@@ -153,6 +153,12 @@ export const pluginApi: PluginAPI = {
        if (!node || !Array.isArray(node.metadata?.attachments)) return;
        const attachments = node.metadata.attachments.filter((a: any) => a.id !== attachmentId);
        useAppStore.getState().updateNodeMetadata(nodeId, { attachments });
+    },
+    createDocument: async (title, initialNodes) => {
+       // Since useFileSystemActions does not use React hooks internally (only getState/setState), we can call it here
+       const { useFileSystemActions } = await import("../hooks/useFileSystemActions");
+       const actions = useFileSystemActions();
+       await actions.createNewFile(initialNodes, title);
     }
   },
 
