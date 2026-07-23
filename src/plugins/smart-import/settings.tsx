@@ -6,7 +6,10 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
   const [maxDepth, setMaxDepth] = useState(() => pluginApi?.settings?.get('max_depth', 0));
   const [detailLevel, setDetailLevel] = useState(() => pluginApi?.settings?.get('detail_level', 'brief'));
   const [customPrompt, setCustomPrompt] = useState(() => pluginApi?.settings?.get('custom_prompt', ''));
-  const [promptHistory, setPromptHistory] = useState<string[]>(() => pluginApi?.settings?.get('custom_prompt_history', []));
+  const [promptHistory, setPromptHistory] = useState<string[]>(() => {
+    const hist = pluginApi?.settings?.get('custom_prompt_history', []);
+    return Array.isArray(hist) ? hist : [];
+  });
   const [createNewDocument, setCreateNewDocument] = useState(() => pluginApi?.settings?.get('create_new_document', true));
   const [showImportDialog, setShowImportDialog] = useState(() => pluginApi?.settings?.get('show_import_dialog', true));
   const defaultSystemPrompt = 'Твоя задача — преобразовать линейный текст в иерархическую древовидную структуру. Это необходимо для того, чтобы пользователь мог нелинейно перемещаться по материалу. Раздели текст на логические блоки, темы или хронологические этапы и выстрой их в виде вложенного дерева.';
