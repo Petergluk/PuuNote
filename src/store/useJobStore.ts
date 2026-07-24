@@ -46,6 +46,12 @@ export const useJobStore = create<JobStore>((set) => ({
         job.id === id ? { ...job, ...updates } : job,
       ),
     }));
+    
+    if (updates.status === "completed" || updates.status === "failed" || updates.status === "cancelled") {
+        setTimeout(() => {
+            useJobStore.getState().removeJob(id);
+        }, 2000);
+    }
   },
 
   removeJob: (id: string) => {

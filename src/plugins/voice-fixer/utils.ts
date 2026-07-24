@@ -1,4 +1,4 @@
-import { DEFAULT_PROMPT } from './prompts';
+import { VOICE_FIXER_DEFAULT_PROMPT as DEFAULT_PROMPT } from './prompts';
 import type { PluginAPI } from '../registry';
 
 import type { PuuNode } from '../../../src/types';

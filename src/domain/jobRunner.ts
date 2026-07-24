@@ -80,6 +80,18 @@ class JobRunnerClass {
         .updateJob(jobId, { status: "cancelled", message: "Cancelling..." });
     }
   }
+
+  registerExternalJob(jobId: string, abortController: AbortController) {
+    this.activeJobs.add(jobId);
+    this.abortControllers.set(jobId, abortController);
+    useJobStore.getState().updateJob(jobId, { status: "running", message: "Starting..." });
+  }
+
+  deregisterExternalJob(jobId: string) {
+    this.activeJobs.delete(jobId);
+    this.cancelledJobs.delete(jobId);
+    this.abortControllers.delete(jobId);
+  }
 }
 
 export const JobRunner = new JobRunnerClass();

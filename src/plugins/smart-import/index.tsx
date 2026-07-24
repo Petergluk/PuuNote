@@ -1,3 +1,4 @@
+import { DEFAULT_SYSTEM_PROMPT, buildSmartImportPrompt } from './prompts';
 import React from "react";
 import type { PluginDefinition } from "../registry";
 import { FileUp, MessageSquareDiff } from "lucide-react";
@@ -11,33 +12,18 @@ import { usePluginUiStore } from "../uiRegistry";
 import { ImportModal } from "./ImportModal";
 
 async function executeImport(files: File[]) {
+  const globalAbortController = new AbortController();
+  const jobId = pluginApi?.addJob?.(`Умный импорт (${files.length} файлов)...`, () => {
+      globalAbortController.abort();
+  }) || "";
+
   try {
-    const jobId = pluginApi?.addJob?.(`Умный импорт (${files.length} файлов)...`) || "";
-    
     const maxDepth = pluginApi?.settings?.get('max_depth', 0);
     const detailLevel = pluginApi?.settings?.get('detail_level', 'brief');
     const customPrompt = pluginApi?.settings?.get('custom_prompt', '');
-    const defaultSystemPrompt = 'Твоя задача — преобразовать линейный текст в иерархическую древовидную структуру. Это необходимо для того, чтобы пользователь мог нелинейно перемещаться по материалу. Раздели текст на логические блоки, темы или хронологические этапы и выстрой их в виде вложенного дерева.';
-    const systemPrompt = pluginApi?.settings?.get('system_prompt', defaultSystemPrompt);
+    
+    const systemPrompt = pluginApi?.settings?.get('system_prompt', DEFAULT_SYSTEM_PROMPT);
     const createNewDoc = pluginApi?.settings?.get('create_new_document', true);
-
-    let baseInstructions = systemPrompt || defaultSystemPrompt;
-
-    if (detailLevel === 'full') {
-        baseInstructions += `\nПолный импорт: перенеси предоставленный текст в структуру без сокращений. Сохрани весь исходный объем информации, распределив его по узлам дерева.`;
-    } else if (detailLevel === 'optimized') {
-        baseInstructions += `\nОптимизированный импорт: сохрани всю фактологию и структуру, удаляя только явные повторы и смысловые дубликаты.`;
-    } else if (detailLevel === 'brief') {
-        baseInstructions += `\nКраткий импорт: оставь только ключевые темы и тезисы (выжимку), опуская мелкие детали.`;
-    }
-
-    if (maxDepth > 0) {
-      baseInstructions += `\nОграничение: Максимальная глубина вложенности дерева: ${maxDepth}.`;
-    }
-
-    if (customPrompt) {
-      baseInstructions += `\nДополнительные инструкции от пользователя:\n${customPrompt}\n`;
-    }
 
     const nodesToCreate: any[] = [];
     let idCounter = 1;
@@ -53,21 +39,17 @@ async function executeImport(files: File[]) {
         const text = await file.text();
         pluginApi?.updateJobProgress?.(jobId, Math.round((i / files.length) * 100), `Обработка (${i+1}/${files.length}): ${file.name}`);
 
-        const prompt = `${baseInstructions}
-        
-        Формат ответа: древовидный вложенный JSON-массив объектов. Каждый объект должен иметь поле 'title' (строка с текстом узла) и опционально массив 'children' (дочерние объекты такой же структуры).
+        const prompt = buildSmartImportPrompt({
+          systemPrompt,
+          detailLevel,
+          maxDepth,
+          customPrompt,
+          text
+        });
 
-        Сделай так, чтобы у корня были верхнеуровневые темы или разделы, а дальше они древовидно разворачивались вглубь конкретными блоками текста.
-        
-        Текст для импорта:
-        ${text}
-        
-        Ответь ТОЛЬКО валидным JSON-массивом. Не добавляй никаких других слов или форматирования вокруг массива.`;
-
-        const abortController = new AbortController();
         const { text: jsonText } = await generateContentFallback(prompt, undefined, {
-          signal: abortController.signal,
-          timeoutMs: 120000,
+          signal: globalAbortController.signal,
+          timeoutMs: 300000,
           onStatusChange: (msg) => {
              pluginApi?.updateJobProgress?.(jobId, Math.round((i / files.length) * 100), `Обработка ${file.name}: ${msg}`);
           }
@@ -154,6 +136,7 @@ async function executeImport(files: File[]) {
         message = "Недействительный API ключ (API key not valid). Пожалуйста, проверьте настройки ключей в плагинах.";
     }
     
+    pluginApi?.failJob?.(jobId, message);
     pluginApi?.toast?.("Ошибка импорта: " + message, "error");
   }
 }

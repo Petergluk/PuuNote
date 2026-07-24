@@ -12,16 +12,8 @@ const statusClass: Record<Job["status"], string> = {
 
 export function JobPanel() {
   const jobs = useJobStore((s) => s.jobs);
-  const clearCompleted = useJobStore((s) => s.clearCompleted);
 
   if (jobs.length === 0) return null;
-
-  const hasFinished = jobs.some(
-    (job) =>
-      job.status === "completed" ||
-      job.status === "failed" ||
-      job.status === "cancelled",
-  );
 
   return (
     <div className="fixed right-4 bottom-14 z-[90] w-[min(360px,calc(100vw-2rem))] rounded border border-app-border bg-app-panel shadow-xl">
@@ -29,15 +21,6 @@ export function JobPanel() {
         <span className="text-[10px] font-mono uppercase tracking-widest text-app-text-muted">
           Jobs
         </span>
-        {hasFinished && (
-          <button
-            onClick={clearCompleted}
-            className="p-1 text-app-text-muted hover:text-app-text-primary transition-colors"
-            title="Очистить завершенные"
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
       </div>
       <div className="max-h-64 overflow-y-auto">
         {jobs.map((job) => {

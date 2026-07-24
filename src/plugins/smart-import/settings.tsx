@@ -1,3 +1,4 @@
+import { DEFAULT_SYSTEM_PROMPT } from './prompts';
 import React, { useState } from "react";
 import { pluginApi } from "./api";
 import { Trash2 } from "lucide-react";
@@ -12,8 +13,7 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
   });
   const [createNewDocument, setCreateNewDocument] = useState(() => pluginApi?.settings?.get('create_new_document', true));
   const [showImportDialog, setShowImportDialog] = useState(() => pluginApi?.settings?.get('show_import_dialog', true));
-  const defaultSystemPrompt = 'Твоя задача — преобразовать линейный текст в иерархическую древовидную структуру. Это необходимо для того, чтобы пользователь мог нелинейно перемещаться по материалу. Раздели текст на логические блоки, темы или хронологические этапы и выстрой их в виде вложенного дерева.';
-  const [systemPrompt, setSystemPrompt] = useState(() => pluginApi?.settings?.get('system_prompt', defaultSystemPrompt));
+  const [systemPrompt, setSystemPrompt] = useState(() => pluginApi?.settings?.get('system_prompt', DEFAULT_SYSTEM_PROMPT));
 
   const saveToHistory = (text: string) => {
     const trimmed = text.trim();
@@ -53,23 +53,24 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
       </div>
 
       {!isModal && (
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-2 text-sm text-app-text-primary cursor-pointer font-medium">
-            <input 
-              type="checkbox" 
-              checked={showImportDialog}
-              onChange={(e) => {
-                setShowImportDialog(e.target.checked);
-                pluginApi?.settings?.set('show_import_dialog', e.target.checked);
-              }}
-              className="rounded border-app-border bg-app-input-bg text-app-accent focus:ring-app-accent" 
-            />
-            Показывать этот диалог настроек перед импортом
-          </label>
-        </div>
+        <>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-sm text-app-text-primary cursor-pointer font-medium">
+              <input 
+                type="checkbox" 
+                checked={showImportDialog}
+                onChange={(e) => {
+                  setShowImportDialog(e.target.checked);
+                  pluginApi?.settings?.set('show_import_dialog', e.target.checked);
+                }}
+                className="rounded border-app-border bg-app-input-bg text-app-accent focus:ring-app-accent" 
+              />
+              Показывать этот диалог настроек перед импортом
+            </label>
+          </div>
+          <div className="h-px w-full bg-app-border" />
+        </>
       )}
-
-      <div className="h-px w-full bg-app-border" />
 
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-app-text-primary">Уровень детализации импорта</label>
@@ -122,37 +123,38 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
           className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none min-h-[80px] resize-y"
         />
         {promptHistory.length > 0 ? (
-          <div className="flex flex-col gap-1 mt-1">
-            <div className="flex flex-col gap-1 max-h-32 overflow-y-auto pr-1">
+          <div className="flex items-center gap-2 mt-1">
+            <select
+              className="flex-1 min-w-0 text-ellipsis rounded-md border border-app-border bg-app-input-bg px-3 py-1.5 text-sm text-app-text-primary focus:border-app-accent focus:outline-none"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) {
+                  setCustomPrompt(val);
+                  pluginApi?.settings?.set('custom_prompt', val);
+                }
+              }}
+              value=""
+            >
+              <option value="" disabled>Выберите из сохраненных...</option>
               {promptHistory.map((histPrompt, idx) => {
                 const firstLine = histPrompt.split('\n')[0].trim();
                 const displayTitle = firstLine.length > 60 ? firstLine.substring(0, 60) + '...' : firstLine;
                 return (
-                  <div 
-                    key={idx} 
-                    className="flex items-center justify-between gap-2 p-1.5 px-2 rounded-md border border-transparent hover:border-app-border hover:bg-app-bg group cursor-pointer transition-colors" 
-                    onClick={() => {
-                       setCustomPrompt(histPrompt);
-                       pluginApi?.settings?.set('custom_prompt', histPrompt);
-                    }}
-                  >
-                    <span className="text-sm text-app-text-secondary group-hover:text-app-text-primary truncate flex-1" title={histPrompt}>
-                      {displayTitle}
-                    </span>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFromHistory(histPrompt);
-                      }}
-                      className="p-1 rounded text-app-text-secondary hover:text-red-500 hover:bg-app-input-bg opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Удалить"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  <option key={idx} value={histPrompt}>
+                    {displayTitle}
+                  </option>
                 );
               })}
-            </div>
+            </select>
+            {customPrompt && promptHistory.includes(customPrompt.trim()) && (
+              <button 
+                onClick={() => removeFromHistory(customPrompt.trim())}
+                className="shrink-0 p-1.5 rounded text-app-text-secondary hover:text-red-500 hover:bg-app-input-bg transition-colors"
+                title="Удалить выбранный промпт"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         ) : (
           <p className="text-xs text-app-text-secondary">
@@ -161,20 +163,22 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-app-text-primary">Основной системный промпт</label>
-        <textarea 
-          value={systemPrompt}
-          onChange={(e) => {
-            setSystemPrompt(e.target.value);
-            pluginApi?.settings?.set('system_prompt', e.target.value);
-          }}
-          className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary font-mono focus:border-app-accent focus:outline-none min-h-[120px] resize-y"
-        />
-        <p className="text-xs text-app-text-secondary">
-          Базовые инструкции для нейросети при импорте. Можно кастомизировать или вернуть к исходному состоянию.
-        </p>
-      </div>
+      {!isModal && (
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-app-text-primary">Основной системный промпт</label>
+          <textarea 
+            value={systemPrompt}
+            onChange={(e) => {
+              setSystemPrompt(e.target.value);
+              pluginApi?.settings?.set('system_prompt', e.target.value);
+            }}
+            className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary font-mono focus:border-app-accent focus:outline-none min-h-[120px] resize-y"
+          />
+          <p className="text-xs text-app-text-secondary">
+            Базовые инструкции для нейросети при импорте. Можно кастомизировать или вернуть к исходному состоянию.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

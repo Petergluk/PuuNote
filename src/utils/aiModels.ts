@@ -58,6 +58,8 @@ export async function generateContentFallback(
             throw new Error('AbortError');
         }
 
+        let isTimeoutTriggered = false;
+
         try {
             const controller = new AbortController();
             let timer: ReturnType<typeof setTimeout> | null = null;
@@ -66,8 +68,12 @@ export async function generateContentFallback(
             if (options?.signal) {
                options.signal.addEventListener('abort', onAbort);
             }
+
             if (options?.timeoutMs) {
-                timer = setTimeout(() => controller.abort(), options.timeoutMs);
+                timer = setTimeout(() => {
+                    isTimeoutTriggered = true;
+                    controller.abort();
+                }, options.timeoutMs);
             }
 
             const response = await fetch('/api/gemini', {
@@ -101,8 +107,15 @@ export async function generateContentFallback(
             lastError = err;
             const errMsg = err instanceof Error ? err.message : String(err);
             console.warn(`Error with model ${model}: ${errMsg}`);
+            
+            if (isTimeoutTriggered) {
+                const timeoutErr = new Error('TimeoutError: Превышено время ожидания ответа.');
+                timeoutErr.cause = err;
+                throw timeoutErr;
+            }
+
             if (errMsg === 'AbortError' || (err as Error)?.name === 'AbortError') {
-                const abortErr = new Error('AbortError');
+                const abortErr = new Error('AbortError: Операция была отменена.');
                 abortErr.cause = err;
                 throw abortErr;
             }

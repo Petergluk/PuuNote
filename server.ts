@@ -175,8 +175,8 @@ async function startServer() {
       throw lastError || new Error("Failed to process API keys");
 
     } catch (err: any) {
-      console.error("Gemini API backend error:", err);
       let errorMessage = err.message || "Unknown error";
+      console.error("Gemini API backend error:", errorMessage);
       try {
          const parsed = JSON.parse(errorMessage);
          if (parsed.error && parsed.error.message) {

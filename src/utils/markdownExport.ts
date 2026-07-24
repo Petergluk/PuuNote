@@ -2,7 +2,7 @@ import { PuuNode } from "../types";
 import { buildTreeIndex } from "./tree";
 import { trimBlankEdges, normalizeLineEndings } from "./markdownCommon";
 
-const toMarkdownCard = (content: string, depth: number): string => {
+const toMarkdownCard = (content: string, _depth: number): string => {
   const lines = trimBlankEdges(normalizeLineEndings(content).split("\n"));
   return lines.join("\n").trim();
 };

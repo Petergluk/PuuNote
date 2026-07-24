@@ -8,23 +8,24 @@ import { generateContentFallback } from "../utils/aiModels";
 import { usePluginUiStore } from "./uiRegistry";
 import { resolveNodeContext, ContextScope } from "../utils/pluginContextResolver";
 import { editorFocusTracker } from "./focusTracker";
+import { JobRunner } from "../domain/jobRunner";
 
 // Create the unified API object for plugins
 export const pluginApi: PluginAPI = {
   events: {
     on: (eventName, callback) => {
-      // @ts-ignore
+      // @ts-expect-error - Attaching wrapped listener for cleanup
       callback._wrappedListener = (e: any) => callback(e.detail || e);
-      // @ts-ignore
+      // @ts-expect-error - Event listener types
       window.addEventListener(`sandbox:${eventName}`, callback._wrappedListener);
       
       if (eventName === 'beforeUnload') {
-         // @ts-ignore
+         // @ts-expect-error - Event listener types
          window.addEventListener('beforeunload', callback._wrappedListener);
       }
     },
     off: (eventName, callback) => {
-      // @ts-ignore
+      // @ts-expect-error - Accessing attached wrapped listener
       const listener = callback._wrappedListener || callback;
       window.removeEventListener(`sandbox:${eventName}`, listener);
       if (eventName === 'beforeUnload') {
@@ -34,8 +35,14 @@ export const pluginApi: PluginAPI = {
   },
   getState: () => useAppStore.getState(),
 
-  addJob: (title) => {
-    return useJobStore.getState().addJob(title);
+  addJob: (title, onCancel) => {
+    const jobId = useJobStore.getState().addJob(title);
+    if (onCancel) {
+      const abortController = new AbortController();
+      abortController.signal.addEventListener("abort", onCancel);
+      JobRunner.registerExternalJob(jobId, abortController);
+    }
+    return jobId;
   },
 
   updateJobProgress: (id, progress, statusText) => {
@@ -43,6 +50,7 @@ export const pluginApi: PluginAPI = {
   },
 
   completeJob: (id, resultLabel, onClick) => {
+    JobRunner.deregisterExternalJob(id);
     useJobStore.getState().updateJob(id, {
       progress: 100,
       status: "completed",
@@ -55,6 +63,7 @@ export const pluginApi: PluginAPI = {
   },
 
   failJob: (id, error) => {
+    JobRunner.deregisterExternalJob(id);
     useJobStore.getState().updateJob(id, {
       status: "failed",
       error
@@ -62,9 +71,7 @@ export const pluginApi: PluginAPI = {
   },
 
   cancelJob: (id) => {
-    import("../domain/jobRunner").then(({ JobRunner }) => {
-       JobRunner.cancelJob(id);
-    });
+    JobRunner.cancelJob(id);
     useJobStore.getState().updateJob(id, { status: "cancelled" });
     window.dispatchEvent(new CustomEvent('sandbox:jobCancelled', { detail: { id } }));
   },
@@ -118,7 +125,7 @@ export const pluginApi: PluginAPI = {
     },
     resolveContext: (id, scope) => {
        const nodes = useAppStore.getState().nodes;
-       // @ts-ignore (Assuming ContextScope casting for strictness here)
+       // @ts-expect-error (Assuming ContextScope casting for strictness here)
        return resolveNodeContext(nodes, id, scope as ContextScope);
     },
     batchUpdate: (updates) => {
@@ -157,6 +164,7 @@ export const pluginApi: PluginAPI = {
     createDocument: async (title, initialNodes) => {
        // Since useFileSystemActions does not use React hooks internally (only getState/setState), we can call it here
        const { useFileSystemActions } = await import("../hooks/useFileSystemActions");
+       // eslint-disable-next-line react-hooks/rules-of-hooks
        const actions = useFileSystemActions();
        await actions.createNewFile(initialNodes, title);
     }
@@ -221,7 +229,7 @@ export const pluginApi: PluginAPI = {
         activeEl.setRangeText(text, start, end, "end");
         // Dispatching React-compatible event
         const ev = new Event('input', { bubbles: true });
-        // @ts-ignore (React internal hack for native setter)
+        // @ts-expect-error (React internal hack for native setter)
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
         if (nativeInputValueSetter) nativeInputValueSetter.call(activeEl, activeEl.value);
         activeEl.dispatchEvent(ev);
@@ -254,7 +262,7 @@ export const pluginApi: PluginAPI = {
       if (key === 'geminiApiKey') {
         const localUserKey = localStorage.getItem('GLOBAL_GEMINI_API_KEY');
         if (localUserKey && localUserKey.trim() !== '') return localUserKey;
-        // @ts-ignore
+        // @ts-expect-error
         return import.meta.env.VITE_GLOBAL_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || '';
       }
       return null;
@@ -263,12 +271,12 @@ export const pluginApi: PluginAPI = {
 
   llm: {
     generateText: async (prompt, options) => {
-      // @ts-ignore
+      // @ts-expect-error
       return generateContentFallback(prompt, options?.model, options);
     },
     generateTextStream: async (prompt, options, onChunk) => {
       // Use fallback to get full text
-      // @ts-ignore
+      // @ts-expect-error
       const result = await generateContentFallback(prompt, options?.model, options);
       
       if (onChunk) {
