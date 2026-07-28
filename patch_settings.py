@@ -1,118 +1,16 @@
-import { X, HelpCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useAppStore } from "../store/useAppStore";
-import { useFocusTrap } from "../hooks/useFocusTrap";
-import type {
-  EditorEnterMode,
-  FocusModeScope,
-  EditorMode,
-  InactiveBranchesMode,
-  PasteSplitMode,
-} from "../store/appStoreTypes";
+import re
 
-const branchModes: Array<{
-  value: InactiveBranchesMode;
-  labelKey: string;
-}> = [
-  { value: "dim", labelKey: "settings.dim" },
-  { value: "hide", labelKey: "settings.hide" },
-];
+with open('src/components/SettingsPanel.tsx', 'r') as f:
+    content = f.read()
 
-const focusModes: Array<{
-  value: FocusModeScope;
-  labelKey: string;
-}> = [
-  { value: "single", labelKey: "settings.single" },
-  { value: "branchLevel", labelKey: "settings.branchLevel" },
-  { value: "column", labelKey: "settings.column" },
-];
+# Replace the inner part of <div className="flex flex-col gap-3 p-4">
+# It starts at <div className="flex flex-col gap-3 p-4"> and ends at </div>\n      </section>
 
-const editorModes: Array<{
-  value: EditorMode;
-  labelKey: string;
-}> = [
-  { value: "markdown", labelKey: "settings.markdown" },
-  { value: "visual", labelKey: "settings.visual" },
-];
-
-const editorEnterModes: Array<{
-  value: EditorEnterMode;
-  labelKey: string;
-}> = [
-  { value: "enterNewline", labelKey: "settings.enterNewline" },
-  { value: "enterCard", labelKey: "settings.enterCard" },
-];
-
-const pasteSplitModes: Array<{
-  value: PasteSplitMode;
-  labelKey: string;
-}> = [
-  { value: "separator", labelKey: "settings.separators" },
-  { value: "paragraph", labelKey: "settings.paragraphs" },
-];
-
-export function SettingsPanel() {
-  const { t, i18n } = useTranslation();
-  const settingsOpen = useAppStore((state) => state.settingsOpen);
-  const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
-  const inactiveBranchesMode = useAppStore(
-    (state) => state.inactiveBranchesMode,
-  );
-  const setInactiveBranchesMode = useAppStore(
-    (state) => state.setInactiveBranchesMode,
-  );
-  const focusModeScope = useAppStore((state) => state.focusModeScope);
-  const setFocusModeScope = useAppStore((state) => state.setFocusModeScope);
-  const editorMode = useAppStore((state) => state.editorMode);
-  const setEditorMode = useAppStore((state) => state.setEditorMode);
-  const editorEnterMode = useAppStore((state) => state.editorEnterMode);
-  const setEditorEnterMode = useAppStore((state) => state.setEditorEnterMode);
-  const pasteSplitMode = useAppStore((state) => state.pasteSplitMode);
-  const setPasteSplitMode = useAppStore((state) => state.setPasteSplitMode);
-
-  const language = i18n.resolvedLanguage?.startsWith("ru") ? "ru" : "en";
-  const panelRef = useFocusTrap<HTMLElement>(settingsOpen, () =>
-    setSettingsOpen(false),
-  );
-
-  if (!settingsOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[95]"
-      onClick={() => setSettingsOpen(false)}
-    >
-      <section
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="settings-panel-title"
-        tabIndex={-1}
-        className="absolute right-2 top-14 max-h-[calc(100vh-4rem)] w-auto min-w-[320px] max-w-[calc(100vw-1rem)] overflow-y-auto rounded border border-app-border bg-app-panel shadow-2xl sm:right-6"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="flex items-center justify-between border-b border-app-border px-4 py-2.5">
-          <h2
-            id="settings-panel-title"
-            className="text-sm font-semibold text-app-text-primary"
-          >
-            {t("settings.title")}
-          </h2>
-          <button
-            onClick={() => setSettingsOpen(false)}
-            className="rounded p-1 text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
-            title={t("settings.close")}
-            aria-label={t("settings.close")}
-          >
-            <X size={16} />
-          </button>
-        </header>
-
-                <div className="flex flex-col gap-4 p-4">
+new_content = """        <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.language")}
-              <span title={t("settings.tooltips.language")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.language")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {(["ru", "en"] as const).map((lng) => (
@@ -135,7 +33,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.inactiveBranches")}
-              <span title={t("settings.tooltips.inactiveBranches")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.inactiveBranches")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {branchModes.map((mode) => (
@@ -158,7 +56,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.focusMode")}
-              <span title={t("settings.tooltips.focusMode")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.focusMode")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {focusModes.map((mode) => (
@@ -181,7 +79,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.editorMode")}
-              <span title={t("settings.tooltips.editorMode")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.editorMode")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {editorModes.map((mode) => (
@@ -204,7 +102,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.editorEnter")}
-              <span title={t("settings.tooltips.editorEnter")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.editorEnter")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {editorEnterModes.map((mode) => (
@@ -227,7 +125,7 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-sm text-app-text-secondary">
               {t("settings.pasteSplit")}
-              <span title={t("settings.tooltips.pasteSplit")} className="flex"><HelpCircle  className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" /></span>
+              <HelpCircle className="h-3.5 w-3.5 text-app-text-muted hover:text-app-text-secondary cursor-help transition-colors" title={t("settings.tooltips.pasteSplit")} />
             </div>
             <div className="flex shrink-0 rounded-[0.85rem] border border-app-border bg-app-card p-0.5 shadow-sm">
               {pasteSplitModes.map((mode) => (
@@ -246,8 +144,11 @@ export function SettingsPanel() {
               ))}
             </div>
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+        </div>"""
+
+content = re.sub(r'<div className="flex flex-col gap-3 p-4">.*?(?=\s*</section>)', new_content, content, flags=re.DOTALL)
+
+with open('src/components/SettingsPanel.tsx', 'w') as f:
+    f.write(content)
+
+print('done')

@@ -149,6 +149,8 @@ export function usePreferencesInit() {
     const savedInactiveCardDim = clampInactiveCardDim(
       safeLocalStorage.getItem("puu_inactiveCardDimV2"),
     );
+    const savedCardRadiusStr = safeLocalStorage.getItem("puu_cardRadiusV1");
+    const savedCardRadius = savedCardRadiusStr !== null ? Number(savedCardRadiusStr) : 0.25;
     const savedThemeTuning = (() => {
       try {
         return {
@@ -247,6 +249,7 @@ export function usePreferencesInit() {
       branchColorSettingsById: savedBranchColorSettingsById,
       themeBranchSettings: savedThemeBranchSettings,
       inactiveCardDim: savedInactiveCardDim,
+        cardRadius: savedCardRadius,
       themeTuning: savedThemeTuning,
       inactiveBranchesMode: savedInactiveBranchesMode,
       focusModeScope: savedFocusModeScope,
@@ -328,6 +331,12 @@ export function usePreferencesInit() {
         safeLocalStorage.setItem(
           "puu_themeBranchSettings",
           JSON.stringify(state.themeBranchSettings),
+        );
+      }
+      if (state.cardRadius !== prevState.cardRadius) {
+        safeLocalStorage.setItem(
+          "puu_cardRadiusV1",
+          state.cardRadius.toString(),
         );
       }
       if (state.inactiveCardDim !== prevState.inactiveCardDim) {

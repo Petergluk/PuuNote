@@ -22,6 +22,8 @@ export function ThemeTuneMenu() {
   const theme = useAppStore((s) => s.theme);
   const themeTuning = useAppStore((s) => s.themeTuning);
   const inactiveCardDim = useAppStore((s) => s.inactiveCardDim);
+  const cardRadius = useAppStore((s) => s.cardRadius);
+  const setCardRadius = useAppStore((s) => s.setCardRadius);
   const setTheme = useAppStore((s) => s.setTheme);
   const setThemeTuneValue = useAppStore((s) => s.setThemeTuneValue);
   const resetThemeTune = useAppStore((s) => s.resetThemeTune);
@@ -74,6 +76,7 @@ export function ThemeTuneMenu() {
             byColor: branchColorSettingsById,
           },
           inactiveCardDim,
+            cardRadius,
         },
         null,
         2,
@@ -87,6 +90,7 @@ export function ThemeTuneMenu() {
       branchColorSpread,
       branchColorTone,
       inactiveCardDim,
+            cardRadius,
       resolvedThemeTuning,
       theme,
     ],
@@ -106,7 +110,7 @@ export function ThemeTuneMenu() {
     <div ref={menuRef} className="relative hidden sm:block">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors items-center justify-center ${
+        className={`hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors items-center justify-center ${
           open
             ? "text-app-text-primary bg-app-card-hover border-app-border"
             : "text-app-text-secondary"
@@ -209,6 +213,16 @@ export function ThemeTuneMenu() {
                 "linear-gradient(90deg, #b9e4ff 0%, var(--app-card) 50%, #c98238 100%)",
             }}
             onChange={(value) => setThemeTuneValue(theme, "warmth", value)}
+          />
+          <MiniSlider
+            label="Скругление"
+            min={0}
+            max={100}
+            value={cardRadius * 100}
+            fillStyle={{
+              borderRadius: `${cardRadius * 100}px`
+            }}
+            onChange={(value) => setCardRadius(clamp(value, 0, 100) / 100)}
           />
           <MiniSlider
             label="Неактивные"

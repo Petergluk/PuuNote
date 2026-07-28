@@ -125,7 +125,7 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
         {promptHistory.length > 0 ? (
           <div className="flex items-center gap-2 mt-1">
             <select
-              className="flex-1 min-w-0 text-ellipsis rounded-md border border-app-border bg-app-input-bg px-3 py-1.5 text-sm text-app-text-primary focus:border-app-accent focus:outline-none"
+              className="flex-1 min-w-0 w-0 truncate rounded-md border border-app-border bg-app-input-bg px-3 py-1.5 text-sm text-app-text-primary focus:border-app-accent focus:outline-none"
               onChange={(e) => {
                 const val = e.target.value;
                 if (val) {
@@ -138,7 +138,7 @@ export function MyPluginSettings({ isModal = false }: { isModal?: boolean } = {}
               <option value="" disabled>Выберите из сохраненных...</option>
               {promptHistory.map((histPrompt, idx) => {
                 const firstLine = histPrompt.split('\n')[0].trim();
-                const displayTitle = firstLine.length > 60 ? firstLine.substring(0, 60) + '...' : firstLine;
+                const displayTitle = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
                 return (
                   <option key={idx} value={histPrompt}>
                     {displayTitle}

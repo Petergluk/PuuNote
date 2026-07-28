@@ -71,7 +71,7 @@ const resources = {
       Copied: "Copied!",
       "Copy all": "Copy All",
       "Document is empty": "Document is empty...",
-      "File is too large": "File is too large (max 5MB).",
+      "File is too large": "File is too large (max 100MB).",
       "Import invalid": "Imported file is invalid or corrupted.",
       "Import confirm": "Import will create a new document. Proceed?",
       "Add Fragment": "+ Add Fragment",
@@ -84,9 +84,9 @@ const resources = {
         dim: "Dim",
         hide: "Hide",
         focusMode: "Focus mode",
-        single: "Single",
-        branchLevel: "Level",
-        column: "Column",
+        single: "Unit",
+        branchLevel: "Branch",
+        column: "Level",
         editor: "Editor",
         markdown: "Markdown",
         visual: "WYSIWYG",
@@ -97,6 +97,14 @@ const resources = {
         pasteSplit: "Paste split",
         separators: "Separators",
         paragraphs: "Paragraphs",
+        tooltips: {
+          language: "App interface language.",
+          inactiveBranches: "How inactive branches are displayed when a node is focused.",
+          focusMode: "Scope of focus mode (Zen). Unit: single node. Branch: current path to root. Level: all siblings of focused node.",
+          editorMode: "Text editor format. WYSIWYG for rich text, Markdown for plain text.",
+          editorEnter: "Action for Enter key. Line: creates new line. Card: creates new sibling node (Shift+Enter for new line).",
+          pasteSplit: "How pasted multi-line text is split into nodes. Separators: splits by double newline or headers. Paragraphs: splits every paragraph."
+        }
       },
       saveStatus: {
         saved: "Saved",
@@ -171,7 +179,7 @@ const resources = {
       Copied: "Скопировано",
       "Copy all": "Копировать всё",
       "Document is empty": "Документ пуст...",
-      "File is too large": "Файл слишком большой (макс. 5MB).",
+      "File is too large": "Файл слишком большой (макс. 100MB).",
       "Import invalid": "Импортированный файл повреждён или некорректен.",
       "Import confirm": "Импорт создаст новый документ. Продолжить?",
       "Add Fragment": "+ Добавить фрагмент",
@@ -184,9 +192,9 @@ const resources = {
         dim: "Затенять",
         hide: "Скрывать",
         focusMode: "Zen-редактор",
-        single: "Одна",
-        branchLevel: "Уровень",
-        column: "Колонка",
+        single: "Юнит",
+        branchLevel: "Ветка",
+        column: "Уровень",
         editor: "Редактор",
         markdown: "Markdown",
         visual: "WYSIWYG",
@@ -197,6 +205,14 @@ const resources = {
         pasteSplit: "Вставка",
         separators: "Разделители",
         paragraphs: "Абзацы",
+        tooltips: {
+          language: "Язык интерфейса приложения.",
+          inactiveBranches: "Как отображаются неактивные ветки при фокусе на карточке.",
+          focusMode: "Охват дзен-режима. Юнит: только одна карточка. Ветка: путь от корня. Уровень: соседи текущей карточки.",
+          editorMode: "Формат редактора. WYSIWYG для визуального редактирования, Markdown для обычного текста.",
+          editorEnter: "Действие по нажатию Enter. строка: перевод строки. карточка: создает новую карточку (Shift+Enter для строки).",
+          pasteSplit: "Как разбивать вставленный многострочный текст. Разделители: бьет по двойным переносам и заголовкам. Абзацы: каждый абзац в новую карточку."
+        }
       },
       saveStatus: {
         saved: "Сохранено",

@@ -65,7 +65,7 @@ function HotkeysList() {
   return (
     <div className="flex flex-col gap-2">
       {commands.map(cmd => (
-        <div key={cmd.id} className="flex items-center justify-between p-3 rounded-lg border border-app-border bg-app-card">
+        <div key={cmd.id} className="flex items-center justify-between p-3 rounded-xl border border-app-border bg-app-card">
           <div className="flex items-center gap-2">
             {cmd.icon && <cmd.icon size={16} className="text-app-text-muted" />}
             <span className="text-sm text-app-text-primary">{cmd.label}</span>
@@ -148,7 +148,7 @@ export function PluginsPanel() {
                 setActiveTab("plugins");
                 setSelectedPluginId(null);
               }}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                 activeTab === "plugins"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
@@ -159,7 +159,7 @@ export function PluginsPanel() {
             </button>
             <button
               onClick={() => setActiveTab("ai_settings")}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                 activeTab === "ai_settings"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
@@ -170,7 +170,7 @@ export function PluginsPanel() {
             </button>
             <button
               onClick={() => setActiveTab("hotkeys")}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                 activeTab === "hotkeys"
                   ? "bg-app-accent/10 text-app-accent"
                   : "text-app-text-secondary hover:bg-app-card hover:text-app-text-primary"
@@ -199,7 +199,7 @@ export function PluginsPanel() {
                         Gemini API Key (или несколько ключей)
                       </label>
                       <textarea
-                        className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                        className="w-full rounded-xl border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
                         placeholder={((typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as unknown as { env: Record<string, string> }).env : {}).VITE_GLOBAL_GEMINI_API_KEY) ? "Установлен из .env" : "AIzaSy...\nAIzaSy..."}
                         defaultValue={localStorage.getItem('GLOBAL_GEMINI_API_KEY') || localStorage.getItem('GEMINI_PLUGIN_API_KEY') || ''}
                         onChange={(e) => {
@@ -221,7 +221,7 @@ export function PluginsPanel() {
                         Предпочитаемые модели (в порядке приоритета)
                       </label>
                       <textarea
-                        className="w-full rounded-md border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
+                        className="w-full rounded-xl border border-app-border bg-app-input-bg px-3 py-2 text-sm text-app-text-primary focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent transition-shadow font-mono min-h-[60px] resize-y"
                         placeholder="gemini-3.5-flash, gemini-2.5-pro, gemini-2.5-flash"
                         defaultValue={localStorage.getItem('GLOBAL_GEMINI_MODELS') || DEFAULT_MODELS}
                         onChange={(e) => {
@@ -282,7 +282,7 @@ export function PluginsPanel() {
                               </button>
                               <button 
                                   onClick={() => setSelectedPluginId(plugin.id)}
-                                  className={`rounded-lg p-2 transition-colors text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary`}
+                                  className={`rounded-xl p-2 transition-colors text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary`}
                                   title="Настройки плагина"
                               >
                                   <Settings size={18} />
@@ -301,7 +301,7 @@ export function PluginsPanel() {
                       <div className="flex items-center gap-4 pb-4 border-b border-app-border">
                         <button 
                           onClick={() => setSelectedPluginId(null)}
-                          className="p-2 rounded-lg hover:bg-app-card transition-colors text-app-text-secondary hover:text-app-text-primary"
+                          className="p-2 rounded-xl hover:bg-app-card transition-colors text-app-text-secondary hover:text-app-text-primary"
                           title="Назад к списку плагинов"
                         >
                           <ChevronLeft size={20} />

@@ -60,7 +60,7 @@ export function TutorialModal({
               if (existingTutorialId) switchFile(existingTutorialId);
               onClose();
             }}
-            className="w-full text-left px-4 py-3 bg-app-card hover:bg-app-card-hover border border-app-border rounded-lg transition-colors flex items-center justify-between"
+            className="w-full text-left px-4 py-3 bg-app-card hover:bg-app-card-hover border border-app-border rounded-xl transition-colors flex items-center justify-between"
           >
             <span>{t("Open old tutorial")}</span>
             <span className="text-app-text-muted text-xs">&rarr;</span>
@@ -75,7 +75,7 @@ export function TutorialModal({
               );
               onClose();
             }}
-            className="w-full text-left px-4 py-3 bg-app-card hover:bg-app-card-hover border border-app-border rounded-lg transition-colors flex items-center justify-between"
+            className="w-full text-left px-4 py-3 bg-app-card hover:bg-app-card-hover border border-app-border rounded-xl transition-colors flex items-center justify-between"
           >
             <span>{t("Create new tutorial")}</span>
             <span className="text-app-text-muted text-xs">&rarr;</span>
@@ -103,7 +103,7 @@ export function TutorialModal({
                 });
               onClose();
             }}
-            className="w-full text-left px-4 py-3 bg-app-card hover:bg-red-900/20 hover:text-red-500 hover:border-red-500/50 border border-app-border rounded-lg transition-colors flex items-center justify-between"
+            className="w-full text-left px-4 py-3 bg-app-card hover:bg-red-900/20 hover:text-red-500 hover:border-red-500/50 border border-app-border rounded-xl transition-colors flex items-center justify-between"
           >
             <span>{t("Reset tutorial")}</span>
             <span className="text-app-text-muted text-xs">&rarr;</span>

@@ -220,6 +220,7 @@ export const Card = React.memo(
               "--branch-gradient-end-mix": `${
                 branchColor.settings.gradient * 0.1
               }%`,
+              borderRadius: "var(--card-radius)",
             } as React.CSSProperties)
           : ({
               "--uncolored-border-mix": globalBorderBrightness,
@@ -291,7 +292,8 @@ export const Card = React.memo(
             }
           }}
           className={cn(
-            "relative w-full shrink-0 px-4 py-3 rounded cursor-text min-h-[40px] flex flex-col",
+            "relative w-full shrink-0 px-4 py-3 cursor-text min-h-[40px] flex flex-col",
+            "![border-radius:var(--card-radius)]",
             isEditing && "group/edit",
             cardClasses,
             branchColor ? "branch-card" : "uncolored-card",
@@ -333,7 +335,7 @@ export const Card = React.memo(
               className="absolute right-0 top-0 flex flex-col items-end gap-1 p-0.5 opacity-0 group-hover/edit:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity z-20"
               onMouseLeave={() => setShowMoreActions(false)}
             >
-              <div className="flex gap-0.5 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden p-0.5">
+              <div className="flex gap-0.5 shadow-lg bg-app-card border border-app-border overflow-hidden p-0.5 ![border-radius:var(--card-radius)]">
                 {pluginActions.slice(0, 1).map(action => (
                   <button
                     key={action.id}
@@ -388,7 +390,7 @@ export const Card = React.memo(
               </div>
 
               {showMoreActions && pluginActions.length > 1 && (
-                <div className="flex flex-col gap-0.5 shadow-lg bg-app-card border border-app-border rounded-md overflow-hidden p-0.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                <div className="flex flex-col gap-0.5 shadow-lg bg-app-card border border-app-border overflow-hidden p-0.5 ![border-radius:var(--card-radius)] animate-in slide-in-from-top-1 fade-in duration-150 ![border-radius:var(--card-radius)]">
                   {pluginActions.slice(1).map(action => (
                     <button
                       key={action.id}
@@ -477,7 +479,7 @@ export const Card = React.memo(
           ) : (
             <div className="relative">
               {node.metadata?.isGenerating && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-app-accent/10 to-transparent transform -skew-x-12 animate-[shimmer_2s_infinite] overflow-hidden rounded pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-app-accent/10 to-transparent transform -skew-x-12 animate-[shimmer_2s_infinite] overflow-hidden pointer-events-none ![border-radius:var(--card-radius)]" />
               )}
               <div
                 className={cn(

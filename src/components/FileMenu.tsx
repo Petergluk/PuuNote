@@ -57,7 +57,7 @@ export function FileMenu() {
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
               <button
                 onClick={() => createNewFile()}
-                className="w-full flex items-center justify-center gap-2 p-3 bg-app-accent/10 hover:bg-app-accent/20 text-app-accent border border-app-accent/20 rounded-lg transition-colors font-medium mb-4"
+                className="w-full flex items-center justify-center gap-2 p-3 bg-app-accent/10 hover:bg-app-accent/20 text-app-accent border border-app-accent/20 rounded-xl transition-colors font-medium mb-4"
               >
                 <Plus size={16} /> {t("New Document")}
               </button>
@@ -68,7 +68,7 @@ export function FileMenu() {
                   return (
                     <div
                       key={doc.id}
-                      className={`group flex items-center justify-between gap-2 rounded-lg border transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
+                      className={`group flex items-center justify-between gap-2 rounded-xl border transition-all ${isActive ? "bg-app-accent/5 border-app-accent/30 shadow-sm" : "bg-transparent border-transparent hover:bg-app-bg hover:border-app-border "}`}
                     >
                       <button
                         type="button"

@@ -194,7 +194,7 @@ export function Header({ handleImport }: HeaderProps) {
           <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
             <button
               onClick={() => setFileMenuOpen(!fileMenuOpen)}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${fileMenuOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
+              className={`p-1.5 rounded-xl transition-colors flex items-center justify-center ${fileMenuOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title="Manage documents"
               aria-label="Manage documents"
               aria-pressed={fileMenuOpen}
@@ -203,7 +203,7 @@ export function Header({ handleImport }: HeaderProps) {
             </button>
             <button
               onClick={() => setTimelineOpen(!timelineOpen)}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${timelineOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
+              className={`p-1.5 rounded-xl transition-colors flex items-center justify-center ${timelineOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
               title={viewModeLabel}
               aria-label={viewModeLabel}
               aria-pressed={timelineOpen}
@@ -212,7 +212,7 @@ export function Header({ handleImport }: HeaderProps) {
             </button>
             <button
               onClick={openCommandPalette}
-              className="p-1.5 rounded-lg transition-colors flex items-center justify-center text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"
+              className="p-1.5 rounded-xl transition-colors flex items-center justify-center text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"
               title="Command Palette (Cmd/Ctrl+K)"
               aria-label="Command Palette"
             >
@@ -245,7 +245,7 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={toggleFullscreen}
           onDoubleClick={handleFullscreenDoubleClick}
-          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
+          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
           title="Toggle Fullscreen"
           aria-label="Toggle fullscreen"
           aria-pressed={uiMode !== "normal"}
@@ -259,7 +259,7 @@ export function Header({ handleImport }: HeaderProps) {
         {!timelineOpen && (
           <button
             onClick={toggleCardsCollapsed}
-            className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
+            className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
             title="Toggle Expand/Collapse"
             aria-label="Toggle card collapse"
             aria-pressed={cardsCollapsed}
@@ -273,7 +273,7 @@ export function Header({ handleImport }: HeaderProps) {
         )}
         <button
           onClick={toggleTheme}
-          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
+          className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
           title="Toggle theme"
           aria-label="Toggle theme"
         >
@@ -295,7 +295,7 @@ export function Header({ handleImport }: HeaderProps) {
             <button
               key={action.id}
               onClick={action.onClick}
-              className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded transition-colors text-app-text-secondary items-center justify-center"
+              className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
               title={action.label}
               aria-label={action.label}
             >
@@ -306,7 +306,7 @@ export function Header({ handleImport }: HeaderProps) {
 
         <button
           onClick={enterMobileZen}
-          className="flex w-8 h-8 items-center justify-center rounded border border-app-border/50 bg-app-card text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary hover:border-app-border sm:hidden"
+          className="flex w-8 h-8 items-center justify-center rounded-xl border border-app-border/50 bg-app-card text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary hover:border-app-border sm:hidden"
           title={t("Fullscreen")}
           aria-label={t("Fullscreen")}
         >
@@ -314,7 +314,7 @@ export function Header({ handleImport }: HeaderProps) {
         </button>
         <button
           onClick={() => { useAppStore.getState().setPluginsOpen(!useAppStore.getState().pluginsOpen) }}
-          className={`bg-app-card border w-8 h-8 rounded transition-colors hidden sm:flex items-center justify-center ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
+          className={`bg-app-card border w-8 h-8 rounded-xl transition-colors hidden sm:flex items-center justify-center ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
           title="Plugins"
           aria-label="Plugins"
           aria-pressed={useAppStore.getState().pluginsOpen}
@@ -323,7 +323,7 @@ export function Header({ handleImport }: HeaderProps) {
         </button>
         <button
           onClick={() => setSettingsOpen(!settingsOpen)}
-          className={`bg-app-card border w-8 h-8 rounded transition-colors flex items-center justify-center ${settingsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
+          className={`bg-app-card border w-8 h-8 rounded-xl transition-colors flex items-center justify-center ${settingsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
           title="Settings"
           aria-label="Settings"
           aria-pressed={settingsOpen}

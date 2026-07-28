@@ -66,18 +66,18 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
             </h2>
           </div>
 
-          <div className="flex bg-app-card p-1 rounded-lg border border-app-border mb-4">
+          <div className="flex bg-app-card p-1 rounded-xl border border-app-border mb-4">
             <button
               onClick={() => setOs("mac")}
               aria-pressed={isMac}
-              className={`flex-1 py-1 text-sm rounded-md transition-colors ${isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
+              className={`flex-1 py-1 text-sm rounded-xl transition-colors ${isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
             >
               Mac
             </button>
             <button
               onClick={() => setOs("win")}
               aria-pressed={!isMac}
-              className={`flex-1 py-1 text-sm rounded-md transition-colors ${!isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
+              className={`flex-1 py-1 text-sm rounded-xl transition-colors ${!isMac ? "bg-app-panel shadow-sm text-app-text-primary" : "text-app-text-secondary hover:text-app-text-primary"}`}
             >
               Windows
             </button>

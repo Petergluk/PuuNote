@@ -19,7 +19,7 @@ export const PuuNodeMetadataSchema = z
 
 export const PuuNodeSchema = z.object({
   id: z.string().min(1).max(256),
-  content: z.string().max(5_000_000).catch(""), // Limit size to 5MB characters to prevent DoS
+  content: z.string().max(100_000_000).catch(""), // Limit size to 100MB characters to prevent DoS
   parentId: z
     .string()
     .nullable()

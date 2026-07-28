@@ -17,6 +17,7 @@ import {
 } from "../../utils/branchColors";
 
 const DEFAULT_INACTIVE_CARD_DIM = -25;
+const DEFAULT_CARD_RADIUS = 0.25;
 
 function updateBranchSettings(s: UiSlice, partialGlobal: Partial<BranchColorSettings>, newById?: BranchColorSettingsById) {
   const nextGlobal = {
@@ -136,6 +137,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   themeBranchSettings: {},
   branchColorTuningTargetId: null,
   inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
+  cardRadius: DEFAULT_CARD_RADIUS,
   themeTuning: DEFAULT_THEME_TUNING,
   commandPaletteOpen: false,
   uiMode: "normal",
@@ -255,6 +257,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
     set((s) =>
       s.inactiveCardDim === inactiveCardDim ? s : { inactiveCardDim },
     ),
+  setCardRadius: (cardRadius) =>
+    set((s) =>
+      s.cardRadius === cardRadius ? s : { cardRadius }
+    ),
   setThemeTuneValue: (theme, key, value) =>
     set((s) => {
       const themeId = getThemeId(theme);
@@ -275,6 +281,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
       const themeId = getThemeId(theme);
       return {
         inactiveCardDim: DEFAULT_INACTIVE_CARD_DIM,
+  cardRadius: DEFAULT_CARD_RADIUS,
         themeTuning: {
           ...s.themeTuning,
           [themeId]: DEFAULT_THEME_TUNING[themeId] ?? {},

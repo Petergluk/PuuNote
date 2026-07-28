@@ -12,7 +12,7 @@ export const getLocalizedInitialNodes = (lang: string) => {
     return lang.startsWith('ru') ? INITIAL_NODES_RU : INITIAL_NODES_EN;
 };
 
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 export const MAX_HISTORY_STATES = 500;
 export const THEMES = ["mono", "light", "light-cool", "dark", "blue", "brown"] as const;
 

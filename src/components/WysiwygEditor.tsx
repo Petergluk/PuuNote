@@ -236,7 +236,7 @@ export const WysiwygEditor = forwardRef<
       {editor && (
         <BubbleMenu
           editor={editor}
-          className="flex bg-app-card border border-app-border rounded-lg shadow-xl overflow-hidden pointer-events-auto z-[99999]"
+          className="flex bg-app-card border border-app-border rounded-xl shadow-xl overflow-hidden pointer-events-auto z-[99999]"
         >
           <div
             onMouseDown={(e) => {

@@ -14,10 +14,10 @@ interface CardRect {
 }
 
 const ACTION_CLASS =
-  "pointer-events-auto fixed h-7 w-7 rounded-full border border-app-border bg-app-card text-app-accent shadow-lg transition-colors flex items-center justify-center hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent";
+  "pointer-events-auto fixed h-7 w-7 rounded-xl-full border border-app-border bg-app-card text-app-accent shadow-lg transition-colors flex items-center justify-center hover:bg-app-card-hover hover:border-app-accent dark:hover:border-app-accent";
 
 const DELETE_ACTION_CLASS =
-  "pointer-events-auto fixed h-7 w-7 rounded-full border border-app-border bg-app-card text-app-text-muted opacity-80 shadow-lg transition-all flex items-center justify-center hover:opacity-100 hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-400";
+  "pointer-events-auto fixed h-7 w-7 rounded-xl-full border border-app-border bg-app-card text-app-text-muted opacity-80 shadow-lg transition-all flex items-center justify-center hover:opacity-100 hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-400";
 
 const pointInsideRect = (
   point: { x: number; y: number } | null,

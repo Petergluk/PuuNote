@@ -45,6 +45,7 @@ import { useFileSystemActions } from "./hooks/useFileSystemActions";
 const CssVariables = () => {
   const colWidth = useAppStore((s) => s.colWidth);
   const inactiveCardDim = useAppStore((s) => s.inactiveCardDim);
+  const cardRadius = useAppStore((s) => s.cardRadius);
   const inactiveCardOpacity = Math.max(
     0.08,
     Math.min(1, (50 + inactiveCardDim) / 100),
@@ -53,7 +54,8 @@ const CssVariables = () => {
   useEffect(() => {
     document.documentElement.style.setProperty("--col-width", `${colWidth}px`);
     document.documentElement.style.setProperty("--inactive-card-opacity", `${inactiveCardOpacity}`);
-  }, [colWidth, inactiveCardOpacity]);
+    document.documentElement.style.setProperty("--card-radius", `${cardRadius}rem`);
+  }, [colWidth, inactiveCardOpacity, cardRadius]);
 
   return null;
 };

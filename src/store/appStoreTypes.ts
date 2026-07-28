@@ -49,6 +49,7 @@ export interface UiSlice {
   themeBranchSettings: Record<string, ThemeBranchSettings>;
   branchColorTuningTargetId: BranchColorId | null;
   inactiveCardDim: number;
+  cardRadius: number;
   themeTuning: Partial<Record<ThemeId, ThemeTune>>;
   commandPaletteOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
@@ -92,6 +93,7 @@ export interface UiSlice {
   resetBranchColorSettingsForId: (colorId: BranchColorId) => void;
   setBranchColorTuningTargetId: (colorId: BranchColorId | null) => void;
   setInactiveCardDim: (dim: number) => void;
+  setCardRadius: (radius: number) => void;
   setThemeTuneValue: (
     theme: string,
     key: keyof ThemeTune,

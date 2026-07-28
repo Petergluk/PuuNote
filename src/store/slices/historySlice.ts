@@ -6,7 +6,7 @@ import type { PuuNode } from "../../types";
 import { MAX_HISTORY_STATES } from "../../constants";
 
 const MAX_HISTORY_STEPS_LIMIT = MAX_HISTORY_STATES;
-const MAX_HISTORY_VOLUME_BYTES = 1024 * 1024 * 5; // 5 MB of patches limit
+const MAX_HISTORY_VOLUME_BYTES = 1024 * 1024 * 50; // 50 MB of patches limit
 const DEFAULT_HISTORY_GROUP_DELAY_MS = 5000;
 const MAX_GROUP_DURATION_MS = 30000; // max 30s per group
 

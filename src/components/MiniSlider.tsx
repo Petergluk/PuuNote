@@ -15,8 +15,10 @@ type MiniSliderProps = {
   onStepUp?: () => void;
 };
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, Math.round(value)));
+const clamp = (value: number, min: number, max: number, step = 1) => {
+  const rounded = Math.round(value / step) * step;
+  return Math.max(min, Math.min(max, Number(rounded.toFixed(5))));
+};
 
 export function MiniSlider({
   label,
@@ -34,10 +36,10 @@ export function MiniSlider({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const safeRange = max - min || 1;
-  const safeValue = clamp(value, min, max);
+  const safeValue = clamp(value, min, max, step);
   const progress = ((safeValue - min) / safeRange) * 100;
   const updateValue = (nextValue: number) => {
-    onChange(clamp(nextValue, min, max));
+    onChange(clamp(nextValue, min, max, step));
   };
   const commitDraft = () => {
     if (draft.trim() !== "") updateValue(Number(draft));

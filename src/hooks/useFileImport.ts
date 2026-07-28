@@ -25,7 +25,7 @@ export function useFileImport() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      toast.error("File is too large (max 5MB).");
+      toast.error("File is too large (max 100MB).");
       return;
     }
     const reader = new FileReader();

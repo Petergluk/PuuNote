@@ -227,7 +227,7 @@ export const DocumentService = {
     }
     const size = new Blob([JSON.stringify(normalized)]).size;
     if (size > MAX_FILE_SIZE_BYTES) {
-      const error = new Error("Storage quota exceeded (5MB limit).");
+      const error = new Error("Storage quota exceeded (100MB limit).");
       error.name = "QuotaExceededError";
       throw error;
     }
