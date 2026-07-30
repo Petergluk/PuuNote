@@ -21,11 +21,7 @@ import { usePluginUiStore } from "../plugins/uiRegistry";
 
 type DropZone = "none" | "top" | "bottom" | "right";
 
-const WysiwygEditor = lazy(() =>
-  import("./WysiwygEditor").then((module) => ({
-    default: module.WysiwygEditor,
-  })),
-);
+import { WysiwygEditor } from "./WysiwygEditor";
 
 /**
  * Compute the Tailwind class string for the card based on its visual state.

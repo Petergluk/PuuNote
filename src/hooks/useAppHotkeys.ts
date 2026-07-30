@@ -212,8 +212,13 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       // Guard against pasting logic when not in tree view
       if (timelineOpen || fullScreenId) return;
-      if (isEditableTarget(e.target)) return;
-      if (editingId) return;
+
+      const isEditingCard = !!editingId && isEditableTarget(e.target);
+      if (isEditableTarget(e.target) && !isEditingCard) {
+        return;
+      }
+
+      const isEditingActive = isEditingCard;
 
       const text =
         e.clipboardData?.getData("text/plain") ||
@@ -230,18 +235,21 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         clipboardJsonNodes.length > 0
           ? clipboardJsonNodes
           : parseClipboardHtmlNodes(html);
+
       const markdownOutlineNodes =
         clipboardNodes.length === 0 &&
         !hasPuuNoteFormatMarker(text) &&
-        /^#{1,6}\s+/m.test(text)
+        ( /^#{1,6}\s+/m.test(text) || (pasteSplitMode === "separator" && /^[^\S\r\n]*---[^\S\r\n]*\r?$/m.test(text)) )
           ? parseMarkdownToNodes(text)
           : [];
+
       const importedNodes =
         clipboardNodes.length > 0
           ? clipboardNodes
           : hasPuuNoteFormatMarker(text)
             ? parseMarkdownToNodes(text)
             : markdownOutlineNodes;
+
       const parts =
         importedNodes.length > 0
           ? []
@@ -251,9 +259,16 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
                 .map((p) => p.trim())
                 .filter((p) => p.length > 0)
             : text
-                .split(/^\s*---\s*$/m)
+                .split(/(?:\r?\n\s*){2,}|^[^\S\r\n]*---[^\S\r\n]*\r?$/m)
                 .map((p) => p.trim())
                 .filter((p) => p.length > 0);
+
+      // If we are editing and pasting a single node, let the default native paste handle it!
+      if (importedNodes.length === 0 && parts.length <= 1) {
+        if (isEditingActive) {
+          return;
+        }
+      }
 
       if (importedNodes.length === 0 && parts.length === 0) return;
 
@@ -262,26 +277,103 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
 
       let firstPastedId: string | null = null;
 
-      setNodes((prev) => {
-        const targetParentId = activeId ?? null;
-        const siblings = prev.filter((n) => n.parentId === targetParentId);
-        const baseOrder =
-          siblings.length > 0
-            ? Math.max(...siblings.map((n) => n.order || 0))
-            : -1;
+      if (isEditingActive && activeId) {
+        // --- SPLIT ON PASTE WHILE EDITING ---
+        // Exit editing mode
+        useAppStore.getState().setEditingId(null);
 
-        const newNodes: PuuNode[] =
-          importedNodes.length > 0
-            ? cloneNodesForPaste(importedNodes, targetParentId, baseOrder)
-            : parts.map((part, i) => ({
-                id: generateId(),
-                content: part,
-                parentId: targetParentId,
-                order: baseOrder + i + 1,
-              }));
-        firstPastedId = newNodes[0]?.id ?? null;
-        return [...prev, ...newNodes];
-      });
+        let textBefore = "";
+        let textAfter = "";
+        const isTextarea = e.target && (e.target as HTMLElement).tagName === "TEXTAREA";
+        if (isTextarea) {
+          const targetElement = e.target as HTMLTextAreaElement;
+          textBefore = targetElement.value.substring(0, targetElement.selectionStart);
+          textAfter = targetElement.value.substring(targetElement.selectionEnd);
+        } else {
+          // Fallback if contenteditable/Tiptap: split the active node's current saved content
+          const activeNode = state.nodes.find((n) => n.id === activeId);
+          if (activeNode) {
+            textBefore = activeNode.content;
+            textAfter = "";
+          }
+        }
+
+        setNodes((prev) => {
+          const activeNode = prev.find((n) => n.id === activeId);
+          if (!activeNode) return prev;
+
+          const parentId = activeNode.parentId;
+          const activeOrder = activeNode.order ?? 0;
+
+          // If we are pasting imported nodes (PuuNote cards structure) while editing, we insert them as siblings
+          if (importedNodes.length > 0) {
+            // Shift subsequent siblings of the active node to make space
+            const shiftedNodes = prev.map((node) => {
+              if (node.parentId === parentId && (node.order ?? 0) > activeOrder) {
+                return { ...node, order: (node.order ?? 0) + importedNodes.length };
+              }
+              return node;
+            });
+
+            const newNodes = cloneNodesForPaste(importedNodes, parentId, activeOrder);
+            firstPastedId = newNodes[0]?.id ?? null;
+            return [...shiftedNodes, ...newNodes];
+          }
+
+          // Otherwise, we split the pasted parts
+          // Shift subsequent siblings of the active node to make space
+          const shiftedNodes = prev.map((node) => {
+            if (node.parentId === parentId && (node.order ?? 0) > activeOrder) {
+              return { ...node, order: (node.order ?? 0) + parts.length - 1 };
+            }
+            return node;
+          });
+
+          // First part merges with the active node
+          const updatedActiveNode = {
+            ...activeNode,
+            content: textBefore + (parts[0] ?? ""),
+          };
+
+          const newSiblings: PuuNode[] = [];
+          for (let i = 1; i < parts.length; i++) {
+            const isLast = i === parts.length - 1;
+            const partContent = parts[i] ?? "";
+            newSiblings.push({
+              id: generateId(),
+              content: isLast ? partContent + textAfter : partContent,
+              parentId,
+              order: activeOrder + i,
+            });
+          }
+
+          const nextNodes = shiftedNodes.map((n) => (n.id === activeId ? updatedActiveNode : n));
+          firstPastedId = newSiblings[0]?.id ?? updatedActiveNode.id;
+          return [...nextNodes, ...newSiblings];
+        });
+      } else {
+        // --- STANDARD PASTE (NOT EDITING) ---
+        setNodes((prev) => {
+          const targetParentId = activeId ?? null;
+          const siblings = prev.filter((n) => n.parentId === targetParentId);
+          const baseOrder =
+            siblings.length > 0
+              ? Math.max(...siblings.map((n) => n.order || 0))
+              : -1;
+
+          const newNodes: PuuNode[] =
+            importedNodes.length > 0
+              ? cloneNodesForPaste(importedNodes, targetParentId, baseOrder)
+              : parts.map((part, i) => ({
+                  id: generateId(),
+                  content: part,
+                  parentId: targetParentId,
+                  order: baseOrder + i + 1,
+                }));
+          firstPastedId = newNodes[0]?.id ?? null;
+          return [...prev, ...newNodes];
+        });
+      }
 
       if (firstPastedId) {
         useAppStore.getState().setActiveId(firstPastedId);
