@@ -1,4 +1,5 @@
 import { useEffect, useCallback, RefObject, useRef } from "react";
+import { toast } from "sonner";
 import { useAppStore } from "../store/useAppStore";
 import { generateId } from "../utils/id";
 import { PuuNode } from "../types";
@@ -64,18 +65,36 @@ const cloneNodesForPaste = (
   return cloned;
 };
 
+let isDeepCopyRequested = false;
+
 const getClipboardNodes = (nodes: PuuNode[], activeId: string | null) => {
   const selectedIds = useAppStore.getState().selectedIds;
   const treeIndex = buildTreeIndex(nodes);
 
   if (selectedIds.length > 1) {
     const selected = new Set(selectedIds);
-    return getDepthFirstNodesFromIndex(treeIndex)
-      .filter((node) => selected.has(node.id))
-      .map((node) => ({
-        ...node,
-        parentId: selected.has(node.parentId || "") ? node.parentId : null,
-      }));
+    if (isDeepCopyRequested) {
+      const allIds = new Set<string>();
+      selected.forEach((id) => {
+        allIds.add(id);
+        computeDescendantIdsFromIndex(treeIndex, id).forEach((childId) =>
+          allIds.add(childId),
+        );
+      });
+      return getDepthFirstNodesFromIndex(treeIndex)
+        .filter((node) => allIds.has(node.id))
+        .map((node) => ({
+          ...node,
+          parentId: allIds.has(node.parentId || "") ? node.parentId : null,
+        }));
+    } else {
+      return getDepthFirstNodesFromIndex(treeIndex)
+        .filter((node) => selected.has(node.id))
+        .map((node) => ({
+          ...node,
+          parentId: selected.has(node.parentId || "") ? node.parentId : null,
+        }));
+    }
   }
 
   const rootId = activeId || selectedIds[0] || null;
@@ -416,6 +435,33 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
       if (e.ctrlKey || e.metaKey) {
         const target = e.target as HTMLElement;
         if (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable) {
+          return;
+        }
+
+        if ((e.shiftKey || e.altKey) && e.key.toLowerCase() === "c") {
+          e.preventDefault();
+          isDeepCopyRequested = true;
+          
+          const span = document.createElement("span");
+          span.textContent = " ";
+          span.style.position = "absolute";
+          span.style.opacity = "0";
+          document.body.appendChild(span);
+          
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          
+          document.execCommand("copy");
+          
+          selection?.removeAllRanges();
+          document.body.removeChild(span);
+          
+          toast.success("Ветка скопирована");
+          
+          isDeepCopyRequested = false;
           return;
         }
 

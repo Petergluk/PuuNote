@@ -105,7 +105,7 @@ export function BoardView() {
   if (timelineOpen) return null;
 
   return (
-    <div className="flex flex-row items-start gap-0 px-0 py-0 min-h-full h-full w-max relative col-spacer">
+    <div className="flex flex-row items-start gap-0 pl-0 pr-[50vw] py-0 min-h-full h-full w-max relative col-spacer">
       {columns.map((colNodes, colIndex) => {
         return (
           <div
