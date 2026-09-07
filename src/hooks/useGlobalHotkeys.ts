@@ -44,25 +44,42 @@ export function useGlobalHotkeys(commands: CommandItem[]) {
         }
       }
 
+      const isMac = navigator?.userAgent?.toLowerCase()?.includes('mac');
       const keys: string[] = [];
-      if (e.metaKey) keys.push('cmd');
-      if (e.ctrlKey && !e.metaKey) keys.push('ctrl');
-      if (e.altKey) keys.push('alt');
-      if (e.shiftKey) keys.push('shift');
+      const altKeys: string[] = []; // Alternate mapping for mod
+
+      if (e.metaKey) {
+        keys.push('cmd');
+        if (isMac) altKeys.push('mod');
+      }
+      if (e.ctrlKey && !e.metaKey) {
+        keys.push('ctrl');
+        if (!isMac) altKeys.push('mod');
+      }
+      if (e.altKey) {
+        keys.push('alt');
+        altKeys.push('alt');
+      }
+      if (e.shiftKey) {
+        keys.push('shift');
+        altKeys.push('shift');
+      }
       
       const keyStr = e.key.toLowerCase();
       if (!['alt', 'control', 'shift', 'meta'].includes(keyStr)) {
         keys.push(keyStr);
+        altKeys.push(keyStr);
       }
 
       if (keys.length === 0) return;
 
       const pressedStr = keys.join('+');
+      const pressedAltStr = altKeys.join('+');
 
       for (const cmd of commands) {
         const userOverride = hotkeysRef.current[cmd.id];
         const activeHotkey = userOverride !== undefined ? userOverride : (cmd.hotkey?.toLowerCase() || "");
-        if (activeHotkey === pressedStr) {
+        if (activeHotkey === pressedStr || activeHotkey === pressedAltStr) {
           e.preventDefault();
           e.stopPropagation();
           cmd.run();

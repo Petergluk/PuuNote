@@ -8,6 +8,7 @@ import { Footer } from "./components/Footer";
 import { FileMenu } from "./components/FileMenu";
 import { JobPanel } from "./components/JobPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { FindReplaceModal } from "./components/FindReplaceModal";
 import { FloatingCardActions } from "./components/FloatingCardActions";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { PluginsPanel } from "./components/PluginsPanel";
@@ -224,6 +225,9 @@ export default function App() {
         </ErrorBoundary>
         <ErrorBoundary>
           <ConfirmDialog />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <FindReplaceModal />
         </ErrorBoundary>
         <ErrorBoundary>
           <PluginOverlays />

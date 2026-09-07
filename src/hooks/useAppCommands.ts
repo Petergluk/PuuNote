@@ -46,6 +46,13 @@ export function useAppCommands(): CommandItem[] {
       run: () => createNewFile(),
     },
     {
+      id: "find-replace",
+      label: t("Find and Replace"),
+      icon: Search,
+      hotkey: "mod+f",
+      run: () => useAppStore.getState().setFindReplaceOpen(true),
+    },
+    {
       id: "merge-selected-cards",
       label: t("Merge selected cards"),
       icon: Combine,

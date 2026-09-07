@@ -432,36 +432,42 @@ export function useAppHotkeys(containerRef?: RefObject<HTMLElement | null>) {
         return;
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        const target = e.target as HTMLElement;
-        if (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable) {
-          return;
-        }
+      const target = e.target as HTMLElement;
+      const isInputFocused =
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "INPUT" ||
+        target.isContentEditable;
 
-        if ((e.shiftKey || e.altKey) && e.key.toLowerCase() === "c") {
-          e.preventDefault();
-          isDeepCopyRequested = true;
-          
-          const span = document.createElement("span");
-          span.textContent = " ";
-          span.style.position = "absolute";
-          span.style.opacity = "0";
-          document.body.appendChild(span);
-          
-          const selection = window.getSelection();
-          const range = document.createRange();
-          range.selectNodeContents(span);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          
-          document.execCommand("copy");
-          
-          selection?.removeAllRanges();
-          document.body.removeChild(span);
-          
-          toast.success("Ветка скопирована");
-          
-          isDeepCopyRequested = false;
+      // Option + C (Alt + C) for deep copy, bypassing browser devtools conflicts
+      if (!isInputFocused && e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        isDeepCopyRequested = true;
+        
+        const span = document.createElement("span");
+        span.textContent = " ";
+        span.style.position = "absolute";
+        span.style.opacity = "0";
+        document.body.appendChild(span);
+        
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        
+        document.execCommand("copy");
+        
+        selection?.removeAllRanges();
+        document.body.removeChild(span);
+        
+        toast.success("Ветка скопирована");
+        
+        isDeepCopyRequested = false;
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (isInputFocused) {
           return;
         }
 

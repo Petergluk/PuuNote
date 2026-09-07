@@ -140,6 +140,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   cardRadius: DEFAULT_CARD_RADIUS,
   themeTuning: DEFAULT_THEME_TUNING,
   commandPaletteOpen: false,
+  findReplaceOpen: false,
   uiMode: "normal",
   saveStatus: "saved",
   confirmDialog: { isOpen: false, message: "" },
@@ -157,6 +158,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   setCommandPaletteOpen: (commandPaletteOpen) =>
     set((s) =>
       s.commandPaletteOpen === commandPaletteOpen ? s : { commandPaletteOpen },
+    ),
+  setFindReplaceOpen: (findReplaceOpen) =>
+    set((s) =>
+      s.findReplaceOpen === findReplaceOpen ? s : { findReplaceOpen },
     ),
   setTheme: (theme) => set((s) => switchThemeWithBranchSettings(s, theme)),
   toggleTheme: () =>

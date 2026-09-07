@@ -52,6 +52,7 @@ export interface UiSlice {
   cardRadius: number;
   themeTuning: Partial<Record<ThemeId, ThemeTune>>;
   commandPaletteOpen: boolean;
+  findReplaceOpen: boolean;
   uiMode: "normal" | "fullscreen" | "zen";
   saveStatus: SaveStatus;
   confirmDialog: {
@@ -61,6 +62,7 @@ export interface UiSlice {
   };
   floatingActionsVisible: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
+  setFindReplaceOpen: (open: boolean) => void;
   setTheme: (theme: string) => void;
   toggleTheme: () => void;
   setCardsCollapsed: (collapsed: boolean) => void;
