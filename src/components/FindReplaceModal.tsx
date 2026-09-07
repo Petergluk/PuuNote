@@ -25,6 +25,29 @@ export const FindReplaceModal: React.FC = () => {
   const targetRootIds = selectedIds.length > 1 ? selectedIds : (activeId ? [activeId] : []);
   const hasSelection = targetRootIds.length > 0;
   
+  // Compute match count on the fly based on current input
+  let matchCount = 0;
+  if (findText) {
+    let targetIds = new Set<string>();
+    if (hasSelection) {
+      const treeIndex = buildTreeIndex(nodes);
+      targetRootIds.forEach((id) => {
+        targetIds.add(id);
+        const descendants = computeDescendantIdsFromIndex(treeIndex, id);
+        descendants.forEach(d => targetIds.add(d));
+      });
+    } else {
+      nodes.forEach(n => targetIds.add(n.id));
+    }
+
+    for (const node of nodes) {
+      if (targetIds.has(node.id) && node.content) {
+        // Use a simple split approach to count occurrences
+        matchCount += node.content.split(findText).length - 1;
+      }
+    }
+  }
+  
   const handleReplaceAll = () => {
     if (!findText) return;
 
@@ -88,7 +111,7 @@ export const FindReplaceModal: React.FC = () => {
             </p>
 
             <div className="flex flex-col gap-3">
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-medium text-app-text-secondary mb-1">
                   {t("Find")}
                 </label>
@@ -102,8 +125,13 @@ export const FindReplaceModal: React.FC = () => {
                       handleReplaceAll();
                     }
                   }}
-                  className="w-full px-3 py-2 bg-app-input-bg border border-app-border rounded-md text-sm text-app-text-primary focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent"
+                  className="w-full px-3 py-2 pr-16 bg-app-input-bg border border-app-border rounded-md text-sm text-app-text-primary focus:outline-none focus:ring-1 focus:ring-inset focus:ring-app-accent"
                 />
+                {findText && (
+                  <div className="absolute right-3 top-7 text-xs text-app-text-muted pointer-events-none">
+                    {matchCount} {matchCount === 1 ? 'match' : 'matches'}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-app-text-secondary mb-1">
