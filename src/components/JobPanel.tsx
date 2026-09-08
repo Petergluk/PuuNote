@@ -52,7 +52,7 @@ export function JobPanel() {
                   <button
                     onClick={() => JobRunner.cancelJob(job.id)}
                     className="shrink-0 rounded p-1 text-app-text-muted hover:bg-app-card-hover hover:text-red-500"
-                    title="Cancel job"
+                    title={t("Cancel job")}
                   >
                     <X size={14} />
                   </button>

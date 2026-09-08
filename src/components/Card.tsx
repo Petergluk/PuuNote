@@ -359,7 +359,7 @@ export const Card = React.memo(
                         ? "bg-app-text-primary text-app-card" 
                         : "text-app-text-secondary hover:bg-app-text-primary hover:text-app-card"
                     )}
-                    title="More actions"
+                    title={t("More actions")}
                   >
                     <ChevronsLeft size={14} />
                   </button>
@@ -368,7 +368,7 @@ export const Card = React.memo(
                 <button
                   onMouseDown={handleSplitNode}
                   className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
-                  title="Split node at cursor"
+                  title={t("Split node at cursor")}
                 >
                   <Scissors size={14} />
                 </button>
@@ -379,7 +379,7 @@ export const Card = React.memo(
                     setFullScreenId(node.id);
                   }}
                   className="w-6 h-6 shrink-0 text-app-text-secondary cursor-pointer hover:bg-app-text-primary hover:text-app-card transition-colors flex items-center justify-center rounded-sm"
-                  title="Expand to full screen"
+                  title={t("Expand to full screen")}
                 >
                   <Maximize2 size={14} />
                 </button>

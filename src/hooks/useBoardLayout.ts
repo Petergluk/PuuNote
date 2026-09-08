@@ -99,6 +99,8 @@ export function useActivePathScroll(
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initializedCols = useRef<Set<number>>(new Set());
   const isScrollingRef = useRef<boolean[]>([]);
+  const lastActiveNodesRef = useRef<Map<number, { id: string, top: number }>>(new Map());
+  const wasActiveRef = useRef<boolean>(false);
 
   useEffect(() => {
     initializedCols.current.clear();
@@ -184,50 +186,77 @@ export function useActivePathScroll(
         );
       };
 
-      colRefs.current.forEach((col, index) => {
-        if (!col) return;
+      if (activeId) {
+        wasActiveRef.current = true;
+        colRefs.current.forEach((col, index) => {
+          if (!col) return;
 
-        let activeNodeInCol: HTMLElement | null = null;
-        const cards = Array.from(
-          col.querySelectorAll<HTMLElement>('[id^="card-"]'),
-        );
-
-        for (const card of cards) {
-          const id = card.id.replace(/^card-/, "");
-          if (isInActiveBranch(id)) {
-            activeNodeInCol = card;
-            break;
-          }
-        }
-
-        if (activeNodeInCol && activeRect && activeId && !isScrollingRef.current[index]) {
-          const elRect = activeNodeInCol.getBoundingClientRect();
-          const colRect = col.getBoundingClientRect();
-
-          let desiredTop = activeRect.top;
-          const minTop = colRect.top + 64;
-          const maxTop = Math.max(minTop, colRect.bottom - 16 - elRect.height);
-
-          if (desiredTop < minTop) {
-            desiredTop = minTop;
-          } else if (desiredTop > maxTop) {
-            desiredTop = maxTop;
-          }
-
-          const targetDiff = elRect.top - desiredTop;
-          const targetScrollTop = col.scrollTop + targetDiff;
-
-          const maxScrollTop = col.scrollHeight - col.clientHeight;
-          const clampedScrollTop = Math.max(
-            0,
-            Math.min(maxScrollTop || 0, targetScrollTop),
+          let activeNodeInCol: HTMLElement | null = null;
+          const cards = Array.from(
+            col.querySelectorAll<HTMLElement>('[id^="card-"]'),
           );
 
-          if (Math.abs(clampedScrollTop - col.scrollTop) > 1) {
-            col.scrollTop = clampedScrollTop;
+          for (const card of cards) {
+            const id = card.id.replace(/^card-/, "");
+            if (isInActiveBranch(id)) {
+              activeNodeInCol = card;
+              break;
+            }
           }
-        }
-      });
+
+          if (activeNodeInCol && activeRect && !isScrollingRef.current[index]) {
+            const elRect = activeNodeInCol.getBoundingClientRect();
+            
+            // Record position for anchoring when activeId is cleared
+            lastActiveNodesRef.current.set(index, { 
+              id: activeNodeInCol.id.replace(/^card-/, ""), 
+              top: elRect.top 
+            });
+
+            const colRect = col.getBoundingClientRect();
+
+            let desiredTop = activeRect.top;
+            const minTop = colRect.top + 64;
+            const maxTop = Math.max(minTop, colRect.bottom - 16 - elRect.height);
+
+            if (desiredTop < minTop) {
+              desiredTop = minTop;
+            } else if (desiredTop > maxTop) {
+              desiredTop = maxTop;
+            }
+
+            const targetDiff = elRect.top - desiredTop;
+            const targetScrollTop = col.scrollTop + targetDiff;
+            const maxScrollTop = col.scrollHeight - col.clientHeight;
+            const clampedScrollTop = Math.max(
+              0,
+              Math.min(maxScrollTop || 0, targetScrollTop),
+            );
+
+            if (Math.abs(clampedScrollTop - col.scrollTop) > 1) {
+              col.scrollTop = clampedScrollTop;
+            }
+          }
+        });
+      } else if (wasActiveRef.current) {
+        // We just transitioned from having an active node to not having one.
+        // Anchor the scroll positions based on the last known active nodes to prevent jumping.
+        colRefs.current.forEach((col, index) => {
+          if (!col || isScrollingRef.current[index]) return;
+          const anchor = lastActiveNodesRef.current.get(index);
+          if (anchor) {
+            const el = document.getElementById(`card-${anchor.id}`);
+            if (el) {
+              const currentTop = el.getBoundingClientRect().top;
+              const diff = currentTop - anchor.top;
+              if (Math.abs(diff) > 1) {
+                col.scrollTop += diff;
+              }
+            }
+          }
+        });
+        wasActiveRef.current = false;
+      }
     };
 
     rafId = requestAnimationFrame(() => {

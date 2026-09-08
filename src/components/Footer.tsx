@@ -84,8 +84,8 @@ export function Footer() {
   );
 
   const mergeTitle = mergeSelection.ok
-    ? `Merge ${mergeSelection.orderedIds.length} selected cards`
-    : mergeSelection.reason || "Selected cards cannot be merged.";
+    ? t("Merge selected cards").replace("{count}", String(mergeSelection.orderedIds.length))
+    : (mergeSelection.reason || t("Cannot merge selected cards"));
 
   const handleMergeSelected = () => {
     if (!mergeSelection.ok || !mergeSelection.masterId) {

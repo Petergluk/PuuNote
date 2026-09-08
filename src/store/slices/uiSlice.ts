@@ -17,7 +17,7 @@ import {
 } from "../../utils/branchColors";
 
 const DEFAULT_INACTIVE_CARD_DIM = -25;
-const DEFAULT_CARD_RADIUS = 0.25;
+const DEFAULT_CARD_RADIUS = 0.5;
 
 function updateBranchSettings(s: UiSlice, partialGlobal: Partial<BranchColorSettings>, newById?: BranchColorSettingsById) {
   const nextGlobal = {

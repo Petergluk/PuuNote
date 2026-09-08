@@ -252,7 +252,7 @@ export const WysiwygEditor = forwardRef<
                 editor.chain().focus().toggleHeading({ level: 1 }).run()
               }
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("heading", { level: 1 }) ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Heading 1"
+              title={t("Heading 1")}
               aria-label="Heading 1"
             >
               <Heading1 size={16} />
@@ -263,7 +263,7 @@ export const WysiwygEditor = forwardRef<
                 editor.chain().focus().toggleHeading({ level: 2 }).run()
               }
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("heading", { level: 2 }) ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Heading 2"
+              title={t("Heading 2")}
               aria-label="Heading 2"
             >
               <Heading2 size={16} />
@@ -274,7 +274,7 @@ export const WysiwygEditor = forwardRef<
                 editor.chain().focus().toggleHeading({ level: 3 }).run()
               }
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("heading", { level: 3 }) ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Heading 3"
+              title={t("Heading 3")}
               aria-label="Heading 3"
             >
               <Heading3 size={16} />
@@ -285,7 +285,7 @@ export const WysiwygEditor = forwardRef<
                 editor.chain().focus().toggleHeading({ level: 4 }).run()
               }
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("heading", { level: 4 }) ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Heading 4"
+              title={t("Heading 4")}
               aria-label="Heading 4"
             >
               <Heading4 size={16} />
@@ -295,7 +295,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={() => editor.chain().focus().toggleBold().run()}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("bold") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Bold"
+              title={t("Bold")}
               aria-label="Bold"
             >
               <Bold size={16} />
@@ -304,7 +304,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={() => editor.chain().focus().toggleItalic().run()}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("italic") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Italic"
+              title={t("Italic")}
               aria-label="Italic"
             >
               <Italic size={16} />
@@ -313,7 +313,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={() => editor.chain().focus().toggleStrike().run()}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("strike") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Strikethrough"
+              title={t("Strikethrough")}
               aria-label="Strikethrough"
             >
               <Strikethrough size={16} />
@@ -323,7 +323,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("bulletList") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Bullet list"
+              title={t("Bullet list")}
               aria-label="Bullet list"
             >
               <List size={16} />
@@ -332,7 +332,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("orderedList") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Ordered list"
+              title={t("Ordered list")}
               aria-label="Ordered list"
             >
               <ListOrdered size={16} />
@@ -341,7 +341,7 @@ export const WysiwygEditor = forwardRef<
               type="button"
               onClick={openLinkEditor}
               className={`p-2 hover:bg-app-card-hover transition-colors ${editor.isActive("link") ? "text-app-accent bg-app-card-hover" : "text-app-text-secondary"}`}
-              title="Edit link"
+              title={t("Edit link")}
               aria-label="Edit link"
             >
               <LinkIcon size={16} />
@@ -351,7 +351,7 @@ export const WysiwygEditor = forwardRef<
                 type="button"
                 onClick={unsetLink}
                 className="p-2 text-app-text-secondary hover:bg-app-card-hover hover:text-app-accent transition-colors"
-                title="Remove link"
+                title={t("Remove link")}
                 aria-label="Remove link"
               >
                 <Unlink size={16} />
@@ -381,7 +381,7 @@ export const WysiwygEditor = forwardRef<
                   onClick={applyLink}
                   disabled={!normalizeEditorLinkHref(linkInput)}
                   className="p-2 text-app-text-secondary hover:bg-app-card-hover hover:text-app-accent disabled:opacity-40"
-                  title="Apply link"
+                  title={t("Apply link")}
                   aria-label="Apply link"
                 >
                   <Check size={14} />
@@ -390,7 +390,7 @@ export const WysiwygEditor = forwardRef<
                   type="button"
                   onClick={closeLinkEditor}
                   className="p-2 text-app-text-secondary hover:bg-app-card-hover hover:text-app-text-primary"
-                  title="Cancel"
+                  title={t("Cancel")}
                   aria-label="Cancel link editing"
                 >
                   <X size={14} />

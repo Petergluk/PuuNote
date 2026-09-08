@@ -268,7 +268,7 @@ export const FullScreenModal = ({
             handleCopy();
           }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
-          title="Copy Markdown"
+          title={t("Copy Markdown")}
           aria-label="Copy Markdown"
         >
           {copied ? (
@@ -283,7 +283,7 @@ export const FullScreenModal = ({
             handleExport();
           }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
-          title="Export as Markdown"
+          title={t("Export as Markdown")}
           aria-label="Export as Markdown"
         >
           <Download size={20} />
@@ -294,7 +294,7 @@ export const FullScreenModal = ({
             onClose();
           }}
           className="p-2 text-app-text-muted hover:text-app-text-primary bg-app-card/50 hover:bg-app-card border border-app-border/50 hover:border-app-border rounded-full transition-all backdrop-blur-sm"
-          title="Close Focus Mode (Esc)"
+          title={`${t("Close Focus Mode")} (Esc)`}
           aria-label="Close Focus Mode"
         >
           <Minimize2 size={20} />

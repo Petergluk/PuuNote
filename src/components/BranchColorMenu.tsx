@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Paintbrush, RotateCcw } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useClickOutside } from "../hooks/useClickOutside";
@@ -27,9 +28,9 @@ export function BranchColorMenu({
   isSettingsUnlocked,
   onBeautifulClick,
 }: BranchColorMenuProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
   const activeId = useAppStore((s) => s.activeId);
   const nodes = useAppStore((s) => s.nodes);
   const theme = useAppStore((s) => s.theme);
@@ -39,6 +40,7 @@ export function BranchColorMenu({
   const branchColorOpacity = useAppStore((s) => s.branchColorOpacity);
   const branchColorGradient = useAppStore((s) => s.branchColorGradient);
   const branchColorSolid = useAppStore((s) => s.branchColorSolid);
+  const cardRadius = useAppStore((s) => s.cardRadius);
   const branchColorSettingsById = useAppStore(
     (s) => s.branchColorSettingsById,
   );
@@ -51,7 +53,6 @@ export function BranchColorMenu({
   const branchColorBorderBrightness = useAppStore(
     (s) => s.branchColorBorderBrightness,
   );
-
   const setActiveBranchColor = useAppStore((s) => s.setActiveBranchColor);
   const clearAllBranchColors = useAppStore((s) => s.clearAllBranchColors);
   const autoColorRootBranches = useAppStore((s) => s.autoColorRootBranches);
@@ -65,6 +66,7 @@ export function BranchColorMenu({
     (s) => s.setBranchColorGradient,
   );
   const setBranchColorSolid = useAppStore((s) => s.setBranchColorSolid);
+  const setCardRadius = useAppStore((s) => s.setCardRadius);
   const setBranchColorBorderWidth = useAppStore(
     (s) => s.setBranchColorBorderWidth,
   );
@@ -226,8 +228,8 @@ export function BranchColorMenu({
             ? "text-app-text-primary bg-app-card-hover border-app-border"
             : "text-app-text-secondary"
         }`}
-        title="Branch color"
-        aria-label="Branch color"
+        title={t("Branch color")}
+        aria-label={t("Branch color")}
         aria-expanded={open}
       >
         <Paintbrush
@@ -244,7 +246,7 @@ export function BranchColorMenu({
         <div className="absolute right-0 top-full z-[90] mt-2 grid w-[206px] grid-cols-5 gap-2 rounded border border-app-border bg-app-panel p-2 shadow-xl">
           <button
             type="button"
-            disabled={theme === "mono"}
+            
             onClick={() => {
               if (activeId) {
                 setActiveBranchColor(null);
@@ -262,10 +264,10 @@ export function BranchColorMenu({
                 : "border-app-border bg-app-card text-app-text-muted hover:bg-app-card-hover hover:text-app-text-primary"
             }`}
             title={
-              activeId ? "Reset branch color" : "Reset all branch colors"
+              activeId ? t("Reset branch color") : t("Reset all branch colors")
             }
             aria-label={
-              activeId ? "Reset branch color" : "Reset all branch colors"
+              activeId ? t("Reset branch color") : t("Reset all branch colors")
             }
           >
             <RotateCcw size={14} />
@@ -285,7 +287,7 @@ export function BranchColorMenu({
                 key={color.id}
                 type="button"
                 data-branch-color-swatch
-                disabled={theme === "mono"}
+                
                 onClick={() => {
                   if (tuningBranchColorId === color.id) {
                     setBranchColorTuningTargetId(null);
@@ -332,7 +334,7 @@ export function BranchColorMenu({
           <div className="col-span-5 mt-0.5 flex items-center gap-1.5 border-t border-app-border pt-2">
             <div className="min-w-0 flex-1">
               <MiniSlider
-                label="Яркость"
+                label={t("Brightness")}
                 hideLabel
                 min={0}
                 max={300}
@@ -342,31 +344,46 @@ export function BranchColorMenu({
                   background: `color-mix(in srgb, ${branchSliderColor} ${branchIntensityMix}%, var(--app-card))`,
                 }}
                 onChange={setBranchIntensity}
-                disabled={theme === "mono"}
+                
               />
             </div>
             <label
-              className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-app-border bg-app-card${
+              className={`flex shrink-0 items-center gap-1.5 rounded bg-app-card${
                 theme === "mono"
                   ? " opacity-40 cursor-not-allowed pointer-events-none"
                   : " cursor-pointer"
               }`}
-              title="Однотонная заливка"
+              title={t("Solid fill")}
             >
-              <input
-                type="checkbox"
-                checked={currentBranchColorSettings.solid}
-                onChange={(event) => setBranchSolid(event.target.checked)}
-                className="h-3 w-3 accent-app-accent"
-                aria-label="Однотонная заливка"
-              />
+              <span className="text-[10px] text-app-text-dimmer uppercase tracking-wider">{t("Solid fill")}</span>
+              <div className="flex h-[18px] w-[18px] items-center justify-center rounded border border-app-border">
+                <input
+                  type="checkbox"
+                  checked={currentBranchColorSettings.solid}
+                  onChange={(event) => setBranchSolid(event.target.checked)}
+                  className="h-3 w-3 accent-app-accent"
+                  aria-label={t("Solid fill")}
+                />
+              </div>
             </label>
+          </div>
+          <div className="col-span-5 mt-2">
+            <MiniSlider
+              label={t("Corner radius")}
+              min={0}
+              max={100}
+              value={cardRadius * 100}
+              fillStyle={{
+                borderRadius: `${cardRadius * 100}px`
+              }}
+              onChange={(value) => setCardRadius(clamp(value, 0, 100) / 100)}
+            />
           </div>
           {/* Advanced sliders — visible only when unlocked */}
           {isSettingsUnlocked && (
             <div className="col-span-5 grid gap-2">
               <MiniSlider
-                label="Заливка"
+                label={t("Fill")}
                 min={0}
                 max={100}
                 step={5}
@@ -375,10 +392,10 @@ export function BranchColorMenu({
                   background: `color-mix(in srgb, ${branchSliderColor} ${branchFillMix}%, var(--app-card))`,
                 }}
                 onChange={setBranchSpread}
-                disabled={theme === "mono"}
+                
               />
               <MiniSlider
-                label="Прозрачность"
+                label={t("Opacity")}
                 min={0}
                 max={100}
                 step={5}
@@ -390,7 +407,7 @@ export function BranchColorMenu({
                 onChange={(value) => setBranchSetting("opacity", value)}
               />
               <MiniSlider
-                label="Плавность"
+                label={t("Gradient")}
                 min={0}
                 max={100}
                 step={5}
@@ -401,7 +418,7 @@ export function BranchColorMenu({
                 onChange={(value) => setBranchSetting("gradient", value)}
               />
               <MiniSlider
-                label="Оттенок"
+                label={t("Tone")}
                 min={-100}
                 max={100}
                 step={5}
@@ -410,7 +427,7 @@ export function BranchColorMenu({
                 onChange={setBranchTone}
               />
               <MiniSlider
-                label="Яркость рамочки"
+                label={t("Border brightness")}
                 min={0}
                 max={100}
                 step={2}
@@ -421,7 +438,7 @@ export function BranchColorMenu({
                 }
               />
               <MiniSlider
-                label="Толщина рамочки"
+                label={t("Border width")}
                 min={0}
                 max={8}
                 step={1}
@@ -438,10 +455,10 @@ export function BranchColorMenu({
               onBeautifulClick();
             }}
             className="col-span-5 flex h-8 items-center justify-center rounded border border-app-border bg-app-card px-3 text-xs font-medium text-app-text-secondary transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
-            title="Сделай красиво"
-            aria-label="Сделай красиво"
+            title={t("Make it beautiful")}
+            aria-label={t("Make it beautiful")}
           >
-            Сделай красиво
+            {t("Make it beautiful")}
           </button>
         </div>
       )}

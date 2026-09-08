@@ -114,7 +114,7 @@ export function BoardView() {
             ref={(el) => setColRef(colIndex, el)}
             className="column-container h-full shrink-0 overflow-y-auto overflow-x-hidden hide-scrollbar px-2 transition-all duration-200 col-spacer relative"
           >
-            <div className="column-inner relative flex flex-col gap-3 pt-16 pb-[95vh] mx-auto transition-all duration-200 col-spacer">
+            <div className="column-inner relative flex flex-col gap-3 pt-[95vh] pb-[95vh] mx-auto transition-all duration-200 col-spacer">
               {colNodes.map((node) => {
                 const branchColorId = branchColorIdByNode.get(node.id);
                 const branchColorSettings = getBranchColorSettings(

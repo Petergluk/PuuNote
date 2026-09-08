@@ -20,6 +20,7 @@ export function useFileSystemInit() {
 
     async function init() {
       let savedDocs: PuuDocument[] = [];
+      let isFirstTime = false;
       try {
         await DocumentService.migrateLegacyLocalStorage();
         if (cancelled) return;
@@ -30,6 +31,7 @@ export function useFileSystemInit() {
       if (cancelled) return;
 
       if (savedDocs.length === 0) {
+        isFirstTime = true;
         savedDocs = [
           { id: "default", title: "New Document", updatedAt: Date.now() },
         ];
@@ -94,6 +96,10 @@ export function useFileSystemInit() {
         if (active) updateDocumentMetadataInStore(active, newNodes);
       } finally {
         fsManager.isHydratingFile = false;
+        if (isFirstTime) {
+          useAppStore.setState({ theme: "light" });
+          useAppStore.getState().autoColorRootBranches();
+        }
       }
     }
     init();

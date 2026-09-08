@@ -78,7 +78,7 @@ export function MiniSlider({
             style={{
               left: `clamp(1.25rem, ${progress}%, calc(100% - 1.25rem))`,
             }}
-            title="Двойной клик: ввести значение"
+            title={t("Double click to enter value")}
           >
             {editing ? (
               <input
@@ -112,7 +112,7 @@ export function MiniSlider({
               }}
               className="absolute inset-0 z-30 h-full w-full cursor-pointer opacity-0"
               aria-label={label}
-              title="Двойной клик: ввести значение"
+              title={t("Double click to enter value")}
             />
           )}
         </div>

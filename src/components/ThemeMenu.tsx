@@ -59,7 +59,7 @@ export function ThemeMenu() {
       <button
         onClick={toggleTheme}
         className="flex bg-app-card border border-app-border hover:bg-app-card-hover p-1.5 px-3 py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2"
-        title="Toggle theme"
+        title={t("Toggle Theme")}
         aria-label="Toggle theme"
       >
         <Palette size={16} />
@@ -68,7 +68,7 @@ export function ThemeMenu() {
       <button
         onClick={() => setOpen((o) => !o)}
         className={`flex bg-app-card border hover:bg-app-card-hover p-1.5 px-2 py-1.5 rounded transition-colors text-app-text-secondary font-medium items-center justify-center gap-2 ${open ? "border-app-text-primary text-app-text-primary bg-app-card-hover" : "border-app-border text-app-text-secondary"}`}
-        title="Theme settings"
+        title={t("Theme settings")}
         aria-label="Theme settings"
         aria-expanded={open}
       >
@@ -84,7 +84,7 @@ export function ThemeMenu() {
                 type="button"
                 onClick={() => resetThemeTune(theme)}
                 className="flex h-7 items-center gap-1.5 rounded border border-app-border bg-app-card px-2 text-xs text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
-                title="Сбросить настройки текущей темы"
+                title={t("Reset theme tuning")}
                 aria-label="Сбросить настройки текущей темы"
               >
                 <RotateCcw size={12} />
@@ -148,7 +148,7 @@ export function ThemeMenu() {
                   type="button"
                   onClick={() => void copyThemeTuning()}
                   className="flex h-6 items-center gap-1.5 rounded border border-app-border bg-app-card px-2 text-[10px] text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text-primary"
-                  title="Скопировать настройки тем"
+                  title={t("Copy theme settings")}
                   aria-label="Скопировать настройки тем"
                 >
                   <Copy size={10} />

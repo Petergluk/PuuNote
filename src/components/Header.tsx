@@ -60,15 +60,6 @@ export function Header({ handleImport }: HeaderProps) {
   const uiMode = useAppStore((s) => s.uiMode);
   const setUiMode = useAppStore((s) => s.setUiMode);
 
-  // Reset unlock when switching away from mono theme
-  useEffect(() => {
-    if (theme !== "mono") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSettingsUnlocked(false);
-      beautifulClickTimesRef.current = [];
-    }
-  }, [theme]);
-
   const clickTimeoutRef = useRef<number | null>(null);
 
   const exitFullscreenState = () => {
@@ -153,17 +144,15 @@ export function Header({ handleImport }: HeaderProps) {
   };
 
   const handleBeautifulClick = () => {
-    if (theme === "mono") {
-      const now = Date.now();
-      const recent = [
-        ...beautifulClickTimesRef.current.filter((t) => now - t < 600),
-        now,
-      ];
-      beautifulClickTimesRef.current = recent;
-      if (recent.length >= 3) {
-        setIsSettingsUnlocked((prev) => !prev);
-        beautifulClickTimesRef.current = [];
-      }
+    const now = Date.now();
+    const recent = [
+      ...beautifulClickTimesRef.current.filter((t) => now - t < 600),
+      now,
+    ];
+    beautifulClickTimesRef.current = recent;
+    if (recent.length >= 3) {
+      setIsSettingsUnlocked((prev) => !prev);
+      beautifulClickTimesRef.current = [];
     }
   };
 
@@ -179,7 +168,7 @@ export function Header({ handleImport }: HeaderProps) {
           <span
             className="cursor-pointer hidden sm:inline-block pr-2 sm:pr-4 border-r border-app-border"
             onClick={() => setFileMenuOpen(!fileMenuOpen)}
-            title="Open files menu"
+            title={t("Documents")}
           >
             <span className="text-app-text-muted">Puu</span>
             <span className="text-app-accent">Note.</span>
@@ -187,7 +176,7 @@ export function Header({ handleImport }: HeaderProps) {
           <span
             className="cursor-pointer hidden items-center justify-center p-1 pr-3 border-r border-app-border"
             onClick={() => setFileMenuOpen(!fileMenuOpen)}
-            title="Open files menu"
+            title={t("Documents")}
           >
             <span className="text-app-accent text-xl font-bold">P.</span>
           </span>
@@ -195,8 +184,8 @@ export function Header({ handleImport }: HeaderProps) {
             <button
               onClick={() => setFileMenuOpen(!fileMenuOpen)}
               className={`p-1.5 rounded-xl transition-colors flex items-center justify-center ${fileMenuOpen ? "text-app-text-primary bg-app-card-hover border border-app-border" : "text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"}`}
-              title="Manage documents"
-              aria-label="Manage documents"
+              title={t("Documents")}
+              aria-label={t("Documents")}
               aria-pressed={fileMenuOpen}
             >
               <Folder size={18} />
@@ -213,8 +202,8 @@ export function Header({ handleImport }: HeaderProps) {
             <button
               onClick={openCommandPalette}
               className="p-1.5 rounded-xl transition-colors flex items-center justify-center text-app-text-muted hover:text-app-text-primary hover:bg-app-card-hover border border-transparent hover:border-app-border"
-              title="Command Palette (Cmd/Ctrl+K)"
-              aria-label="Command Palette"
+              title={`${t("Command Palette")} (Cmd/Ctrl+K)`}
+              aria-label={t("Command Palette")}
             >
               <Search size={18} />
             </button>
@@ -227,8 +216,8 @@ export function Header({ handleImport }: HeaderProps) {
             onClick={handleUndo}
             disabled={!canUndo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Undo (Ctrl+Z)"
-            aria-label="Undo"
+            title={t("Undo")}
+            aria-label={t("Undo shortcut")}
           >
             <Undo2 size={16} />
           </button>
@@ -236,8 +225,8 @@ export function Header({ handleImport }: HeaderProps) {
             onClick={handleRedo}
             disabled={!canRedo}
             className="p-1 sm:p-1.5 text-app-text-muted hover:text-app-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Redo (Ctrl+Shift+Z)"
-            aria-label="Redo"
+            title={t("Redo")}
+            aria-label={t("Redo shortcut")}
           >
             <Redo2 size={16} />
           </button>
@@ -246,8 +235,8 @@ export function Header({ handleImport }: HeaderProps) {
           onClick={toggleFullscreen}
           onDoubleClick={handleFullscreenDoubleClick}
           className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
-          title="Toggle Fullscreen"
-          aria-label="Toggle fullscreen"
+          title={t("Fullscreen")}
+          aria-label={t("Fullscreen")}
           aria-pressed={uiMode !== "normal"}
         >
           {uiMode !== "normal" ? (
@@ -260,8 +249,8 @@ export function Header({ handleImport }: HeaderProps) {
           <button
             onClick={toggleCardsCollapsed}
             className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
-            title="Toggle Expand/Collapse"
-            aria-label="Toggle card collapse"
+            title={t("Toggle Expand")}
+            aria-label={t("Toggle Expand")}
             aria-pressed={cardsCollapsed}
           >
              {cardsCollapsed ? (
@@ -274,8 +263,8 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={toggleTheme}
           className="hidden sm:flex bg-app-card border border-app-border/50 hover:bg-app-card-hover hover:border-app-border w-8 h-8 rounded-xl transition-colors text-app-text-secondary items-center justify-center"
-          title="Toggle theme"
-          aria-label="Toggle theme"
+          title={t("Toggle Theme")}
+          aria-label={t("Toggle Theme")}
         >
           <Palette size={16} />
         </button>
@@ -315,8 +304,8 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={() => { useAppStore.getState().setPluginsOpen(!useAppStore.getState().pluginsOpen) }}
           className={`bg-app-card border w-8 h-8 rounded-xl transition-colors hidden sm:flex items-center justify-center ${useAppStore.getState().pluginsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
-          title="Plugins"
-          aria-label="Plugins"
+          title={t("Plugins")}
+          aria-label={t("Plugins")}
           aria-pressed={useAppStore.getState().pluginsOpen}
         >
           <Blocks size={16} />
@@ -324,8 +313,8 @@ export function Header({ handleImport }: HeaderProps) {
         <button
           onClick={() => setSettingsOpen(!settingsOpen)}
           className={`bg-app-card border w-8 h-8 rounded-xl transition-colors flex items-center justify-center ${settingsOpen ? "text-app-text-primary bg-app-card-hover border-app-border" : "text-app-text-secondary border-app-border/50 hover:bg-app-card-hover hover:border-app-border"}`}
-          title="Settings"
-          aria-label="Settings"
+          title={t("settings.title")}
+          aria-label={t("settings.title")}
           aria-pressed={settingsOpen}
         >
           <Settings size={16} />

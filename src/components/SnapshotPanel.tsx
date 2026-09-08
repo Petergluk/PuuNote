@@ -185,7 +185,7 @@ export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
                   onClick={() => handleRestore(snapshot)}
                   disabled={isRestoring}
                   className="shrink-0 rounded p-1.5 text-app-text-muted hover:bg-app-card hover:text-app-accent disabled:opacity-50"
-                  title="Restore snapshot"
+                  title={t("Restore snapshot")}
                   aria-label={`Restore snapshot: ${snapshot.description || "Snapshot"}`}
                 >
                   <RotateCcw size={15} />

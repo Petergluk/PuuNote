@@ -252,7 +252,7 @@ export function FloatingCardActions() {
               top: cardRect.top + cardRect.height,
               transform: "translate(-50%, -50%)",
             }}
-            title="Add Sibling (Shift+Enter)"
+            title={`${t("Add Sibling")} (Shift+Enter)`}
             aria-label="Add sibling card"
             onClick={(event) => {
               event.stopPropagation();
@@ -270,7 +270,7 @@ export function FloatingCardActions() {
               top: middleY,
               transform: "translate(-50%, -50%)",
             }}
-            title="Add Child (Tab)"
+            title={`${t("Add Child")} (Tab)`}
             aria-label="Add child card"
             onClick={(event) => {
               event.stopPropagation();
@@ -288,7 +288,7 @@ export function FloatingCardActions() {
               top: cardRect.top,
               transform: "translate(-50%, -50%)",
             }}
-            title="Delete"
+            title={t("Delete")}
             aria-label="Delete card"
             onClick={(event) => {
               event.stopPropagation();
@@ -330,8 +330,8 @@ export function FloatingCardActions() {
                 top: cardRect.top,
                 transform: "translate(-50%, -50%)",
               }}
-              title={`Merge ${mergeSelection.orderedIds.length} selected cards`}
-              aria-label="Merge selected cards"
+              title={t("Merge selected cards").replace("{count}", String(mergeSelection.orderedIds.length))}
+              aria-label={t("Merge selected cards").replace("{count}", "")}
               onClick={(event) => {
                 event.stopPropagation();
                 const { masterId, nodeIdsToMerge, orderedIds } =
@@ -340,7 +340,7 @@ export function FloatingCardActions() {
                 useAppStore
                   .getState()
                   .openConfirm(
-                    `Merge ${orderedIds.length} selected cards?`,
+                    t("Merge selected cards").replace("{count}", String(orderedIds.length)) + "?",
                     () => mergeNodes(masterId, nodeIdsToMerge),
                   );
               }}
