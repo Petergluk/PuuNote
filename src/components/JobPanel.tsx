@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { X, Trash2 } from "lucide-react";
 import { JobRunner } from "../domain/jobRunner";
 import { Job, useJobStore } from "../store/useJobStore";
@@ -11,6 +12,7 @@ const statusClass: Record<Job["status"], string> = {
 };
 
 export function JobPanel() {
+  const { t } = useTranslation();
   const jobs = useJobStore((s) => s.jobs);
 
   if (jobs.length === 0) return null;

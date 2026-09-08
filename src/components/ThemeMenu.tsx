@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Palette, Copy, RotateCcw, PaintBucket } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useClickOutside } from "../hooks/useClickOutside";
@@ -22,6 +23,7 @@ const themeTuneControls: Array<{
 ];
 
 export function ThemeMenu() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

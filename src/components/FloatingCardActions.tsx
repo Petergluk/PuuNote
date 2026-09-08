@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { Combine, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -33,6 +34,7 @@ const pointInsideRect = (
 };
 
 export function FloatingCardActions() {
+  const { t } = useTranslation();
   const activeId = useAppStore((state) => state.activeId);
   const editingId = useAppStore((state) => state.editingId);
   const nodes = useAppStore((state) => state.nodes);

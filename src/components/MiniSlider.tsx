@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useTranslation } from "react-i18next";
 import type { CSSProperties, KeyboardEvent } from "react";
 
 type MiniSliderProps = {
@@ -33,6 +34,7 @@ export function MiniSlider({
   onStepDown,
   onStepUp,
 }: MiniSliderProps) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const safeRange = max - min || 1;

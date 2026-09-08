@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Maximize2, Scissors, ChevronsLeft } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -73,6 +74,7 @@ export const Card = React.memo(
     isDescendantFromActive: boolean;
     branchColor: BranchColor | null;
   }) => {
+  const { t } = useTranslation();
     const {
       hasActiveNode,
       isActive,

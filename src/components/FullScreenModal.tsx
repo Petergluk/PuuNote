@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Minimize2, Copy, Download, Check } from "lucide-react";
 import { motion } from "motion/react";
 

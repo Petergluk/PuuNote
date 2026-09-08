@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Camera, RotateCcw, Trash2, X } from "lucide-react";
 import {
   clearDocumentSnapshots,
