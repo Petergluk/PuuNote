@@ -1,6 +1,7 @@
 
 import { useTranslation } from "react-i18next";
 import type { CSSProperties, KeyboardEvent } from "react";
+import { useState } from "react";
 
 type MiniSliderProps = {
   label: string;

@@ -17,6 +17,7 @@ interface SnapshotPanelProps {
 }
 
 export function SnapshotPanel({ isOpen, onClose }: SnapshotPanelProps) {
+  const { t } = useTranslation();
   const activeFileId = useAppStore((s) => s.activeFileId);
   const openConfirm = useAppStore((s) => s.openConfirm);
   const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);

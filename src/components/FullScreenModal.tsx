@@ -25,6 +25,7 @@ export const FullScreenModal = ({
   nodeId: string;
   onClose: () => void;
 }) => {
+  const { t } = useTranslation();
   const nodes = useAppStore((s) => s.nodes);
   const updateContent = useAppStore((s) => s.updateContent);
   const editorMode = useAppStore((s) => s.editorMode);

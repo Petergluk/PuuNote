@@ -3,13 +3,6 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  @font-face {
-    font-family: 'Yanone Kaffeesatz';
-    src: url('/fonts/YanoneKaffeesatz-VariableFont_wght.ttf') format('truetype');
-    font-weight: 200 700;
-    font-style: normal;
-    font-display: swap;
-  }
 }
 
 @theme {

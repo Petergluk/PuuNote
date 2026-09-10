@@ -74,6 +74,7 @@ export const WysiwygEditor = forwardRef<
   WysiwygEditorHandle,
   WysiwygEditorProps
 >(({ initialValue, onChange, onBlur, autoFocus, className, "data-node-id": dataNodeId }, ref) => {
+  const { t } = useTranslation();
   const isApplyingExternalValueRef = useRef(false);
   const lastEmittedMarkdownRef = useRef(initialValue);
   const linkInputRef = useRef<HTMLInputElement>(null);

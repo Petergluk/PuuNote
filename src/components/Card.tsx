@@ -290,7 +290,8 @@ export const Card = React.memo(
             }
           }}
           className={cn(
-            "relative w-full shrink-0 px-4 py-3 cursor-text min-h-[40px] flex flex-col",
+            "relative w-full shrink-0 pr-4 py-3 cursor-text min-h-[40px] flex flex-col",
+            (isActive || isSelected) ? "pl-[13px]" : "pl-4",
             "![border-radius:var(--card-radius)]",
             isEditing && "group/edit",
             cardClasses,
