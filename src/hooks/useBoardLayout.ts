@@ -239,22 +239,6 @@ export function useActivePathScroll(
           }
         });
       } else if (wasActiveRef.current) {
-        // We just transitioned from having an active node to not having one.
-        // Anchor the scroll positions based on the last known active nodes to prevent jumping.
-        colRefs.current.forEach((col, index) => {
-          if (!col || isScrollingRef.current[index]) return;
-          const anchor = lastActiveNodesRef.current.get(index);
-          if (anchor) {
-            const el = document.getElementById(`card-${anchor.id}`);
-            if (el) {
-              const currentTop = el.getBoundingClientRect().top;
-              const diff = currentTop - anchor.top;
-              if (Math.abs(diff) > 1) {
-                col.scrollTop += diff;
-              }
-            }
-          }
-        });
         wasActiveRef.current = false;
       }
     };

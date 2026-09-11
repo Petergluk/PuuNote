@@ -79,6 +79,7 @@ export function useAppCommands(): CommandItem[] {
       id: "add-child-card",
       label: t("Add Child Card (Right)"),
       icon: Plus,
+      hotkey: "Tab",
       run: () => {
         const store = useAppStore.getState();
         const targetId = store.activeId;
@@ -96,6 +97,7 @@ export function useAppCommands(): CommandItem[] {
       id: "add-sibling-card",
       label: t("Add Sibling Card (Below)"),
       icon: Plus,
+      hotkey: "Enter",
       run: () => {
         const store = useAppStore.getState();
         const targetId = store.activeId;
@@ -113,6 +115,7 @@ export function useAppCommands(): CommandItem[] {
       label: t("Delete Card"),
       icon: Trash2,
       destructive: true,
+      hotkey: "Delete",
       run: () => {
         const state = useAppStore.getState();
         const activeId = state.activeId;

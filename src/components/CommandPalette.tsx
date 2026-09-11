@@ -16,12 +16,35 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { useFileSystemActions } from "../hooks/useFileSystemActions";
 
+const isMac = navigator?.userAgent?.toLowerCase()?.includes('mac');
+
+function formatHotkey(hotkey: string) {
+  if (!hotkey) return "";
+  let formatted = hotkey.replace(/mod\+/g, isMac ? "⌘" : "Ctrl+");
+  formatted = formatted.replace(/shift\+/g, isMac ? "⇧" : "Shift+");
+  formatted = formatted.replace(/alt\+/g, isMac ? "⌥" : "Alt+");
+  formatted = formatted.replace(/ctrl\+/g, isMac ? "⌃" : "Ctrl+");
+  
+  const parts = formatted.split('+');
+  const last = parts.pop() || "";
+  parts.push(last.toUpperCase());
+  return parts.join(isMac ? '' : '+').replace(/\+\+/g, '+');
+}
+
 export function CommandPalette() {
   const { t } = useTranslation();
   const isOpen = useAppStore((s) => s.commandPaletteOpen);
   const setIsOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const userOverrides = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('PUU_COMMAND_HOTKEYS') || '{}');
+    } catch {
+      return {};
+    }
+  }, [isOpen]);
 
   const [searchDocs, setSearchDocs] = useState<SearchDocumentNode[]>([]);
   const [searchResults, setSearchResults] = useState<SearchDocumentNode[]>([]);
@@ -285,6 +308,8 @@ export function CommandPalette() {
                   {commandItems.map((command, index) => {
                     const Icon = command.icon;
                     const isActive = safeActiveIndex === index;
+                    const activeHotkey = userOverrides[command.id] !== undefined ? userOverrides[command.id] : command.hotkey;
+                    
                     return (
                       <button
                         key={command.id}
@@ -292,19 +317,24 @@ export function CommandPalette() {
                         role="option"
                         aria-selected={isActive}
                         onClick={() => handleExecuteCommand(command.run)}
-                        className={`w-full text-left px-4 py-3 flex items-center gap-3 ${
+                        className={`w-full text-left px-4 py-3 flex items-center justify-between ${
                           command.destructive
                             ? "text-red-500 hover:bg-red-500/10"
                             : "text-app-text-primary"
                         } ${isActive ? "bg-app-card-hover" : "hover:bg-app-card-hover"}`}
                       >
-                        <Icon
-                          size={16}
-                          className={
-                            command.destructive ? "" : "text-app-accent"
-                          }
-                        />
-                        {command.label}
+                        <div className="flex items-center gap-3 truncate">
+                          <Icon
+                            size={16}
+                            className={command.destructive ? "" : "text-app-accent flex-shrink-0"}
+                          />
+                          <span className="truncate">{command.label}</span>
+                        </div>
+                        {activeHotkey && (
+                          <span className="text-xs text-app-text-muted opacity-70 ml-2 font-mono whitespace-nowrap bg-app-card px-1.5 py-0.5 rounded border border-app-border">
+                            {formatHotkey(activeHotkey)}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
