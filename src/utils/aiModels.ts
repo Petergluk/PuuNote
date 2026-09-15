@@ -93,7 +93,20 @@ export async function generateContentFallback(
             }
             if (timer) clearTimeout(timer);
 
-            const data = await response.json();
+            const textResponse = await response.text();
+            let data: any = {};
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                console.error(`Failed to parse JSON response: ${textResponse.substring(0, 200)}...`);
+                let errorDesc = `Ошибка сервера (${response.status})`;
+                if (response.status === 504 || response.status === 502) {
+                    errorDesc = "Таймаут или ошибка шлюза (504/502). Запрос обрабатывался слишком долго.";
+                } else if (response.status === 413) {
+                    errorDesc = "Слишком большой объем данных для отправки.";
+                }
+                throw new Error(errorDesc);
+            }
 
             if (!response.ok) {
                 if (data.error && (data.error.toLowerCase().includes('key not valid') || data.error.toLowerCase().includes('api key not valid'))) {

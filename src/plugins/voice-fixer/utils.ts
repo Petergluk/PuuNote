@@ -111,7 +111,13 @@ export const processAudio = async (
               if (!response.ok) {
                 let errorDetails = '';
                 try {
-                  const errData = await response.json();
+                  const textResp = await response.text();
+                  let errData: any = {};
+                  try {
+                    errData = JSON.parse(textResp);
+                  } catch (e) {
+                    errData = { error: { message: textResp || response.statusText } };
+                  }
                   errorDetails = errData.error?.message || JSON.stringify(errData);
                 } catch {
                   errorDetails = response.statusText;
@@ -129,7 +135,12 @@ export const processAudio = async (
               }
               
               pluginApi.updateJobProgress(jobId, 80, "Обработка отклика...");
-              responseData = await response.json();
+              const textResp2 = await response.text();
+              try {
+                  responseData = JSON.parse(textResp2);
+              } catch (e) {
+                  throw new Error(`Таймаут или сбой шлюза (${response.status})`);
+              }
               
               if (i > 0) {
                 localStorage.setItem('VOICE_FIXER_MODEL', modelName);

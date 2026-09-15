@@ -53,13 +53,13 @@ export const PROSE_CARD_DIM = [
 export const PROSE_FULL = [
   "prose dark:prose-invert prose-base",
   PROSE_BASE,
-  "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary/80",
-  "prose-p:text-app-text-secondary dark:prose-p:text-app-text-secondary",
+  "prose-headings:text-app-text-primary dark:prose-headings:text-app-text-primary",
+  "prose-p:text-app-text-primary dark:prose-p:text-app-text-primary",
   "prose-p:leading-relaxed prose-p:my-2",
-  "prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary/90",
-  "prose-ul:text-app-text-secondary dark:prose-ul:text-app-text-secondary",
-  "prose-ol:text-app-text-secondary dark:prose-ol:text-app-text-secondary",
-  "prose-h4:opacity-80",
+  "prose-strong:text-app-text-primary dark:prose-strong:text-app-text-primary",
+  "prose-ul:text-app-text-primary dark:prose-ul:text-app-text-primary",
+  "prose-ol:text-app-text-primary dark:prose-ol:text-app-text-primary",
+  "prose-h4:opacity-90",
   "prose-code:text-app-accent prose-code:bg-app-card dark:prose-code:bg-app-card-hover",
 ].join(" ");
 

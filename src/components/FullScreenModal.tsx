@@ -325,7 +325,7 @@ export const FullScreenModal = ({
               className={`rounded border px-6 py-4 transition-all duration-200 cursor-text ${
                 isLocalActive || isGlobalUnfocused
                   ? "border-transparent bg-transparent opacity-100"
-                  : "border-transparent opacity-35 hover:border-app-border hover:opacity-80"
+                  : "border-transparent opacity-40 hover:border-app-border hover:opacity-100"
               }`}
             >
               {isLocalActive ? (

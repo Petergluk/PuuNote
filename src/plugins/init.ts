@@ -78,8 +78,8 @@ export const pluginApi: PluginAPI = {
 
   toast: (msg, type = "info") => {
     if (type === "success") toast.success(msg);
-    else if (type === "error") toast.error(msg);
-    else if (type === "warning") toast.warning(msg);
+    else if (type === "error") toast.error(msg, { duration: 15000 });
+    else if (type === "warning") toast.warning(msg, { duration: 10000 });
     else toast(msg);
   },
 

@@ -145,7 +145,7 @@ export default function App() {
         }
       }}
     >
-      <Toaster theme="system" position="bottom-right" richColors />{" "}
+      <Toaster theme="system" position="bottom-right" richColors duration={8000} expand={true} visibleToasts={6} />{" "}
       <CssVariables />
       {uiMode !== "zen" && <Header handleImport={handleImport} />}{" "}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
